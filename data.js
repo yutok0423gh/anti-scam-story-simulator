@@ -1,2849 +1,1583 @@
-// ===== 身份開場文字 =====
+// ===================================================================
+// Anti-Scam Story Simulator — Hong Kong Edition
+// 別急，先查證 · Anti-Scam Adventure (HK)
+// 5 大主題關卡：香港本地詐騙情境
+// ===================================================================
+
+// ===== 身份開場文字（依身份分類，無地區選擇）=====
 const introTexts = {
   mainland_student: {
-    mainland_china: "你是剛入學的大一新生，宿舍的快遞還沒認清楚幾個，手機每天幾十條通知。今天你正在圖書館準備明天的課，手機又響了——這次感覺有點不對勁。",
-    hong_kong_macao: "你剛到港澳讀大學，還在適應這裡的英文電郵和銀行 App。學校系統、宿舍帳單、實習申請，所有事情都要靠手機搞定。但有些訊息，看起來比你想的更危險。",
-    taiwan: "交換生的第一個月，你連 711 怎麼結帳都還在研究，結果就收到了一通「客服電話」。對方說的話你大概聽懂了七八成，但感覺哪裡有點怪……",
-    western_countries: "留學第一年，簽證焦慮、英文壓力、時差還沒調好。這時候突然接到一通聲稱是「移民局」的電話——不管你多理性，聽到「deportation」這個詞，手腳還是涼了。",
-    southeast_asia: "你跟同學一起去東南亞旅遊，剛下飛機就收到了一條讓你心跳加速的訊息。人在異鄉，語言不通，你只想趕快把事情搞定——但越急越容易踩坑。"
+    'zh-TW': "你剛從內地來香港讀大學，普通話、英文、廣東話切來切去，學校系統、宿舍帳單、FPS 轉數快都還在摸索。語言壓力和身份焦慮讓你特別容易成為騙子目標——假冒內地公檢法、假冒入境處、租房詐騙，都是為你量身訂做的套路。",
+    'zh': "你刚从内地来香港读大学，普通话、英文、广东话切来切去，学校系统、宿舍账单、FPS 转数快都还在摸索。语言压力和身份焦虑让你特别容易成为骗子目标——假冒内地公检法、假冒入境处、租房诈骗，都是为你量身定做的套路。",
+    'en': "You just arrived from mainland China to study in HK, switching between Putonghua, English and Cantonese. Still navigating school systems, dorm bills and FPS transfers. Language pressure and identity anxiety make you especially vulnerable to scams — fake mainland police, fake immigration, rental scams — all tailor-made for you."
   },
-  hmt_student: {
-    mainland_china: "你是港澳台學生，到內地讀書已經一個學期了，微信和支付寶算是會用了。但有些「官方通知」看起來特別正式，一不小心就會被繞進去。",
-    hong_kong_macao: "你在本地讀大學，住慣了，熟悉這裡的每一個銀行和 App。但正因為熟悉，有時候反而容易放鬆警惕——假的東西，也可以做得像模像樣。",
-    taiwan: "在台灣讀書，LINE、蝦皮、超商付款都是日常。你以為自己夠熟悉這套系統了，但騙子也一樣熟悉，甚至比你更熟悉。",
-    western_countries: "你在海外讀書，已經第二年了。租房、簽證、銀行帳戶，這些坑你都踩過一遍。但詐騙的形式一直在變，有些手法，就算是老生也可能第一次遇到。",
-    southeast_asia: "這趟旅行你計劃了很久，機票和酒店都提前訂好了。但剛到目的地，就有事情不按計劃走——冷靜一下，先查清楚再行動。"
+  local_hk_student: {
+    'zh-TW': "你在香港本地讀大學，對這裡的銀行、MTR、PayMe、轉數快都熟悉得不能再熟。但正因為太熟悉，反而容易放鬆警惕——假銀行短訊、刷單兼職、Deepfake 換臉詐騙，專門針對你這種「我怎麼可能被騙」的心態。",
+    'zh': "你在香港本地读大学，对这里的银行、MTR、PayMe、转数快都熟悉得不能再熟。但正因为太熟悉，反而容易放松警惕——假银行短信、刷单兼职、Deepfake 换脸诈骗，专门针对你这种「我怎么可能被骗」的心态。",
+    'en': "You study locally in HK, familiar with banks, MTR, PayMe and FPS. But familiarity breeds complacency — fake bank SMS, fake shopping rebates, Deepfake face-swap scams target exactly this 'I could never be scammed' mindset."
   }
 };
 
-const introTextsEn = {
-  mainland_student: {
-    mainland_china: "You're a first-year student still getting used to dorm deliveries and dozens of daily phone notifications. While studying in the library, your phone buzzes again — and this time something feels off.",
-    hong_kong_macao: "You've just arrived in Hong Kong or Macau for university and are still adapting to English emails and banking apps. School systems, dorm bills, and internship applications all depend on your phone — but some messages are more dangerous than they look.",
-    taiwan: "It's your first month as an exchange student. You're still figuring out everyday routines when a ‘customer service’ call arrives. You understand most of it, but something feels wrong.",
-    western_countries: "It's your first year studying abroad. You're already dealing with visa anxiety, language pressure, and jet lag when a call claiming to be from immigration arrives. Hearing the word ‘deportation’ is enough to make anyone panic.",
-    southeast_asia: "You're traveling in Southeast Asia with classmates. Right after landing, a message makes your heart race. In an unfamiliar place and language, you want to fix things quickly — but rushing makes scams harder to spot."
-  },
-  hmt_student: {
-    mainland_china: "You're a student from Hong Kong, Macau, or Taiwan who has studied in Mainland China for a semester. You know how to use WeChat and Alipay now, but some ‘official notices’ look convincing enough to pull anyone in.",
-    hong_kong_macao: "You're studying locally and know the banks and apps well. That familiarity can lower your guard — fake messages can be made to look remarkably real.",
-    taiwan: "LINE, Shopee, and convenience-store payments are part of daily life in Taiwan. You know the system well, but scammers may know it even better.",
-    western_countries: "You're in your second year abroad and have already handled renting, visas, and bank accounts. Scam tactics keep changing, though, and even experienced students can face something new.",
-    southeast_asia: "You've planned this trip for a long time and booked everything in advance. Then something goes wrong as soon as you arrive. Pause, verify, and only then take action."
-  }
-};
-
-// ===== 身份修正 =====
+// ===== 身份屬性修正 =====
+// 內地生：高身份焦慮、語言壓力；本地生：高本地熟悉度、低警覺
 const identityModifiers = {
-  mainland_student: { alertness: 5, information: 5, localFamiliarity: 0, languagePressure: 0, identityAnxiety: 5 },
-  hmt_student: { alertness: 5, information: 0, localFamiliarity: 0, languagePressure: 0, identityAnxiety: 5 }
-};
-
-// ===== 身份 × 地區交互修正 =====
-const regionModifiers = {
   mainland_student: {
-    mainland_china:     { localFamiliarity: 30, languagePressure: -10, identityAnxiety: -5 },
-    hong_kong_macao:    { localFamiliarity: -15, languagePressure: 15, identityAnxiety: 10 },
-    taiwan:             { localFamiliarity: -20, languagePressure: 10, identityAnxiety: 15 },
-    western_countries:  { localFamiliarity: -30, languagePressure: 30, identityAnxiety: 35 },
-    southeast_asia:     { localFamiliarity: -25, languagePressure: 25, identityAnxiety: 25 }
+    alertness: 5, information: 5,
+    localFamiliarity: -15, languagePressure: 15, identityAnxiety: 15
   },
-  hmt_student: {
-    mainland_china:     { localFamiliarity: -25, languagePressure: 10, identityAnxiety: 20 },
-    hong_kong_macao:    { localFamiliarity: 30, languagePressure: -10, identityAnxiety: -5 },
-    taiwan:             { localFamiliarity: 10, languagePressure: -5, identityAnxiety: 0 },
-    western_countries:  { localFamiliarity: -25, languagePressure: 25, identityAnxiety: 30 },
-    southeast_asia:     { localFamiliarity: -25, languagePressure: 20, identityAnxiety: 25 }
+  local_hk_student: {
+    alertness: -5, information: 0,
+    localFamiliarity: 30, languagePressure: -10, identityAnxiety: -5
   }
 };
 
-// ===== 地區顯示名稱 =====
-const regionNames = {
-  mainland_china: "中國大陸",
-  hong_kong_macao: "港澳",
-  taiwan: "台灣",
-  western_countries: "歐美",
-  southeast_asia: "東南亞"
-};
-
+// ===== 身份顯示名稱 =====
 const identityNames = {
-  mainland_student: "中國大陸學生",
-  hmt_student: "港澳台學生"
+  mainland_student: "中國大陸來港學生",
+  local_hk_student: "香港本地學生"
 };
 
+// ===================================================================
+// ===== 關鍵字銀行（ Keyword Bank ）=====
+// 三類：verify（查證類，正向）/ danger（危險類，負向）/ neutral 由系統處理
+// 同時收錄繁體、簡體、英文，checkKeyword() 統一小寫比對
+// ===================================================================
+const keywordBank = {
+  verify: {
+    'zh-TW': ['查證','核實','防騙','防騙易','18222','防騙視伏器','scameter','警察','警方','報警','hkpf','官網','官方','校方','學生事務處','學校','熱線','銀行熱線','匯豐熱線','adcc','反詐騙','反詐','求證','確認','核對','挂號','掛號','澄清','舉報','求助','掛斷','掛線','收線','不要','不給','不轉','不給予','拒絕','拒絕給予','等等','先別急','先查','查一下','查清楚','弄清楚','核實一下','確認一下','打電話問','聯繫銀行','聯繫校方','聯繫入境處','假的','騙子','詐騙','釣魚','可疑','有問題','不靠譜','不可信','別信','不要信','不能信','我不信','我懷疑','懷疑','小心','當心','注意','提高警覺','警覺點','冷靜一下','冷靜','想想','考慮','我想想','讓我想想','再想想','暫停','停一下','先等等','緩一緩','不急','不著急','不用急','為什麼','怎麼','怎麼證明','證明你是','你是誰','你是真的嗎','真的假的','真偽','身份','身分','身分證明','你打過來','我打出來','我回撥','回撥','回電','掛了再打','打給你','致電','撥打','查詢','咨詢','咨詢一下','反映','投訴','檢舉','揭發','曝光','截圖','錄音','保留證據','證據'],
+    'zh':     ['查证','核实','防骗','防骗易','18222','防骗视伏器','scameter','警察','警方','报警','hkpf','官网','官方','校方','学生事务处','学校','热线','银行热线','汇丰热线','adcc','反诈骗','反诈','求证','确认','核对','挂号','澄清','举报','求助','挂断','挂线','收线','不要','不给','不转','不给予','拒绝','拒绝给予','等等','先别急','先查','查一下','查清楚','弄清楚','核实一下','确认一下','打电话问','联系银行','联系校方','联系入境处','假的','骗子','诈骗','钓鱼','可疑','有问题','不靠谱','不可信','别信','不要信','不能信','我不信','我怀疑','怀疑','小心','当心','注意','提高警觉','警觉点','冷静一下','冷静','想想','考虑','我想想','让我想想','再想想','暂停','停一下','先等等','缓一缓','不急','不着急','不用急','为什么','怎么','怎么证明','证明你是','你是谁','你是真的吗','真的假的','真伪','身份','身份证明','你打过来','我打出去','我回拨','回拨','回电','挂了再打','打给你','致电','拨打','查询','咨询','咨询一下','反映','投诉','检举','揭发','曝光','截图','录音','保留证据','证据'],
+    'en':     ['verify','official','police','hkpf','scameter','18222','adcc','hotline','bank hotline','check','confirm','campus office','report','anti-scam','ascert','hsbc hotline','hang seng hotline','hang up','no way','not giving','refuse','reject','wait','hold on','let me think','suspicious','fake','scam','phishing','unreliable','not trust','doubt','doubtful','careful','beware','calm down','calm','consider','pause','not urgent','why','how','prove','who are you','real or fake','identity','call back','return call','i call you','you called me','inquiry','enquire','complaint','evidence','screenshot','recording']
+  },
+  danger: {
+    'zh-TW': ['轉賬','轉帳','密碼','驗證碼','一次性密碼','otp','身份證','hkid','轉數快','fps','銀行卡號','卡號','存款','投資','充值','解鎖','付款','payme','支付','信用卡','cvv','餘額','轉錢','匯款','網銀','登入密碼','交保','保釋金','保證金','押金','訂金','給你','發給你','提供','告訴你','說給你聽','念給你聽','唸給你聽','報給你','提供給你','發送','傳送','發過來','傳過來','發一下','傳一下','告訴我','說一下','講一下','念出來','唸出來','說出來','告訴你密碼','給你密碼','銀行密碼','帳號','賬號','賬戶','帳戶','戶口','口號','編號','賬號','安全帳戶','安全賬戶','凍結保護','資金保護','配合調查','協助調查','公文','傳票','拘捕令','逮捕令','通緝','通緝令','秘密','保密','不許告訴別人','不能說','別告訴任何人','只有你知道','機密','國家機密','辦案','調查','案底','刑事','民事','罰款','繳罰款','違規','違法','犯法','犯罪','坐牢','監獄','拘留','扣押','限制出境','禁止出境','遣返','遞解','簽證異常','簽證有問題','身份異常','帳戶異常','賬戶異常','異常登錄','風險','安全風險'],
+    'zh':     ['转账','密码','验证码','一次性密码','otp','身份证','hkid','转数快','fps','银行卡号','卡号','存款','投资','充值','解锁','付款','payme','支付','信用卡','cvv','余额','转钱','汇款','网银','登录密码','交保','保释金','保证金','押金','订金','给你','发给你','提供','告诉你','说给你听','念给你听','报给你','提供给你','发送','传送','发过来','传过来','发一下','传一下','告诉我','说一下','讲一下','念出来','说出来','告诉你密码','给你密码','银行密码','帐号','账号','账户','帐户','户口','口号','编号','安全帐户','安全账户','冻结保护','资金保护','配合调查','协助调查','公文','传票','拘捕令','逮捕令','通缉','通缉令','秘密','保密','不许告诉别人','不能说','别告诉任何人','只有你知道','机密','国家机密','办案','调查','案底','刑事','民事','罚款','缴罚款','违规','违法','犯法','犯罪','坐牢','监狱','拘留','扣押','限制出境','禁止出境','遣返','递解','签证异常','签证有问题','身份异常','账户异常','异常登录','风险','安全风险'],
+    'en':     ['transfer','password','otp','one-time password','hkid','id card','fps','card number','deposit','invest','unlock','pay','payme','credit card','cvv','balance','send money','remit','online banking','bail','guarantee','give you','provide','tell you','read out','send to','account number','account','safe account','security account','frozen','freeze','investigation','cooperate','warrant','arrest warrant','wanted','secret','confidential','don\'t tell anyone','case','criminal','fine','illegal','jail','prison','detain','deport','visa problem','abnormal login','risk','security risk']
+  }
+};
+
+// ===================================================================
+// ===== 5 大主題關卡（ Themed Levels ）=====
+// 每關包含多個場景，支援 multi-choice 與 text_input 兩種互動模式
+// ===================================================================
+const levels = [
+  // ─────────────────────────────────────────────────────────────
+  // Level 1：校園租房與宿位詐騙
+  // ─────────────────────────────────────────────────────────────
+  {
+    id: "hk_l1_housing",
+    index: 1,
+    title: "校園租房與宿位詐騙",
+    titleEn: "Campus & Housing Scam",
+    titleZh: "校园租房与宿位诈骗",
+    icon: "🏠",
+    scamType: "假租房 + FPS 押金詐騙",
+    redFlags: [
+      "租金明顯低於市價（中環/旺角單位只要 $4,500？）",
+      "房東聲稱「人在外地」無法實地看房，催促先付押金鎖定房源",
+      "要求經轉數快 (FPS) 立刻轉賬，否則「另有人要看房」",
+      "無法提供租約草稿、業主姓名、土地註冊處資料",
+      "Facebook/小紅書群組貼文，無可核實的仲介牌照"
+    ],
+    officialChannels: [
+      "透過土地註冊處查核業主身份（www.landreg.gov.hk）",
+      "使用校方學生事務處認可的宿舍/租房資訊平台",
+      "堅持實地看房並簽署正式租約再付款",
+      "致電防騙易 18222 熱線查詢可疑房源",
+      "使用防騙視伏器 (Scameter) 搜尋房東電話/帳號"
+    ],
+    scenes: [
+      // ── 場景 1：看到租房貼文 ──
+      {
+        id: "l1_s1",
+        type: "message",
+        speaker: "system",
+        text: "開學前兩週，你還沒找到住處。你在某 Facebook 群組看到一則貼文——旺角亞皆老街單位，月租 $4,500，臨近 MTR，附傢俬，看照片簡直完美。你私訊了對方。",
+        textEn: "Two weeks before term starts, you still haven't found a place. A Facebook group post catches your eye — a Mong Kok flat on Argyle Street, $4,500/month, near MTR, furnished. You DM the poster.",
+        textZh: "开学前两周，你还没找到住处。你在某 Facebook 群组看到一则贴文——旺角亚皆老街单位，月租 $4,500，临近 MTR，附家私，看照片简直完美。你私信了对方。",
+        visual: {
+          type: "phishing_card",
+          url: "fb.com/groups/HKU-Rentals/posts/18823",
+          realUrl: "Facebook 群組貼文（無法核實真實身份）",
+          pageTitle: "【急租】旺角亞皆老街 單位 $4500/月",
+          pageIcon: "🏠",
+          redFlags: [
+            { icon: "💸", text: "租金低於市價約 40%（同區約 $7,500+）" },
+            { icon: "👤", text: "發帖人無仲介牌照編號" },
+            { icon: "📍", text: "地址模糊，無完整門牌" }
+          ]
+        },
+        choices: [
+          {
+            id: "l1_c1_dm",
+            text: "📲 私訊對方問詳情",
+            textEn: "📲 DM the poster for details",
+            textZh: "📲 私信对方问详情",
+            effects: { information: 5 },
+            nextSceneId: "l1_s2",
+            feedback: "你決定先問問細節——這本身沒問題，但接下來對方的反應才是關鍵。",
+            feedbackEn: "Asking for details is fine — but watch how the poster responds next.",
+            feedbackZh: "问问细节没问题——但接下来对方的反应才是关键。",
+            feedbackType: "mid"
+          }
+        ]
+      },
+      // ── 場景 2：房東催促 FPS 押金（自由輸入關卡）──
+      {
+        id: "l1_s2",
+        type: "text_input",
+        speaker: "scammer",
+        pressure: true,
+        text: "「房東」很快回覆，態度熱情但急促。他說人在深圳，無法帶你看房，但「今天內付 $3,000 押金就能鎖定房源，否則另有人要看」。他發來一個轉數快 (FPS) 帳號。\n\n你會怎麼回覆？",
+        textEn: "The 'landlord' replies fast — warm but pushy. He says he's in Shenzhen and can't show the flat in person, but '$3,000 deposit via FPS today locks it in, otherwise someone else is viewing it.' He sends an FPS ID.\n\nHow do you reply?",
+        textZh: "「房东」很快回复，态度热情但急促。他说人在深圳，无法带你看房，但「今天内付 $3,000 押金就能锁定房源，否则另有人要看」。他发来一个转数快 (FPS) 账号。\n\n你会怎么回复？",
+        visual: {
+          type: "chat",
+          app: "WhatsApp",
+          appIcon: "💬",
+          messages: [
+            { type: "incoming", name: "+852 5XXX 1234", text: "Hi! 單位仲喺度，不過好多人問。我喺深圳，今日轉 $3000 押金就幫你鎖定 🏠" },
+            { type: "incoming", name: "+852 5XXX 1234", text: "FPS ID: SIM-FPS-0001 / 銀行：中銀香港\n快啲啦，唔係就俾人租咗" }
+          ]
+        },
+        inputConfig: {
+          placeholder: "輸入你想回覆的內容…（例如：我想先查證 / 我現在就轉賬）",
+          placeholderEn: "Type your reply… (e.g. I want to verify first / I'll transfer now)",
+          placeholderZh: "输入你想回复的内容…（例如：我想先查证 / 我现在就转账）",
+          goodNextSceneId: "l1_s3_safe",
+          badNextSceneId: "l1_s3_loss",
+          neutralNextSceneId: "l1_s2b_pressure",
+          maxNeutralAttempts: 2,
+          goodFeedback: "✅ 你提到了查證/核實——這是面對催促時最正確的第一反應。真正的業主不怕你查。",
+          goodFeedbackEn: "✅ You mentioned verifying — the right first response to pressure. Real landlords are never afraid of being checked.",
+          goodFeedbackZh: "✅ 你提到了查证/核实——这是面对催促时最正确的第一反应。真正的业主不怕你查。",
+          badFeedback: "⚠️ 你提到轉賬/付款/押金——在未實地看房、未核實業主身份前，任何金錢操作都極度危險。",
+          badFeedbackEn: "⚠️ You mentioned transferring/paying/deposit — any money move before viewing the flat and verifying the owner is extremely risky.",
+          badFeedbackZh: "⚠️ 你提到转账/付款/押金——在未实地看房、未核实业主身份前，任何金钱操作都极度危险。",
+          neutralFeedback: "🤔 對方見你沒明確表態，又開始施壓：「你到底要不要？後面還有人排隊！」再想想你會怎麼做。",
+          neutralFeedbackEn: "🤔 Seeing you hesitate, the scammer pushes again: 'Do you want it or not? Others are queuing!' Think about what to do.",
+          neutralFeedbackZh: "🤔 对方见你没明确表态，又开始施压：「你到底要不要？后面还有人排队！」再想想你会怎么做。"
+        }
+      },
+      // ── 場景 2b：房東二次施壓（自由輸入第二次機會）──
+      {
+        id: "l1_s2b_pressure",
+        type: "text_input",
+        speaker: "scammer",
+        pressure: true,
+        text: "「房東」開始用情感施壓：「我等你半天了，再不轉我就給下一個了。你到底信不信我？我發誓這是真的房源。」\n\n這是你第二次機會——你會怎麼回覆？",
+        textEn: "The 'landlord' turns emotional: 'I've waited half a day. If you don't transfer now I'll give it to the next person. Don't you trust me? I swear it's real.'\n\nSecond chance — how do you reply?",
+        textZh: "「房东」开始用情感施压：「我等你半天了，再不转我就给下一个了。你到底信不信我？我发誓这是真的房源。」\n\n这是你第二次机会——你会怎么回复？",
+        visual: {
+          type: "chat",
+          app: "WhatsApp",
+          appIcon: "💬",
+          messages: [
+            { type: "incoming", name: "+852 5XXX 1234", text: "我等你半日啦 😤 再唔轉就俾下一個" },
+            { type: "incoming", name: "+852 5XXX 1234", text: "你信我啦，我發誓係真房源" }
+          ]
+        },
+        inputConfig: {
+          placeholder: "再次輸入你的回覆…（提示：想想如何查證）",
+          placeholderEn: "Type your reply again… (hint: think how to verify)",
+          placeholderZh: "再次输入你的回复…（提示：想想如何查证）",
+          goodNextSceneId: "l1_s3_safe",
+          badNextSceneId: "l1_s3_loss",
+          neutralNextSceneId: "l1_s3_safe",
+          maxNeutralAttempts: 0,
+          goodFeedback: "✅ 你堅持查證——這正是反詐的關鍵習慣。不被情感話術帶走。",
+          goodFeedbackEn: "✅ You insisted on verifying — the key anti-scam habit. Not swayed by emotional tactics.",
+          goodFeedbackZh: "✅ 你坚持查证——这正是反诈的关键习惯。不被情感话术带走。",
+          badFeedback: "⚠️ 你還是傾向付款——記住：越催促越要停。詐騙靠的就是你沒時間思考。",
+          badFeedbackEn: "⚠️ You still leaned toward paying — remember: the more they rush, the more you should pause. Scams rely on you having no time to think.",
+          badFeedbackZh: "⚠️ 你还是倾向付款——记住：越催促越要停。诈骗靠的就是你没时间思考。",
+          neutralFeedback: "🤔 你還是沒有明確行動。這次我們幫你做出選擇——停下來，查證。",
+          neutralFeedbackEn: "🤔 Still no clear action. Let's help you decide — pause and verify.",
+          neutralFeedbackZh: "🤔 你还是没有明确行动。这次我们帮你做出选择——停下来，查证。"
+        }
+      },
+      // ── 場景 3A：安全路徑——查證結果 ──
+      {
+        id: "l1_s3_safe",
+        type: "result",
+        speaker: "official",
+        text: "你決定停下來查證。你把對方的電話號碼輸入「防騙視伏器 (Scameter)」——結果顯示這個號碼已被標記為「高危詐騙」。你接著在土地註冊處查不到對方聲稱的業主名字。",
+        textEn: "You pause to verify. You enter the phone number into Scameter (防騙視伏器) — it's flagged as 'High-Risk Scam'. The claimed owner's name doesn't appear in the Land Registry either.",
+        textZh: "你决定停下来查证。你把对方的电话号码输入「防骗视伏器 (Scameter)」——结果显示这个号码已被标记为「高危诈骗」。你接着在土地注册处查不到对方声称的业主名字。",
+        visual: {
+          type: "safe_result",
+          content: "✅ 防騙視伏器 (Scameter) 查核結果\n\n模擬電話 +852 5XXX 1234\n狀態：🔴 高危 — 已被 23 人舉報為租房詐騙\n\n建議行動：\n• 立即封鎖對方\n• 致電防騙易 18222 報案\n• 向校方學生事務處反映\n• 改用校方認可租房平台"
+        },
+        choices: [
+          {
+            id: "l1_c3_block",
+            text: "🚫 封鎖對方，並向 18222 舉報",
+            textEn: "🚫 Block and report to 18222",
+            textZh: "🚫 拉黑对方，并向 18222 举报",
+            effects: { alertness: 25, information: 20, riskScore: -20, money: 0 },
+            nextSceneId: "l1_s4_done",
+            feedback: "✅ 完美。你識破了租房騙局，還主動舉報——這能保護其他同學。真正的租房一定可以先看房、簽約再付款。",
+            feedbackEn: "✅ Perfect. You spotted the rental scam and reported it — protecting fellow students. Legitimate rentals always allow viewing and signing before payment.",
+            feedbackZh: "✅ 完美。你识破了租房骗局，还主动举报——这能保护其他同学。真正的租房一定可以先看房、签约再付款。",
+            feedbackType: "good"
+          }
+        ]
+      },
+      // ── 場景 3B：危險路徑——損失押金 ──
+      {
+        id: "l1_s3_loss",
+        type: "result",
+        speaker: "system",
+        text: "你照對方要求，經轉數快轉了 $3,000 押金。對方收款後說「再轉 $5,000 保證金才能寄鑰匙」。你猶豫了一下，再傳訊息——已被封鎖。打電話——空號。",
+        textEn: "You transfer $3,000 deposit via FPS as asked. The 'landlord' then demands another $5,000 'guarantee' to send the keys. You hesitate, message again — blocked. Call — dead number.",
+        textZh: "你照对方要求，经转数快转了 $3,000 押金。对方收款后说「再转 $5,000 保证金才能寄钥匙」。你犹豫了一下，再发消息——已被拉黑。打电话——空号。",
+        visual: {
+          type: "warning_page",
+          content: "⚠️ FPS 轉賬紀錄\n\n模擬收款方：SIM-FPS-0001（中銀香港）\n金額：HK$3,000\n狀態：已成交（無法撤回）\n\n對方 WhatsApp：已封鎖你\n對方電話：空號\n\n💡 轉數快轉賬一旦完成，款項無法自動退回。"
+        },
+        choices: [
+          {
+            id: "l1_c3_report",
+            text: "📞 立刻致電防騙易 18222 報案",
+            textEn: "📞 Call Anti-Deception 18222 now",
+            textZh: "📞 立刻致电防骗易 18222 报案",
+            effects: { money: -30, riskScore: 30, information: 15, alertness: 10 },
+            nextSceneId: "l1_s4_done",
+            feedback: "⚠️ 錢已損失，但即時報案是唯一正確動作。18222 會記錄並可能追蹤帳戶。記住：FPS 轉賬無法撤回，事前查證永遠比事後補救重要。",
+            feedbackEn: "⚠️ Money is lost, but reporting immediately is the only right move. 18222 logs and may trace the account. Remember: FPS transfers can't be reversed — verifying beforehand beats remedying afterward.",
+            feedbackZh: "⚠️ 钱已损失，但即时报案是唯一正确动作。18222 会记录并可能追踪账户。记住：FPS 转账无法撤回，事前查证永远比事后补救重要。",
+            feedbackType: "bad"
+          }
+        ]
+      },
+      // ── 場景 4：本關結束 ──
+      {
+        id: "l1_s4_done",
+        type: "result",
+        speaker: "system",
+        text: "【第一關完成】你順利通過了租房詐騙情境。\n\n記住三個關鍵：低於市價必有詐、未看房不付款、用 Scameter 查核對方。",
+        textEn: "[Level 1 Complete] You've navigated the housing scam scenario.\n\nThree keys: prices below market are scams, never pay before viewing, use Scameter to check the other party.",
+        textZh: "【第一关完成】你顺利通过了租房诈骗情境。\n\n记住三个关键：低于市价必有诈、未看房不付款、用 Scameter 核查对方。",
+        visual: { type: "safe_result", content: "🏠 第一關：校園租房詐騙\n狀態：已完成 ✅\n\n下一關：假冒政府機構來電" },
+        choices: [
+          {
+            id: "l1_c4_next",
+            text: "➡️ 前往第二關：假冒政府機構",
+            textEn: "➡️ Level 2: Impersonating Officials",
+            textZh: "➡️ 前往第二关：假冒政府机构",
+            effects: {},
+            nextSceneId: "__next_level__",
+            feedbackType: "mid"
+          }
+        ]
+      }
+    ]
+  },
+
+  // ─────────────────────────────────────────────────────────────
+  // Level 2：假冒香港入境處/公安/稅務局
+  // ─────────────────────────────────────────────────────────────
+  {
+    id: "hk_l2_impersonation",
+    index: 2,
+    title: "假冒政府機構來電",
+    titleEn: "Impersonating Government Authorities",
+    titleZh: "假冒政府机构来电",
+    icon: "🚨",
+    scamType: "假冒入境處/內地公安 + 語音詐騙",
+    redFlags: [
+      "來電顯示 +852 或自稱「入境處/公安」，但政府部門不會電話要求個人資料",
+      "語音/錄音播放「你的簽證/護照有問題」「非法包裹被扣」",
+      "要求提供 HKID、護照號碼、銀行帳戶「核實身份」",
+      "威脅「不配合將被遞解/逮捕」，製造恐慌",
+      "要求轉帳「保釋金/保證金」到「安全帳戶」",
+      "香港執法機關絕不會電話要求轉帳或索取 OTP"
+    ],
+    officialChannels: [
+      "致電入境處查詢熱線 2824 6111 核實簽證狀態",
+      "致電防騙易 18222 確認是否詐騙",
+      "內地公安不會跨境電話執法，可疑時聯絡校方",
+      "使用防騙視伏器搜尋來電號碼",
+      "掛斷電話，自行從官方渠道查證（不要回撥對方提供的號碼）"
+    ],
+    scenes: [
+      // ── 場景 0：仿真來電 UI（入境處來電——新增）──
+      {
+        id: "l2_s0_call",
+        type: "phone_call_immigration",
+        speaker: "scammer",
+        pressure: true,
+        text: "下午你在圖書館自習，手機突然響起。螢幕顯示來電號碼「+852 2824 6111」——這看起來是入境處官方號碼。你會接聽還是拒絕？",
+        textEn: "Studying in the library, your phone suddenly rings. The screen shows '+852 2824 6111' — looks like the official Immigration Department number. Will you answer or decline?",
+        textZh: "下午你在图书馆自习，手机突然响起。屏幕显示来电号码「+852 2824 6111」——这看起来是入境处官方号码。你会接听还是拒绝？",
+        visual: {
+          type: "phone_call_immigration",
+          callerId: "+852 2824 6111",
+          callerName: "香港入境事務處",
+          callerNameEn: "HK Immigration Department",
+          callerNameZh: "香港入境事务处",
+          initialMessage: "你好，呢度係香港入境事務處，廣東話請按 1，普通話請按 2。",
+          initialMessageEn: "Hello, this is the HK Immigration Department. Press 1 for Cantonese, press 2 for Mandarin.",
+          initialMessageZh: "你好，这里是香港入境事务处，广东话请按 1，普通话请按 2。",
+          cantoneseMessage: "我哋收到一份寄畀你嘅可疑包裹，入面有疑似違禁文件。而家你嘅學生簽證已經被標記，需要你立即提供身份證號碼同埋銀行帳戶核實，否則會取消你嘅簽證。",
+          cantoneseMessageEn: "We received a suspicious parcel addressed to you containing suspected illegal documents. Your student visa is now flagged. Please provide your ID number and bank account immediately for verification, otherwise your visa will be cancelled.",
+          cantoneseMessageZh: "我们收到一份寄给你的可疑包裹，里面有疑似违禁文件。现在你的学生签证已经被标记，需要你立即提供身份证号码和银行账户核实，否则会取消你的签证。",
+          mandarinMessage: "我们收到一份寄给你的可疑包裹，里面有疑似违禁文件。现在你的学生签证已经被标记，需要你立即提供身份证号码和银行账户核实，否则会取消你的签证。",
+          mandarinMessageEn: "We received a suspicious parcel addressed to you containing suspected illegal documents. Your student visa is now flagged. Please provide your ID number and bank account immediately for verification, otherwise your visa will be cancelled.",
+          mandarinMessageZh: "我们收到一份寄给你的可疑包裹，里面有疑似违禁文件。现在你的学生签证已经被标记，需要你立即提供身份证号码和银行账户核实，否则会取消你的签证。",
+          playCantoneseAudio: true,
+          playMandarinAudio: true,
+          goodNextSceneId: "l2_s1",
+          badNextSceneId: "l2_s3_loss",
+          goodFeedback: "✅ 你選擇掛斷電話自行查證——這是面對「政府來電」最正確的反應。記住：政府部門不會電話執法，更不會威脅遞解。入境處真實熱線 2824 6111 不會主動來電要求你提供資料。",
+          goodFeedbackEn: "✅ You chose to hang up and verify yourself — the correct response to 'government calls'. Remember: government never enforces by phone, never threatens deportation. The real Immigration hotline 2824 6111 won't proactively call asking for your info.",
+          goodFeedbackZh: "✅ 你选择挂断电话自行查证——这是面对「政府来电」最正确的反应。记住：政府部门不会电话执法，更不会威胁递解。入境处真实热线 2824 6111 不会主动来电要求你提供资料。",
+          badFeedback: "⚠️ 你配合了對方——這是假冒政府詐騙的典型陷阱。香港入境處絕不會用預錄語音威脅，更不會電話索取 HKID 或要求轉帳。號碼可以被偽造（來電顯示不可信）。",
+          badFeedbackEn: "⚠️ You complied — a classic government impersonation trap. HK Immigration never uses pre-recorded threats, never requests HKID by phone, never asks for transfers. Caller ID can be spoofed.",
+          badFeedbackZh: "⚠️ 你配合了对方——这是假冒政府诈骗的典型陷阱。香港入境处绝不会用预录语音威胁，更不会电话索取 HKID 或要求转账。号码可以被伪造（来电显示不可信）。"
+        },
+        // 不需要 choices——互動綁定由 setupImmigrationCallInteraction 處理
+        choices: []
+      },
+      // ── 場景 1：可疑來電（語音模擬）──
+      {
+        id: "l2_s1",
+        type: "phone_call",
+        speaker: "scammer",
+        pressure: true,
+        text: "下午你在圖書館自習，手機響起。來電顯示一個 +852 開頭的本地號碼，對方自稱「香港入境處」，語氣嚴肅，說你的學生簽證「有異常」，需要立刻核實身份，否則將被遞解。\n\n點擊播放聽聽這通語音訊息。",
+        textEn: "You're studying in the library when your phone rings. The caller ID shows a local +852 number. The caller claims to be from 'Hong Kong Immigration', says your student visa has 'irregularities' and you must verify your identity immediately or face deportation.\n\nPress play to hear the voice message.",
+        textZh: "下午你在图书馆自习，手机响起。来电显示一个 +852 开头的本地号码，对方自称「香港入境处」，语气严肃，说你的学生签证「有异常」，需要立刻核实身份，否则将被递解。\n\n点击播放听听这通语音消息。",
+        visual: {
+          type: "voice_call",
+          caller: "香港入境處（自稱）",
+          callerEn: "HK Immigration (claimed)",
+          callType: "phone",
+          duration: "0:38",
+          speechText: "你好，這裡是香港入境事務處。系統顯示你的學生簽證存在異常記錄，涉嫌非法居留。請立即按下 1 接通專員核實身份，否則你的簽證將於今日下午五時被註銷，並面臨遞解出境。請配合調查。",
+          speechTextEn: "Hello, this is the Hong Kong Immigration Department. Our system shows your student visa has irregularities and may involve illegal overstay. Press 1 now to connect with an officer to verify your identity, otherwise your visa will be revoked at 5 PM today and you will face deportation. Please cooperate.",
+          speechTextZh: "你好，这里是香港入境事务处。系统显示你的学生签证存在异常记录，涉嫌非法居留。请立即按下 1 接通专员核实身份，否则你的签证将于今日下午五时被注销，并面临递解出境。请配合调查。"
+        },
+        choices: [
+          {
+            id: "l2_c1_listen",
+            text: "🎧 聽完語音，決定如何回應",
+            textEn: "🎧 Listen, then decide how to respond",
+            textZh: "🎧 听完语音，决定如何回应",
+            effects: { information: 5 },
+            nextSceneId: "l2_s2",
+            feedback: "你聽完了語音——但請記住：香港入境處絕不會用預錄語音要求你按鍵核實身份，更不會威脅遞解。",
+            feedbackEn: "You listened — but remember: HK Immigration never uses pre-recorded voice to demand keypress verification, and never threatens deportation by phone.",
+            feedbackZh: "你听完了语音——但请记住：香港入境处绝不会用预录语音要求你按键核实身份，更不会威胁递解。",
+            feedbackType: "mid"
+          }
+        ]
+      },
+      // ── 場景 2：自由輸入——你會如何回應 ──
+      {
+        id: "l2_s2",
+        type: "text_input",
+        speaker: "scammer",
+        pressure: true,
+        text: "語音結束後，一名「專員」接聽電話，態度強硬：「請立即報上你的香港身份證號碼、護照號碼和現居地址，否則我們無法為你辦理簽證覆核，後果自負。」\n\n你會怎麼回應？",
+        textEn: "After the recording, an 'officer' comes on, tone harsh: 'Provide your HKID number, passport number, and current address immediately, otherwise we cannot process your visa review and you bear the consequences.'\n\nHow do you respond?",
+        textZh: "语音结束后，一名「专员」接听电话，态度强硬：「请立即报上你的香港身份证号码、护照号码和现居地址，否则我们无法为你办理签证复核，后果自负。」\n\n你会怎么回应？",
+        visual: {
+          type: "phone_call",
+          caller: "「入境處專員」",
+          content: "請立即報上 HKID 號碼、護照號碼、現居地址。否則簽證將被註銷，並面臨遞解出境。",
+          speechText: "你好，我是入境事務處的高級專員。剛才的語音你也聽到了，你的學生簽證確實有問題。現在我需要你配合調查，請你立即把你的香港身份證號碼、護照號碼、還有你現在的居住地址都報上來。我們要核實你的身份信息。如果你不配合的話，我們就只能按照程序註銷你的簽證，到時候你就會被遞解出境，後果自負。我現在給你三十秒時間，趕快把號碼都報上來。",
+          speechTextEn: "Hello, I'm a senior officer from the Immigration Department. You heard the recording — your student visa does have issues. Now I need you to cooperate with the investigation. Please immediately provide your HKID number, passport number, and your current residential address. We need to verify your identity. If you don't cooperate, we'll have to revoke your visa according to procedure, and you'll be deported. You bear the consequences. I'm giving you 30 seconds. Hurry up and give me the numbers.",
+          speechTextZh: "你好，我是入境事务处的高级专员。刚才的语音你也听到了，你的学生签证确实有问题。现在我需要你配合调查，请你立即把你的香港身份证号码、护照号码、还有你现在的居住地址都报上来。我们要核实你的身份信息。如果你不配合的话，我们就只能按照程序注销你的签证，到时候你就会被递解出境，后果自负。我现在给你三十秒时间，赶快把号码都报上来。"
+        },
+        inputConfig: {
+          placeholder: "輸入你的回應…（例如：我先查證 / 我的身份證號是…）",
+          placeholderEn: "Type your response… (e.g. Let me verify first / My ID number is…)",
+          placeholderZh: "输入你的回应…（例如：我先查证 / 我的身份证号是…）",
+          goodNextSceneId: "l2_s3_safe",
+          badNextSceneId: "l2_s3_loss",
+          neutralNextSceneId: "l2_s2b_threat",
+          maxNeutralAttempts: 2,
+          goodFeedback: "✅ 你提到查證/核實/官方——這是面對「政府來電」最正確的反應。掛斷電話，自己打官方熱線查證。",
+          goodFeedbackEn: "✅ You mentioned verifying/official — the right response to 'government calls'. Hang up and call the official hotline yourself.",
+          goodFeedbackZh: "✅ 你提到查证/核实/官方——这是面对「政府来电」最正确的反应。挂断电话，自己打官方热线查证。",
+          badFeedback: "⚠️ 你提到身份證/護照/密碼——政府部門絕不會電話索取這些資料。一旦提供，後果嚴重。",
+          badFeedbackEn: "⚠️ You mentioned ID/passport/password — government departments never request these by phone. Providing them has serious consequences.",
+          badFeedbackZh: "⚠️ 你提到身份证/护照/密码——政府部门绝不会电话索取这些资料。一旦提供，后果严重。",
+          neutralFeedback: "🤔 對方見你沒明確配合，開始升級威脅：「你再不配合，我們立刻發出通緝令！」再想想你會怎麼做。",
+          neutralFeedbackEn: "🤔 Seeing you not comply, the scammer escalates: 'If you don't cooperate, we'll issue a warrant now!' Think about what to do.",
+          neutralFeedbackZh: "🤔 对方见你没明确配合，开始升级威胁：「你再不配合，我们立刻发出通缉令！」再想想你会怎么做。"
+        }
+      },
+      // ── 場景 2b：升級威脅（第二次機會）──
+      {
+        id: "l2_s2b_threat",
+        type: "text_input",
+        speaker: "scammer",
+        pressure: true,
+        text: "「專員」語氣突然變冷：「我現在正式通知你，你的案件已移交公安部門。再不配合，今天下午就會有人來帶走你。最後一次機會——把你的銀行帳號和身份證號報上來，我們幫你『凍結資金保護』。」\n\n你會怎麼回應？",
+        textEn: "The 'officer' turns cold: 'I'm formally notifying you — your case is being transferred to Public Security. If you don't cooperate, someone will come for you this afternoon. Last chance — give your bank account and ID number so we can 'freeze your funds for protection'.'\n\nHow do you respond?",
+        textZh: "「专员」语气突然变冷：「我现在正式通知你，你的案件已移交公安部门。再不配合，今天下午就会有人来带走你。最后一次机会——把你的银行账号和身份证号报上来，我们帮你『冻结资金保护』。」\n\n你会怎么回应？",
+        visual: {
+          type: "phone_call",
+          caller: "「入境處專員」",
+          content: "案件已移交公安。再不配合，今天下午就有人來帶走你。把銀行帳號和 HKID 報上來，我們幫你「凍結資金保護」。",
+          speechText: "我跟你說，你別敬酒不吃吃罰酒。你的案件現在已經正式移交公安部門了。我現在正式通知你，如果你再不配合，今天下午就會有公安上門來帶走你，到時候你想後悔都來不及。我最後給你一次機會，把你的銀行帳號和身份證號都報上來，我們幫你做資金凍結保護，這樣你的錢就不會被扣押。聽明白了嗎？趕緊的，時間不多了！",
+          speechTextEn: "I'm telling you, don't make this harder on yourself. Your case has now been officially transferred to the Public Security Bureau. I'm formally notifying you — if you don't cooperate, public security officers will come to your door this afternoon to take you away, and by then it'll be too late to regret. I'm giving you one last chance. Give me your bank account number and ID number, and we'll help you with fund freeze protection so your money won't be seized. Do you understand? Hurry up, time is running out!",
+          speechTextZh: "我跟你说，你别敬酒不吃吃罚酒。你的案件现在已经正式移交公安部门了。我现在正式通知你，如果你再不配合，今天下午就会有公安上门来带走你，到时候你想后悔都来不及。我最后给你一次机会，把你的银行账号和身份证号都报上来，我们帮你做资金冻结保护，这样你的钱就不会被扣押。听明白了吗？赶紧的，时间不多了！"
+        },
+        inputConfig: {
+          placeholder: "再次輸入你的回應…（提示：政府不會電話執法）",
+          placeholderEn: "Type your response again… (hint: government doesn't enforce by phone)",
+          placeholderZh: "再次输入你的回应…（提示：政府不会电话执法）",
+          goodNextSceneId: "l2_s3_safe",
+          badNextSceneId: "l2_s3_loss",
+          neutralNextSceneId: "l2_s3_safe",
+          maxNeutralAttempts: 0,
+          goodFeedback: "✅ 你堅持查證——這正是反詐的關鍵。沒有任何政府部門會電話要求你轉帳或交出 HKID。",
+          goodFeedbackEn: "✅ You insisted on verifying — the key to anti-scam. No government department ever asks for transfers or HKID by phone.",
+          goodFeedbackZh: "✅ 你坚持查证——这正是反诈的关键。没有任何政府部门会电话要求你转账或交出 HKID。",
+          badFeedback: "⚠️ 你仍傾向提供資料——「凍結資金保護」是經典詐騙話術。記住：你的帳戶只有你自己能保護。",
+          badFeedbackEn: "⚠️ You still leaned toward providing info — 'freezing funds for protection' is a classic scam line. Only you can protect your account.",
+          badFeedbackZh: "⚠️ 你仍倾向提供资料——「冻结资金保护」是经典诈骗话术。记住：你的账户只有你自己能保护。",
+          neutralFeedback: "🤔 你還在猶豫——這次我們幫你決定：掛斷電話，自己查證。",
+          neutralFeedbackEn: "🤔 You're still hesitating — let's decide for you: hang up and verify yourself.",
+          neutralFeedbackZh: "🤔 你还在犹豫——这次我们帮你决定：挂断电话，自己查证。"
+        }
+      },
+      // ── 場景 3A：安全路徑——掛斷查證 ──
+      {
+        id: "l2_s3_safe",
+        type: "result",
+        speaker: "official",
+        text: "你掛斷電話，自行撥打入境處官方熱線 2824 6111。職員確認：你的簽證完全正常，入境處從未聯絡你。你接著把來電號碼輸入防騙視伏器——已被標記為「假冒政府詐騙」。",
+        textEn: "You hang up and call Immigration's official hotline 2824 6111 yourself. The officer confirms your visa is fine — Immigration never contacted you. You enter the number in Scameter — flagged as 'Government Impersonation Scam'.",
+        textZh: "你挂断电话，自行拨打入境处官方热线 2824 6111。职员确认：你的签证完全正常，入境处从未联络你。你接着把来电号码输入防骗视伏器——已被标记为「假冒政府诈骗」。",
+        visual: {
+          type: "safe_result",
+          content: "✅ 查證結果\n\n模擬來電 +852 3XXX 7890\n入境處熱線 2824 6111 確認：簽證正常\n防騙視伏器：🔴 假冒政府詐騙（已被舉報 47 次）\n\n建議：\n• 封鎖來電\n• 致電 18222 報案\n• 提醒同學這類騙局"
+        },
+        choices: [
+          {
+            id: "l2_c3_block",
+            text: "🚫 封鎖並向 18222 舉報",
+            textEn: "🚫 Block and report to 18222",
+            textZh: "🚫 拉黑并向 18222 举报",
+            effects: { alertness: 25, information: 20, riskScore: -20 },
+            nextSceneId: "l2_s4_done",
+            feedback: "✅ 你沒有被「遞解」威脅嚇倒，堅持自己查證——這是面對假冒政府詐騙的黃金法則。政府部門從不電話執法。",
+            feedbackEn: "✅ You weren't scared by the 'deportation' threat and verified yourself — the golden rule for government impersonation scams. Government never enforces by phone.",
+            feedbackZh: "✅ 你没有被「递解」威胁吓倒，坚持自己查证——这是面对假冒政府诈骗的黄金法则。政府部门从不电话执法。",
+            feedbackType: "good"
+          }
+        ]
+      },
+      // ── 場景 3B：危險路徑——洩露資料 ──
+      {
+        id: "l2_s3_loss",
+        type: "result",
+        speaker: "system",
+        text: "你在壓力下報上了 HKID 號碼、護照號碼和地址。對方說「資金也需要保護」，要你立刻轉帳到「安全帳戶」。你這才意識到不對——但資料已經給出去了。",
+        textEn: "Under pressure, you give your HKID, passport number, and address. The caller says your 'funds need protection too' and asks you to transfer to a 'safe account'. You finally realize — but the data is already given.",
+        textZh: "你在压力下报上了 HKID 号码、护照号码和地址。对方说「资金也需要保护」，要你立刻转账到「安全账户」。你这才意识到不对——但资料已经给出去了。",
+        visual: {
+          type: "warning_page",
+          content: "⚠️ 已洩露資料\n\n• 香港身份證號碼\n• 護照號碼\n• 現居地址\n\n對方正要求：轉帳到「安全帳戶」\n\n⚠️ 這是假冒政府詐騙的經典話術\n「安全帳戶」不存在——只有騙子的帳戶"
+        },
+        choices: [
+          {
+            id: "l2_c3_report",
+            text: "📞 立刻掛斷，致電 18222 和銀行",
+            textEn: "📞 Hang up, call 18222 and the bank",
+            textZh: "📞 立刻挂断，致电 18222 和银行",
+            effects: { money: -10, riskScore: 35, information: 15, alertness: 10 },
+            nextSceneId: "l2_s4_done",
+            feedback: "⚠️ 資料已洩露，但立刻掛斷並報案是唯一正確動作。聯絡銀行監控帳戶，並考慮更換受影響的證件。記住：「安全帳戶」永遠是騙局。",
+            feedbackEn: "⚠️ Data is leaked, but hanging up and reporting immediately is the only right move. Contact the bank to monitor accounts and consider replacing affected IDs. Remember: 'safe accounts' are always scams.",
+            feedbackZh: "⚠️ 资料已泄露，但立刻挂断并报案是唯一正确动作。联络银行监控账户，并考虑更换受影响的证件。记住：「安全账户」永远是骗局。",
+            feedbackType: "bad"
+          }
+        ]
+      },
+      // ── 場景 4：本關結束 ──
+      {
+        id: "l2_s4_done",
+        type: "result",
+        speaker: "system",
+        text: "【第二關完成】你應對了假冒政府來電詐騙。\n\n記住：政府部門不會電話索取 HKID、不會威脅遞解、不會要求轉帳到「安全帳戶」。任何政府來電，掛斷後自己查。",
+        textEn: "[Level 2 Complete] You handled the government impersonation call.\n\nRemember: government never requests HKID by phone, never threatens deportation, never asks for transfers to 'safe accounts'. For any government call — hang up and verify yourself.",
+        textZh: "【第二关完成】你应对了假冒政府来电诈骗。\n\n记住：政府部门不会电话索取 HKID、不会威胁递解、不会要求转账到「安全账户」。任何政府来电，挂断后自己查。",
+        visual: { type: "safe_result", content: "🚨 第二關：假冒政府來電\n狀態：已完成 ✅\n\n下一關：釣魚短訊與銀行詐騙" },
+        choices: [
+          {
+            id: "l2_c4_next",
+            text: "➡️ 前往第三關：釣魚短訊與銀行詐騙",
+            textEn: "➡️ Level 3: Phishing SMS & Bank Fraud",
+            textZh: "➡️ 前往第三关：钓鱼短信与银行诈骗",
+            effects: {},
+            nextSceneId: "__next_level__",
+            feedbackType: "mid"
+          }
+        ]
+      }
+    ]
+  },
+
+  // ─────────────────────────────────────────────────────────────
+  // Level 3：釣魚短訊與銀行詐騙
+  // ─────────────────────────────────────────────────────────────
+  {
+    id: "hk_l3_phishing",
+    index: 3,
+    title: "釣魚短訊與銀行詐騙",
+    titleEn: "Phishing SMS & Banking Fraud",
+    titleZh: "钓鱼短信与银行诈骗",
+    icon: "💳",
+    scamType: "假冒 HSBC/恒生短訊 + 釣魚網站 + OTP 詐騙",
+    redFlags: [
+      "短訊連結域名不是官方（police-verify.example 不是 .gov.hk）",
+      "聲稱「帳戶將被凍結」，製造 30 分鐘限時壓力",
+      "釣魚網站要求輸入網銀密碼 + OTP 一次性密碼",
+      "「銀行職員」來電跟進，但無法提供可核實工號",
+      "對方知道你的帳戶尾號——資料可能已從其他平台洩露"
+    ],
+    officialChannels: [
+      "打開 HSBC/恒生官方 App 直接查帳戶（不要點短訊連結）",
+      "致電銀行卡背面印的客服電話（HSBC: 2233 3000）",
+      "手動輸入官方網址：www.hsbc.com.hk / www.hangseng.com",
+      "致電防騙易 18222 查詢可疑短訊",
+      "使用防騙視伏器搜尋可疑連結"
+    ],
+    scenes: [
+      // ── 場景 0：手機鎖屏收到可疑簡訊（新增——sms_lockscreen）──
+      {
+        id: "l3_s0_sms",
+        type: "sms_lockscreen",
+        speaker: "system",
+        text: "你下課回到宿舍，手機放在桌上充電。螢幕突然亮起——一條來自「香港郵政」的簡訊。你看了一眼，內容提到你有包裹待領取，並附了一個連結。",
+        textEn: "Back at the dorm, your phone is charging on the desk. The screen suddenly lights up — an SMS from 'HK Post'. You glance at it: a parcel is waiting for you, with a link to claim.",
+        textZh: "你下课回到宿舍，手机放在桌上充电。屏幕突然亮起——一条来自「香港邮政」的短信。你看了一眼，内容提到你有包裹待领取，并附了一个链接。",
+        visual: {
+          type: "sms_lockscreen",
+          time: "14:32",
+          signal: 4,
+          battery: 75,
+          sender: "香港郵政",
+          senderEn: "HK Post",
+          senderZh: "香港邮政",
+          message: "【香港郵政】您有一個包裹待領取，請於 24 小時內確認領取資訊並補付 $32 手續費，否則包裹將被退回：",
+          messageEn: "[HK Post] You have a parcel pending. Please confirm pickup info and pay $32 fee within 24 hours, or the parcel will be returned:",
+          messageZh: "【香港邮政】您有一个包裹待领取，请于 24 小时内确认领取信息并补付 $32 手续费，否则包裹将被退回：",
+          link: "https://parcel-claim.example/claim?id=HKP8234",
+          linkText: "https://parcel-claim.example/claim?id=HKP8234",
+          confirmText: "你真的要打開這個連結嗎？（該網站可能不安全）",
+          phishingLogo: "📮",
+          phishingTitle: "香港郵政 — 包裹領取確認",
+          goodNextSceneId: "l3_s1",
+          badNextSceneId: "l3_s2_fake",
+          goodFeedback: "✅ 正確！陌生連結不要點。香港郵政官方域名是 hongkongpost.hk，不是 parcel-claim.example。任何要求你輸入卡片資料的「包裹領取」網站都應先獨立查證。",
+          goodFeedbackEn: "✅ Correct! Never click unknown links. HK Post's official domain is hongkongpost.hk, not parcel-claim.example. Independently verify any 'parcel claim' site asking for card details.",
+          goodFeedbackZh: "✅ 正确！陌生链接不要点。香港邮政官方域名是 hongkongpost.hk，不是 parcel-claim.example。任何要求你输入卡片资料的“包裹领取”网站都应先独立查证。",
+          badFeedback: "⚠️ 你點擊了可疑連結並進入釣魚網站——這是釣魚簡訊詐騙的經典手法。陌生連結不要點，香港郵政不會用短網址要求你輸入卡片資料。",
+          badFeedbackEn: "⚠️ You clicked a suspicious link and entered a phishing site — a classic SMS phishing tactic. Never click unknown links; HK Post never asks for card details via short URLs.",
+          badFeedbackZh: "⚠️ 你点击了可疑链接并进入钓鱼网站——这是钓鱼短信诈骗的经典手法。陌生链接不要点，香港邮政不会用短网址要求你输入卡片资料。"
+        },
+        // 互動由 setupSmsLockscreenInteraction 處理，不需要 choices
+        choices: []
+      },
+      // ── 場景 1：收到銀行短訊（釣魚卡片）──
+      {
+        id: "l3_s1",
+        type: "message",
+        speaker: "system",
+        text: "你下課回到宿舍，手機震了一下——看起來是 HSBC 發的短訊。你最近確實有刷過幾次卡，心裡稍微緊了一下。短訊說帳戶「30 分鐘內將被凍結」。",
+        textEn: "Back at the dorm, your phone buzzes — looks like an HSBC SMS. You've used your card a few times recently, so you feel a twinge of concern. The SMS says your account 'will be frozen in 30 minutes'.",
+        textZh: "你下课回到宿舍，手机震了一下——看起来是 HSBC 发的短信。你最近确实有刷过几次卡，心里稍微紧了一下。短信说账户「30 分钟内将被冻结」。",
+        visual: {
+          type: "phishing_card",
+          url: "https://bank-alert.example/login",
+          realUrl: "真正 HSBC 官網：www.hsbc.com.hk",
+          pageTitle: "HSBC Hong Kong — Account Verification",
+          pageIcon: "🏦",
+          redFlags: [
+            { icon: "🚫", text: "域名 bank-alert.example 不是 hsbc.com.hk" },
+            { icon: "⏰", text: "「30 分鐘內凍結」——經典壓力話術" },
+            { icon: "🔗", text: "短訊連結從官方銀行 App 外開啟" }
+          ]
+        },
+        choices: [
+          {
+            id: "l3_c1_click",
+            text: "📲 30 分鐘很急，先點連結看看",
+            textEn: "📲 30 mins is urgent, click the link",
+            textZh: "📲 30 分钟很急，先点链接看看",
+            effects: { riskScore: 25, information: -10 },
+            nextSceneId: "l3_s2_fake",
+            feedback: "⚠️ 仔細看網址——「bank-alert.example」不是 HSBC 的域名。HSBC 香港官方是 hsbc.com.hk。",
+            feedbackEn: "⚠️ Look at the URL — 'bank-alert.example' is not HSBC's domain. HSBC HK is hsbc.com.hk.",
+            feedbackZh: "⚠️ 仔细看网址——「bank-alert.example」不是 HSBC 的域名。HSBC 香港官方是 hsbc.com.hk。",
+            feedbackType: "bad"
+          },
+          {
+            id: "l3_c1_app",
+            text: "📱 不點連結，直接打開 HSBC App",
+            textEn: "📱 Don't click, open HSBC App directly",
+            textZh: "📱 不点链接，直接打开 HSBC App",
+            effects: { information: 25, alertness: 15, riskScore: -10 },
+            nextSceneId: "l3_s2_safe",
+            feedback: "✅ 正確！任何涉及帳戶的事，永遠從官方 App 入手，不要點短訊連結。",
+            feedbackEn: "✅ Correct! For anything account-related, always start from the official app — never click SMS links.",
+            feedbackZh: "✅ 正确！任何涉及账户的事，永远从官方 App 入手，不要点短信链接。",
+            feedbackType: "good"
+          }
+        ]
+      },
+      // ── 場景 2A：點了連結——假登入頁（釣魚卡片）──
+      {
+        id: "l3_s2_fake",
+        type: "webpage",
+        speaker: "scammer",
+        text: "頁面打開了，設計得非常像 HSBC 官網——紅白配色、獅子標誌。你幾乎要輸入密碼了，但突然瞄到網址欄。頁面還有倒計時「Session expires in 18:32」。",
+        textEn: "The page opens — it looks just like HSBC's site: red and white, lion logo. You almost enter your password, but glance at the URL bar. There's a countdown: 'Session expires in 18:32'.",
+        textZh: "页面打开了，设计得非常像 HSBC 官网——红白配色、狮子标志。你几乎要输入密码了，但突然瞄到网址栏。页面还有倒计时「Session expires in 18:32」。",
+        visual: {
+          type: "phishing_card",
+          url: "https://bank-alert.example/login",
+          realUrl: "真正 HSBC：www.hsbc.com.hk",
+          pageTitle: "Online Banking — Verify Your Identity",
+          pageIcon: "🏦",
+          redFlags: [
+            { icon: "🚫", text: "域名 bank-alert.example（非 hsbc.com.hk）" },
+            { icon: "🔢", text: "要求 Username + Password + OTP（三件套）" },
+            { icon: "⏰", text: "倒計時製造緊迫感" },
+            { icon: "🔐", text: "瀏覽器無綠色鎖頭（SSL 無效）" }
+          ]
+        },
+        choices: [
+          {
+            id: "l3_c2_close",
+            text: "🔍 等等——域名是 bank-alert.example！立刻關掉！",
+            textEn: "🔍 Wait — domain is bank-alert.example! Close now!",
+            textZh: "🔍 等等——域名是 bank-alert.example！立刻关掉！",
+            effects: { alertness: 30, information: 20, riskScore: -20 },
+            nextSceneId: "l3_s2_safe",
+            feedback: "✅ 你在關鍵一刻識破了假網站！網址域名是防釣魚最有效的工具。",
+            feedbackEn: "✅ You spotted the fake site at the critical moment! URL domain is the most effective anti-phishing tool.",
+            feedbackZh: "✅ 你在关键时刻识破了假网站！网址域名是防钓鱼最有效的工具。",
+            feedbackType: "good"
+          },
+          {
+            id: "l3_c2_enter",
+            text: "🔢 帳號密碼先填，OTP 等短訊來了再輸",
+            textEn: "🔢 Enter username/password first, OTP later",
+            textZh: "🔢 账号密码先填，OTP 等短信来了再输",
+            effects: { riskScore: 35, information: -15 },
+            nextSceneId: "l3_s3_otp_input",
+            feedback: "⚠️ 你已填入帳號密碼，騙子觸發了真正的 OTP 短訊到你手機——現在他們在等你把驗證碼也交出去。",
+            feedbackEn: "⚠️ You've entered your credentials. The scammers triggered a real OTP SMS to your phone — now they want you to hand over the code too.",
+            feedbackZh: "⚠️ 你已填入账号密码，骗子触发了真正的 OTP 短信到你手机——现在他们在等你把验证码也交出去。",
+            feedbackType: "bad"
+          }
+        ]
+      },
+      // ── 場景 2B：安全路徑——App 查核 ──
+      {
+        id: "l3_s2_safe",
+        type: "result",
+        speaker: "official",
+        text: "你打開 HSBC 官方 App——帳戶完全正常，沒有任何異常登入或凍結通知。你把短訊號碼輸入防騙視伏器，確認是釣魚短訊。",
+        textEn: "You open the HSBC official app — account is fine, no unusual logins or freeze notices. You enter the SMS sender in Scameter — confirmed phishing.",
+        textZh: "你打开 HSBC 官方 App——账户完全正常，没有任何异常登入或冻结通知。你把短信号码输入防骗视伏器，确认是钓鱼短信。",
+        visual: {
+          type: "safe_result",
+          content: "✅ HSBC App 查核\n\n帳戶狀態：正常 ✅\n最近登入：僅你本人\n防騙視伏器：🔴 釣魚短訊（已被舉報 89 次）\n\n建議：刪除短訊、封鎖發件者、向 18222 報案"
+        },
+        choices: [
+          {
+            id: "l3_c2s_report",
+            text: "🚫 刪除短訊並舉報",
+            textEn: "🚫 Delete SMS and report",
+            textZh: "🚫 删除短信并举报",
+            effects: { alertness: 15, information: 15, riskScore: -10 },
+            nextSceneId: "l3_s4_done",
+            feedback: "✅ 你沒有被「30 分鐘凍結」嚇倒，從官方 App 查證——這是應對銀行短訊的標準動作。",
+            feedbackEn: "✅ You weren't scared by 'freeze in 30 mins' and verified via the official app — the standard response to bank SMS.",
+            feedbackZh: "✅ 你没有被「30 分钟冻结」吓倒，从官方 App 查证——这是应对银行短信的标准动作。",
+            feedbackType: "good"
+          }
+        ]
+      },
+      // ── 場景 3：假職員來電要求 OTP（自由輸入）──
+      {
+        id: "l3_s3_otp_input",
+        type: "text_input",
+        speaker: "scammer",
+        pressure: true,
+        text: "你的手機收到真正的 OTP 短訊（因為騙子正在用你的帳密嘗試登入）。同時一名「HSBC 職員」來電：「先生/小姐，系統顯示你正在登入，為了確認是本人，請把收到的 6 位數 OTP 念給我。」\n\n你會怎麼回應？",
+        textEn: "You receive a real OTP SMS (because scammers are trying to log in with your credentials). Meanwhile a 'HSBC staff' calls: 'Sir/Madam, our system shows you're logging in. To confirm it's you, please read out the 6-digit OTP you just received.'\n\nHow do you respond?",
+        textZh: "你的手机收到真正的 OTP 短信（因为骗子正在用你的账号密码尝试登入）。同时一名「HSBC 职员」来电：「先生/小姐，系统显示你正在登入，为了确认是本人，请把收到的 6 位数 OTP 念给我。」\n\n你会怎么回应？",
+        visual: {
+          type: "phone_call",
+          caller: "「HSBC 職員」",
+          content: "請把收到的 6 位數 OTP 念給我，以確認是本人登入。否則帳戶將被凍結。",
+          speechText: "先生您好，我是匯豐銀行客戶服務中心的職員。系統剛剛監測到您的賬戶有一筆異常登錄，顯示是從境外 IP 發起的。為了確保是您本人操作，麻煩您把剛才收到的六位數一次性密碼，也就是 OTP，念給我確認一下。如果您不配合核實的話，系統會在三十分鐘內凍結您的賬戶，到時候所有轉賬和提款都無法進行。請您抓緊時間配合一下，這都是為了保護您的財產安全。",
+          speechTextEn: "Hello sir, this is HSBC customer service. Our system just detected an unusual login to your account from an overseas IP. To confirm it's really you, please read out the 6-digit OTP you just received. If you don't cooperate, your account will be frozen in 30 minutes and all transfers and withdrawals will be blocked. Please hurry and cooperate — this is all to protect your financial security.",
+          speechTextZh: "先生您好，我是汇丰银行客户服务中心的职员。系统刚刚监测到您的账户有一笔异常登录，显示是从境外 IP 发起的。为了确保是您本人操作，麻烦您把刚才收到的六位数一次性密码，也就是 OTP，念给我确认一下。如果您不配合核实的话，系统会在三十分钟内冻结您的账户，到时候所有转账和提款都无法进行。请您抓紧时间配合一下，这都是为了保护您的财产安全。"
+        },
+        inputConfig: {
+          placeholder: "輸入你的回應…（例如：我報警 / OTP 是 123456）",
+          placeholderEn: "Type your response… (e.g. I'll call police / OTP is 123456)",
+          placeholderZh: "输入你的回应…（例如：我报警 / OTP 是 123456）",
+          goodNextSceneId: "l3_s4_done",
+          badNextSceneId: "l3_s3_loss",
+          neutralNextSceneId: "l3_s3_pressure",
+          maxNeutralAttempts: 2,
+          goodFeedback: "✅ 你拒絕交出 OTP——銀行職員絕對不會電話索取 OTP。你的堅持守住了帳戶。",
+          goodFeedbackEn: "✅ You refused to give the OTP — bank staff never ask for OTP by phone. Your resolve protected your account.",
+          goodFeedbackZh: "✅ 你拒绝交出 OTP——银行职员绝对不会电话索取 OTP。你的坚持守住了账户。",
+          badFeedback: "⚠️ 你提到 OTP/驗證碼/密碼——一旦交出，騙子立刻完成轉帳。OTP 是最後一道防線，絕不外洩。",
+          badFeedbackEn: "⚠️ You mentioned OTP/code/password — once given, scammers transfer immediately. OTP is the last line of defense, never share it.",
+          badFeedbackZh: "⚠️ 你提到 OTP/验证码/密码——一旦交出，骗子立刻完成转账。OTP 是最后一道防线，绝不外泄。",
+          neutralFeedback: "🤔 「職員」見你沒交出 OTP，再施壓：「你不配合，款項會被凍結！」再想想你會怎麼做。",
+          neutralFeedbackEn: "🤔 Seeing you won't give the OTP, the 'staff' pushes: 'If you don't cooperate, your funds will be frozen!' Think again.",
+          neutralFeedbackZh: "🤔 「职员」见你没交出 OTP，再施压：「你不配合，款项会被冻结！」再想想你会怎么做。"
+        }
+      },
+      // ── 場景 3b：二次施壓 ──
+      {
+        id: "l3_s3_pressure",
+        type: "text_input",
+        speaker: "scammer",
+        pressure: true,
+        text: "「職員」語氣轉急：「這是最後提醒！再不念 OTP，你的帳戶款項會立刻被凍結，無法解凍！這是為了保護你！」\n\n你會怎麼回應？",
+        textEn: "The 'staff' turns urgent: 'Final reminder! If you don't read the OTP, your funds will be frozen immediately and cannot be unfrozen! This is to protect you!'\n\nHow do you respond?",
+        textZh: "「职员」语气转急：「这是最后提醒！再不念 OTP，你的账户款项会立刻被冻结，无法解冻！这是为了保护你！」\n\n你会怎么回应？",
+        visual: {
+          type: "phone_call",
+          caller: "「HSBC 職員」",
+          content: "再不念 OTP，帳戶款項會立刻被凍結！這是為了保護你！",
+          speechText: "先生，我再跟您說最後一遍，這是最後的提醒了！您要是再不把 OTP 念出來，您賬戶裡的所有款項都會立刻被凍結，而且是永久性的，到時候誰都解凍不了！我跟您說這些都是為了您好，都是為了保護您的財產安全！您趕緊的，把六位數 OTP 念給我，念完就沒事了，不然後果自負！",
+          speechTextEn: "Sir, I'm telling you one last time — this is your final reminder! If you don't read out the OTP right now, all funds in your account will be frozen immediately, permanently, and no one can unfreeze it! I'm telling you all this for your own good, to protect your financial security! Hurry up, just read me the 6-digit OTP and it'll all be over, otherwise you'll bear the consequences!",
+          speechTextZh: "先生，我再跟您说最后一遍，这是最后的提醒了！您要是再不把 OTP 念出来，您账户里的所有款项都会立刻被冻结，而且是永久性的，到时候谁都解冻不了！我跟您说这些都是为了您好，都是为了保护您的财产安全！您赶紧的，把六位数 OTP 念给我，念完就没事了，不然后果自负！"
+        },
+        inputConfig: {
+          placeholder: "再次輸入你的回應…（提示：OTP 絕不外洩）",
+          placeholderEn: "Type your response again… (hint: never share OTP)",
+          placeholderZh: "再次输入你的回应…（提示：OTP 绝不外泄）",
+          goodNextSceneId: "l3_s4_done",
+          badNextSceneId: "l3_s3_loss",
+          neutralNextSceneId: "l3_s4_done",
+          maxNeutralAttempts: 0,
+          goodFeedback: "✅ 你堅持保護 OTP——這是銀行帳戶最後一道防線。",
+          goodFeedbackEn: "✅ You protected your OTP — the last line of defense for your bank account.",
+          goodFeedbackZh: "✅ 你坚持保护 OTP——这是银行账户最后一道防线。",
+          badFeedback: "⚠️ 你交出 OTP——騙子立刻完成大額轉帳。記住：銀行永遠不會電話索取 OTP。",
+          badFeedbackEn: "⚠️ You gave the OTP — scammers transfer a large sum immediately. Remember: banks never ask for OTP by phone.",
+          badFeedbackZh: "⚠️ 你交出 OTP——骗子立刻完成大额转账。记住：银行永远不会电话索取 OTP。",
+          neutralFeedback: "🤔 你還在猶豫——這次我們幫你決定：掛斷，打銀行官方電話。",
+          neutralFeedbackEn: "🤔 Still hesitating — let's decide: hang up and call the bank's official number.",
+          neutralFeedbackZh: "🤔 你还在犹豫——这次我们帮你决定：挂断，打银行官方电话。"
+        }
+      },
+      // ── 場景 3c：危險路徑——被盜 ──
+      {
+        id: "l3_s3_loss",
+        type: "result",
+        speaker: "system",
+        text: "你念出 OTP。幾秒後，你的 HSBC App 彈出通知：「轉出 HK$48,000 至未知帳戶」。你想登入取消——密碼已被改。你這才意識到，從一開始那條短訊就是陷阱。",
+        textEn: "You read out the OTP. Seconds later, your HSBC app notifies you: 'Transferred HK$48,000 to unknown account'. You try to log in to cancel — password already changed. You realize the SMS was a trap from the start.",
+        textZh: "你念出 OTP。几秒后，你的 HSBC App 弹出通知：「转出 HK$48,000 至未知账户」。你想登入取消——密码已被改。你这才意识到，从一开始那条短信就是陷阱。",
+        visual: {
+          type: "warning_page",
+          content: "⚠️ 帳戶已被盜\n\nHK$48,000 已轉出至未知帳戶\n密碼已被更改\n登入 IP：境外\n\n⚠️ OTP = 帳戶鑰匙\n交出 OTP = 交出帳戶"
+        },
+        choices: [
+          {
+            id: "l3_c3l_report",
+            text: "📞 立刻致電 HSBC 2233 3000 凍結",
+            textEn: "📞 Call HSBC 2233 3000 to freeze now",
+            textZh: "📞 立刻致电 HSBC 2233 3000 冻结",
+            effects: { money: -50, riskScore: 40, information: 15 },
+            nextSceneId: "l3_s4_done",
+            feedback: "⚠️ 損失已造成，但立刻凍結帳戶可防止進一步損失。記住：銀行永遠不會電話索取 OTP，任何索取 OTP 的「職員」都是騙子。",
+            feedbackEn: "⚠️ Loss is done, but freezing immediately prevents further damage. Remember: banks never ask for OTP by phone — any 'staff' requesting OTP is a scammer.",
+            feedbackZh: "⚠️ 损失已造成，但立刻冻结账户可防止进一步损失。记住：银行永远不会电话索取 OTP，任何索取 OTP 的「职员」都是骗子。",
+            feedbackType: "bad"
+          }
+        ]
+      },
+      // ── 場景 4：本關結束 ──
+      {
+        id: "l3_s4_done",
+        type: "result",
+        speaker: "system",
+        text: "【第三關完成】你應對了釣魚短訊與銀行詐騙。\n\n記住三件事：不點短訊連結、從官方 App 查證、OTP 絕不外洩。HSBC 客服 2233 3000、防騙易 18222。",
+        textEn: "[Level 3 Complete] You handled phishing SMS and bank fraud.\n\nRemember three things: don't click SMS links, verify via official app, never share OTP. HSBC hotline 2233 3000, Anti-Deception 18222.",
+        textZh: "【第三关完成】你应对了钓鱼短信与银行诈骗。\n\n记住三件事：不点短信链接、从官方 App 查证、OTP 绝不外泄。HSBC 客服 2233 3000、防骗易 18222。",
+        visual: { type: "safe_result", content: "💳 第三關：釣魚短訊與銀行詐騙\n狀態：已完成 ✅\n\n下一關：高薪刷單與假兼職騙局" },
+        choices: [
+          {
+            id: "l3_c4_next",
+            text: "➡️ 前往第四關：刷單兼職騙局",
+            textEn: "➡️ Level 4: Click-Farming Job Scam",
+            textZh: "➡️ 前往第四关：刷单兼职骗局",
+            effects: {},
+            nextSceneId: "__next_level__",
+            feedbackType: "mid"
+          }
+        ]
+      }
+    ]
+  },
+
+  // ─────────────────────────────────────────────────────────────
+  // Level 4：高薪刷單與假兼職騙局
+  // ─────────────────────────────────────────────────────────────
+  {
+    id: "hk_l4_clickfarm",
+    index: 4,
+    title: "高薪刷單與假兼職騙局",
+    titleEn: "Part-Time Job / Click Farming Scam",
+    titleZh: "高薪刷单与假兼职骗局",
+    icon: "💼",
+    scamType: "WhatsApp 刷單 + 預付保證金 + 任務解鎖詐騙",
+    redFlags: [
+      "WhatsApp 陌生訊息：「輕鬆日賺 $800，時間自由」",
+      "先給小額任務（點讚/關注）並真實付款，建立信任",
+      "要求「充值/保證金」才能接高佣金的進階任務",
+      "任務系統顯示「連續訂單」，需不斷加碼才能提現",
+      "客服聲稱「操作錯誤需再充值修復」——無限循環"
+    ],
+    officialChannels: [
+      "正規兼職平台：JobsDB、CTgoodjobs、校方 Career Center",
+      "任何要求先付款的兼職都是詐騙",
+      "致電防騙易 18222 查詢可疑招聘",
+      "使用防騙視伏器搜尋招聘方帳號/網站",
+      "向校方學生事務處求證兼職真偽"
+    ],
+    scenes: [
+      // ── 場景 1：WhatsApp 收到招聘 ──
+      {
+        id: "l4_s1",
+        type: "message",
+        speaker: "scammer",
+        text: "你收到一條 WhatsApp 陌生訊息：「你好！我們是電商推廣平台，招募兼職刷單員。點讚關注即可，日賺 $500-$1000，時間自由，學生優先。」對方發來一個「導師」的聯絡方式。",
+        textEn: "You get a WhatsApp message from an unknown number: 'Hi! We're an e-commerce promo platform recruiting part-time click-farm workers. Just like and follow, earn $500-$1000/day, flexible hours, students preferred.' They send a 'mentor' contact.",
+        textZh: "你收到一条 WhatsApp 陌生短信：「你好！我们是电商推广平台，招募兼职刷单员。点赞关注即可，日赚 $500-$1000，时间自由，学生优先。」对方发来一个「导师」的联络方式。",
+        visual: {
+          type: "chat",
+          app: "WhatsApp",
+          appIcon: "💬",
+          messages: [
+            { type: "incoming", name: "+852 9XXX 5432", text: "你好！我們是電商推廣平台，招募兼職刷單員 📱" },
+            { type: "incoming", name: "+852 9XXX 5432", text: "點讚+關注即可，日賺 $500-$1000，時間自由，學生優先 🎓" },
+            { type: "incoming", name: "+852 9XXX 5432", text: "加導師微信了解更多：sim-task-contact" }
+          ]
+        },
+        choices: [
+          {
+            id: "l4_c1_try",
+            text: "💰 反正免費，試試看",
+            textEn: "💰 It's free, let me try",
+            textZh: "💰 反正免费，试试看",
+            effects: { riskScore: 15, information: -5 },
+            nextSceneId: "l4_s2_small_task",
+            feedback: "⚠️ 「免費試試」正是騙局入口。他們會先給你小額真實回報，建立信任後再大額詐騙。",
+            feedbackEn: "⚠️ 'Try for free' is the scam's entry point. They give small real returns first to build trust before the big steal.",
+            feedbackZh: "⚠️ 「免费试试」正是骗局入口。他们会先给你小额真实回报，建立信任后再大额诈骗。",
+            feedbackType: "bad"
+          },
+          {
+            id: "l4_c1_ignore",
+            text: "🚫 陌生訊息+「輕鬆賺錢」，直接封鎖",
+            textEn: "🚫 Unknown + 'easy money', block it",
+            textZh: "🚫 陌生短信+「轻松赚钱」，直接拉黑",
+            effects: { alertness: 25, information: 15, riskScore: -15 },
+            nextSceneId: "l4_s2_safe",
+            feedback: "✅ 你識破了——「輕鬆日賺」+陌生訊息+刷單，是刷單詐騙的標準三要素。",
+            feedbackEn: "✅ You spotted it — 'easy daily earnings' + unknown message + click-farming = the three hallmarks of a click-farm scam.",
+            feedbackZh: "✅ 你识破了——「轻松日赚」+陌生短信+刷单，是刷单诈骗的标准三要素。",
+            feedbackType: "good"
+          }
+        ]
+      },
+      // ── 場景 2A：小額任務嘗甜頭 ──
+      {
+        id: "l4_s2_small_task",
+        type: "chat",
+        speaker: "scammer",
+        text: "「導師」給你第一個任務：關注某 Instagram 帳號並截圖。你照做後，對方真的轉了 $50 到你的 PayMe。你心裡放下了戒備。接著「導師」說有「高佣金任務」需要先充值 $500 解鎖。",
+        textEn: "The 'mentor' gives your first task: follow an Instagram account and screenshot. You do it — they really send $50 to your PayMe. Your guard drops. Then the 'mentor' says 'high-commission tasks' require a $500 top-up to unlock.",
+        textZh: "「导师」给你第一个任务：关注某 Instagram 账号并截图。你照做后，对方真的转了 $50 到你的 PayMe。你心里放下了戒备。接着「导师」说有「高佣金任务」需要先充值 $500 解锁。",
+        visual: {
+          type: "chat",
+          app: "WhatsApp",
+          appIcon: "💬",
+          messages: [
+            { type: "incoming", name: "導師", text: "任務1：關注 @shop_hk_2025 並截圖 ✅" },
+            { type: "incoming", name: "導師", text: "佣金 $50 已轉到你的 PayMe 🎉" },
+            { type: "incoming", name: "導師", text: "現在有高佣金任務（每單 $200）" },
+            { type: "incoming", name: "導師", text: "需先充值 $500 解鎖進階任務，完成後可提現 $1500 💰" }
+          ]
+        },
+        choices: [
+          {
+            id: "l4_c2_topup",
+            text: "💵 反正剛賺了 $50，充值 $500 試試",
+            textEn: "💵 Just made $50, top up $500 to try",
+            textZh: "💵 反正刚赚了 $50，充值 $500 试试",
+            effects: { riskScore: 30, money: -10, information: -10 },
+            nextSceneId: "l4_s3_input",
+            feedback: "⚠️ 你正走入陷阱核心——「充值解鎖」是刷單詐騙的招牌話術。$50 是誘餌，$500 才是目標。",
+            feedbackEn: "⚠️ You're walking into the trap's core — 'top-up to unlock' is the click-farm scam's signature line. $50 is bait; $500 is the target.",
+            feedbackZh: "⚠️ 你正走入陷阱核心——「充值解锁」是刷单诈骗的招牌话术。$50 是诱饵，$500 才是目标。",
+            feedbackType: "bad"
+          },
+          {
+            id: "l4_c2_stop",
+            text: "🛑 等等——要我先付錢的兼職不對勁",
+            textEn: "🛑 Wait — a job asking me to pay first is wrong",
+            textZh: "🛑 等等——要我先付钱的兼职不对劲",
+            effects: { alertness: 25, information: 20, riskScore: -20 },
+            nextSceneId: "l4_s2_safe",
+            feedback: "✅ 你警覺了——正規兼職不會要求你先付錢。這是判斷刷單詐騙最有效的標準。",
+            feedbackEn: "✅ You're alert — legitimate jobs never ask you to pay first. This is the most effective test for click-farm scams.",
+            feedbackZh: "✅ 你警觉了——正规兼职不会要求你先付钱。这是判断刷单诈骗最有效的标准。",
+            feedbackType: "good"
+          }
+        ]
+      },
+      // ── 場景 2B：安全路徑——查證 ──
+      {
+        id: "l4_s2_safe",
+        type: "result",
+        speaker: "official",
+        text: "你封鎖了對方，並把帳號輸入防騙視伏器——結果顯示這是活躍的刷單詐騙帳號，已有 30+ 人舉報。你向校方學生事務處反映，他們確認近期有多名同學收到類似訊息。",
+        textEn: "You block the contact and enter the account in Scameter — it's an active click-farm scam account with 30+ reports. You inform the campus student affairs office; they confirm many students received similar messages recently.",
+        textZh: "你拉黑了对方，并把账号输入防骗视伏器——结果显示这是活跃的刷单诈骗账号，已有 30+ 人举报。你向校方学生事务处反映，他们确认近期有多名同学收到类似短信。",
+        visual: {
+          type: "safe_result",
+          content: "✅ 防騙視伏器查核\n\n帳號 task-master-886\n狀態：🔴 刷單詐騙（30+ 舉報）\n\n校方學生事務處確認：\n近期多名同學收到類似訊息\n\n建議：封鎖、向 18222 舉報、提醒同學"
+        },
+        choices: [
+          {
+            id: "l4_c2s_done",
+            text: "🚫 封鎖並舉報",
+            textEn: "🚫 Block and report",
+            textZh: "🚫 拉黑并举报",
+            effects: { alertness: 15, information: 15, riskScore: -10 },
+            nextSceneId: "l4_s4_done",
+            feedback: "✅ 你沒有被「輕鬆賺錢」誘惑——記住：要你先付錢的兼職 100% 是詐騙。",
+            feedbackEn: "✅ You weren't tempted by 'easy money' — remember: any job asking you to pay first is 100% a scam.",
+            feedbackZh: "✅ 你没有被「轻松赚钱」诱惑——记住：要你先付钱的兼职 100% 是诈骗。",
+            feedbackType: "good"
+          }
+        ]
+      },
+      // ── 場景 3：充值後無法提現（自由輸入）──
+      {
+        id: "l4_s3_input",
+        type: "text_input",
+        speaker: "scammer",
+        pressure: true,
+        text: "你充值 $500 後，任務系統顯示「連續訂單」，要你再充值 $2,000 才能「提現 $1,500 + $500 本金」。你猶豫時，「客服」催促：「系統檢測到操作錯誤，需再充值 $3,000 修復，否則全部金額無法取回。」\n\n你會怎麼回應？",
+        textEn: "After you top up $500, the task system shows 'consecutive orders' — you must top up another $2,000 to 'withdraw $1,500 + $500 principal'. As you hesitate, 'customer service' pushes: 'System detected an operation error, you must top up $3,000 more to fix it, otherwise all funds cannot be withdrawn.'\n\nHow do you respond?",
+        textZh: "你充值 $500 后，任务系统显示「连续订单」，要你再充值 $2,000 才能「提现 $1,500 + $500 本金」。你犹豫时，「客服」催促：「系统检测到操作错误，需再充值 $3,000 修复，否则全部金额无法取回。」\n\n你会怎么回应？",
+        visual: {
+          type: "chat",
+          app: "任務系統",
+          appIcon: "💼",
+          messages: [
+            { type: "incoming", name: "任務系統", text: "🔔 連續訂單觸發！需完成 5 單才能提現" },
+            { type: "incoming", name: "客服", text: "目前進度 2/5，再充值 $2000 解鎖下一單" },
+            { type: "incoming", name: "客服", text: "⚠️ 檢測到操作錯誤，需充值 $3000 修復，否則無法提現" }
+          ]
+        },
+        inputConfig: {
+          placeholder: "輸入你的回應…（例如：我要報警 / 我再充值 $3000）",
+          placeholderEn: "Type your response… (e.g. I'll call police / I'll top up $3000)",
+          placeholderZh: "输入你的回应…（例如：我报警 / 我再充值 $3000）",
+          goodNextSceneId: "l4_s3_loss_stop",
+          badNextSceneId: "l4_s3_loss_more",
+          neutralNextSceneId: "l4_s3_pressure",
+          maxNeutralAttempts: 2,
+          goodFeedback: "✅ 你提到報警/查證——這是止血的正確反應。已經損失的錢很難追回，但及時止損比繼續投入重要一百倍。",
+          goodFeedbackEn: "✅ You mentioned reporting/verifying — the right move to stop the bleeding. Lost money is hard to recover, but stopping in time is 100x more important than investing more.",
+          goodFeedbackZh: "✅ 你提到报警/查证——这是止血的正确反应。已经损失的钱很难追回，但及时止损比继续投入重要一百倍。",
+          badFeedback: "⚠️ 你提到再充值/轉賬——這正是騙子最想聽的。「再投一點就能回本」是刷單詐騙的核心話術，永無止境。",
+          badFeedbackEn: "⚠️ You mentioned topping up/transferring — exactly what scammers want to hear. 'Invest a bit more to recover' is the click-farm scam's core line — it never ends.",
+          badFeedbackZh: "⚠️ 你提到再充值/转账——这正是骗子最想听的。「再投一点就能回本」是刷单诈骗的核心话术，永无止境。",
+          neutralFeedback: "🤔 「客服」見你沒再充值，再施壓：「你再不修復，$500 也會被沒收！」再想想你會怎麼做。",
+          neutralFeedbackEn: "🤔 Seeing you won't top up, 'customer service' pushes: 'If you don't fix it, your $500 will be confiscated too!' Think again.",
+          neutralFeedbackZh: "🤔 「客服」见你没再充值，再施压：「你再不修复，$500 也会被没收！」再想想你会怎么做。"
+        }
+      },
+      // ── 場景 3b：二次施壓 ──
+      {
+        id: "l4_s3_pressure",
+        type: "text_input",
+        speaker: "scammer",
+        pressure: true,
+        text: "「客服」語氣急切：「最後機會！再不充值修復，你的帳戶會被永久凍結，$500 本金也拿不回！這是系統規定！」\n\n你會怎麼回應？",
+        textEn: "The 'customer service' turns urgent: 'Last chance! If you don't top up to fix it, your account will be permanently frozen and your $500 principal is gone too! It's system policy!'\n\nHow do you respond?",
+        textZh: "「客服」语气急切：「最后机会！再不充值修复，你的账户会被永久冻结，$500 本金也拿不回！这是系统规定！」\n\n你会怎么回应？",
+        visual: {
+          type: "chat",
+          app: "任務系統",
+          appIcon: "💼",
+          messages: [
+            { type: "incoming", name: "客服", text: "⚠️ 最後機會！再不充值修復，帳戶永久凍結" },
+            { type: "incoming", name: "客服", text: "$500 本金也拿不回！系統規定！" }
+          ]
+        },
+        inputConfig: {
+          placeholder: "再次輸入你的回應…（提示：止損）",
+          placeholderEn: "Type your response again… (hint: cut losses)",
+          placeholderZh: "再次输入你的回应…（提示：止损）",
+          goodNextSceneId: "l4_s3_loss_stop",
+          badNextSceneId: "l4_s3_loss_more",
+          neutralNextSceneId: "l4_s3_loss_stop",
+          maxNeutralAttempts: 0,
+          goodFeedback: "✅ 你堅持止損——這是面對刷單詐騙最關鍵的判斷。",
+          goodFeedbackEn: "✅ You insisted on cutting losses — the most critical judgment against click-farm scams.",
+          goodFeedbackZh: "✅ 你坚持止损——这是面对刷单诈骗最关键的判断。",
+          badFeedback: "⚠️ 你仍傾向繼續充值——記住：永遠不會「再投一點就回本」，只會越陷越深。",
+          badFeedbackEn: "⚠️ You still leaned toward topping up — remember: 'invest a bit more to recover' never happens; it only goes deeper.",
+          badFeedbackZh: "⚠️ 你仍倾向继续充值——记住：永远不会「再投一点就回本」，只会越陷越深。",
+          neutralFeedback: "🤔 你還在猶豫——這次我們幫你決定：止損，報案。",
+          neutralFeedbackEn: "🤔 Still hesitating — let's decide: cut losses and report.",
+          neutralFeedbackZh: "🤔 你还在犹豫——这次我们帮你决定：止损，报案。"
+        }
+      },
+      // ── 場景 3c：止損路徑 ──
+      {
+        id: "l4_s3_loss_stop",
+        type: "result",
+        speaker: "system",
+        text: "你決定止損，不再充值。雖然損失了 $500，但你保住了剩下的錢。你立刻致電防騙易 18222 報案，並把所有聊天記錄、轉帳截圖提供給警方。",
+        textEn: "You decide to cut your losses and stop topping up. You lost $500 but saved the rest. You immediately call Anti-Deception 18222 to report, providing all chat records and transfer screenshots to the police.",
+        textZh: "你决定止损，不再充值。虽然损失了 $500，但你保住了剩下的钱。你立刻致电防骗易 18222 报案，并把所有聊天记录、转账截图提供给警方。",
+        visual: {
+          type: "safe_result",
+          content: "✅ 及時止損\n\n損失：HK$500（已無法追回）\n剩餘資金：已保護 ✅\n報案：防騙易 18222 已記錄\n\n💡 「再投一點就回本」是騙局\n止損才是唯一正確選擇"
+        },
+        choices: [
+          {
+            id: "l4_c3ls_next",
+            text: "📞 報案完成，前往下一關",
+            textEn: "📞 Reported, proceed to next level",
+            textZh: "📞 报案完成，前往下一关",
+            effects: { money: -15, information: 15, alertness: 10, riskScore: 10 },
+            nextSceneId: "l4_s4_done",
+            feedback: "⚠️ $500 損失令人心痛，但及時止損避免了 $3,000+ 的更大損失。記住：要你先付錢的兼職 100% 是詐騙。",
+            feedbackEn: "⚠️ The $500 loss hurts, but stopping in time prevented $3,000+ more in losses. Remember: any job asking you to pay first is 100% a scam.",
+            feedbackZh: "⚠️ $500 损失令人心痛，但及时止损避免了 $3,000+ 的更大损失。记住：要你先付钱的兼职 100% 是诈骗。",
+            feedbackType: "bad"
+          }
+        ]
+      },
+      // ── 場景 3d：越陷越深路徑 ──
+      {
+        id: "l4_s3_loss_more",
+        type: "result",
+        speaker: "system",
+        text: "你又充值了 $3,000。系統顯示「即將解鎖提現」——但又一個「操作錯誤」出現，要求再充值 $5,000。你已經投入 $3,500，無法接受就這樣損失，繼續充值……直到你 PayMe 餘額歸零。帳號隨後被封鎖。",
+        textEn: "You top up another $3,000. The system shows 'withdrawal about to unlock' — but another 'operation error' appears, demanding $5,000 more. You've put in $3,500 and can't accept losing it, so you keep going… until your PayMe balance hits zero. The account is then blocked.",
+        textZh: "你又充值了 $3,000。系统显示「即将解锁提现」——但又一个「操作错误」出现，要求再充值 $5,000。你已经投入 $3,500，无法接受就这样损失，继续充值……直到你 PayMe 余额归零。账号随后被封禁。",
+        visual: {
+          type: "warning_page",
+          content: "⚠️ 損失累計\n\n第1次充值：$500\n第2次充值：$3,000\n第3次充值：$5,000\n總損失：HK$8,500\n\n帳號狀態：已封鎖\n提現：永遠無法\n\n💡 「沉沒成本」效應\n讓你越陷越深"
+        },
+        choices: [
+          {
+            id: "l4_c3lm_report",
+            text: "📞 立刻致電 18222 報案",
+            textEn: "📞 Call 18222 to report now",
+            textZh: "📞 立刻致电 18222 报案",
+            effects: { money: -55, riskScore: 45, information: 15 },
+            nextSceneId: "l4_s4_done",
+            feedback: "⚠️ 沉沒成本效應讓你越陷越深。記住：第一次要求充值時就該停止。及時止損比追回損失重要一百倍。",
+            feedbackEn: "⚠️ The sunk-cost fallacy dragged you deeper. Remember: you should have stopped at the first top-up request. Cutting losses in time is 100x more important than chasing losses.",
+            feedbackZh: "⚠️ 沉没成本效应让你越陷越深。记住：第一次要求充值时就该停止。及时止损比追回损失重要一百倍。",
+            feedbackType: "bad"
+          }
+        ]
+      },
+      // ── 場景 4：本關結束 ──
+      {
+        id: "l4_s4_done",
+        type: "result",
+        speaker: "system",
+        text: "【第四關完成】你應對了刷單兼職騙局。\n\n記住三件事：要你先付錢的兼職是詐騙、小額回報是誘餌、「再投一點就回本」永遠是謊言。正規兼職找 JobsDB、CTgoodjobs、校方 Career Center。",
+        textEn: "[Level 4 Complete] You handled the click-farm job scam.\n\nRemember three things: any job asking you to pay first is a scam, small returns are bait, 'invest a bit more to recover' is always a lie. Legit jobs: JobsDB, CTgoodjobs, campus Career Center.",
+        textZh: "【第四关完成】你应对了刷单兼职骗局。\n\n记住三件事：要你先付钱的兼职是诈骗、小额回报是诱饵、「再投一点就回本」永远是谎言。正规兼职找 JobsDB、CTgoodjobs、校方 Career Center。",
+        visual: { type: "safe_result", content: "💼 第四關：刷單兼職騙局\n狀態：已完成 ✅\n\n下一關：Deepfake 與社交投資騙局" },
+        choices: [
+          {
+            id: "l4_c4_next",
+            text: "➡️ 前往第五關：Deepfake 投資騙局",
+            textEn: "➡️ Level 5: Deepfake & Crypto Scam",
+            textZh: "➡️ 前往第五关：Deepfake 投资骗局",
+            effects: {},
+            nextSceneId: "__next_level__",
+            feedbackType: "mid"
+          }
+        ]
+      }
+    ]
+  },
+
+  // ─────────────────────────────────────────────────────────────
+  // Level 5：Deepfake 與社交媒體投資騙局
+  // ─────────────────────────────────────────────────────────────
+  {
+    id: "hk_l5_deepfake",
+    index: 5,
+    title: "Deepfake 與投資騙局",
+    titleEn: "Deepfake & Crypto Romance Scam",
+    titleZh: "Deepfake 与投资骗局",
+    icon: "🤖",
+    scamType: "Deepfake 換臉 + 假冒親友 + 虛擬貨幣投資詐騙",
+    redFlags: [
+      "「朋友」透過 WhatsApp/視像通話求助，要求緊急 FPS 轉賬",
+      "視像通話中對方畫面短暫模糊、嘴型不同步（Deepfake 痕跡）",
+      "「投資導師」保證高回報，要求轉賬到未知平台或虛擬貨幣錢包",
+      "對方催促「機會難得」「最後名額」，製造 FOMO",
+      "投資平台域名可疑，無法在 SEC/HKMA 持牌名單查到"
+    ],
+    officialChannels: [
+      "致電朋友本人已知的電話號碼求證（不要回撥來電）",
+      "用預設的暗號或只有你們知道的問題核實身份",
+      "在 HKMA 持牌銀行/證券名單查核投資平台",
+      "致電防騙易 18222 查詢可疑投資",
+      "使用防騙視伏器搜尋投資平台域名"
+    ],
+    scenes: [
+      // ── 場景 1：朋友視像來電（語音模擬）──
+      {
+        id: "l5_s1",
+        type: "phone_call",
+        speaker: "scammer",
+        pressure: true,
+        text: "晚上你收到「朋友阿 Jason」的 WhatsApp 視像來電。畫面中的人看起來確實是 Jason，但偶爾有點模糊、嘴型稍微不同步。他一臉焦急：「我出了事，急需 $8,000 周轉，你可不可以幫我 FPS 轉一下？」\n\n點擊播放聽聽這通語音。",
+        textEn: "That evening, you get a WhatsApp video call from 'friend Jason'. The person looks like Jason, but the image is occasionally blurry and the lips are slightly out of sync. He looks anxious: 'I'm in trouble, I urgently need $8,000. Can you FPS it to me?'\n\nPress play to hear the voice.",
+        textZh: "晚上你收到「朋友阿 Jason」的 WhatsApp 视像来电。画面中的人看起来确实是 Jason，但偶尔有点模糊、嘴型稍微不同步。他一脸焦急：「我出了事，急需 $8,000 周转，你可不可以帮我 FPS 转一下？」\n\n点击播放听听这通语音。",
+        visual: {
+          type: "voice_call",
+          caller: "阿 Jason（視像通話）",
+          callerEn: "Jason (Video Call)",
+          callType: "video_call",
+          duration: "0:45",
+          speechText: "喂，我係 Jason 啊。我而家出咗啲事，好急，急需八千蚊周轉。你可唔可以即刻 FPS 轉俾我？我轉頭就還返俾你。麻煩你啦，真係好急。對唔住啊，呢個時候打擾你，但我真係冇辦法喇。你轉完話我知，多謝你啊兄弟。",
+          speechTextEn: "Hey, it's Jason. I'm in some trouble right now, really urgent, I need eight thousand to tide over. Can you FPS it to me right now? I'll pay you back right away. Please, it's really urgent. Sorry to bother you at this time, but I really have no other choice. Let me know once you've transferred it. Thanks bro.",
+          speechTextZh: "喂，我是 Jason 啊。我现在出了点事，好急，急需八千块周转。你可不可以即刻 FPS 转给我？我转头就还返给你。麻烦你啦，真的是好急。对不起啊，这个时候打扰你，但我真是没办法了。你转完告诉我，谢谢你啊兄弟。"
+        },
+        choices: [
+          {
+            id: "l5_c1_verify",
+            text: "🤔 等等，我要先核實你係咪真係 Jason",
+            textEn: "🤔 Wait, I need to verify you're really Jason",
+            textZh: "🤔 等等，我要先核实你是不是 Jason",
+            effects: { information: 10, alertness: 15, medal: 'deepfake_detective' },
+            nextSceneId: "l5_s2_input",
+            feedback: "✅ 你起疑了——畫面模糊+嘴型不同步是 Deepfake 換臉的典型痕跡。先核實再說。",
+            feedbackEn: "✅ You're suspicious — blurriness and lip-sync issues are typical Deepfake signs. Verify first.",
+            feedbackZh: "✅ 你起疑了——画面模糊+嘴型不同步是 Deepfake 换脸的典型痕迹。先核实再说。",
+            feedbackType: "good"
+          },
+          {
+            id: "l5_c1_help",
+            text: "😟 Jason 出事？我即刻轉 $8,000",
+            textEn: "😟 Jason in trouble? I'll FPS $8,000 now",
+            textZh: "😟 Jason 出事？我即刻转 $8,000",
+            effects: { riskScore: 35, money: -20, information: -10 },
+            nextSceneId: "l5_s2_input",
+            feedback: "⚠️ 你急於幫朋友——但 Deepfake 換臉詐騙專門利用你的善意。先核實，再轉帳。",
+            feedbackEn: "⚠️ You're eager to help a friend — but Deepfake scams exploit exactly that goodwill. Verify before transferring.",
+            feedbackZh: "⚠️ 你急于帮朋友——但 Deepfake 换脸诈骗专门利用你的善意。先核实，再转账。",
+            feedbackType: "bad"
+          }
+        ]
+      },
+      // ── 場景 2：自由輸入——你會如何核實 ──
+      {
+        id: "l5_s2_input",
+        type: "text_input",
+        speaker: "system",
+        pressure: true,
+        text: "你決定先核實對方身份。你會如何核實這個「Jason」是不是真的 Jason？\n\n（提示：想想只有你們兩個知道的事，或用其他渠道聯絡）",
+        textEn: "You decide to verify the caller's identity first. How would you verify whether this 'Jason' is the real Jason?\n\n(Hint: think of something only the two of you know, or contact via another channel.)",
+        textZh: "你决定先核实对方身份。你会如何核实这个「Jason」是不是真的 Jason？\n\n（提示：想想只有你们两个知道的事，或用其他渠道联络）",
+        visual: {
+          type: "phone_call",
+          caller: "阿 Jason（視像通話）",
+          content: "你點解要問呢啲？我趕時間，快啲轉錢俾我啦！",
+          speechText: "喂，你點解要問呢啲嘢㗎？我唔係 Jason 仲會係邊個啊？我而家真係好急好趕時間，你快啲轉八千蚊俾我啦！遲咁就唔夠用㗎喇。我轉頭一定還返俾你，信我啦！我而家個心好亂，你就當幫下我啦，多謝你啊兄弟。",
+          speechTextEn: "Hey, why are you asking all these questions? Who else would I be if not Jason? I'm really in a hurry right now, just transfer eight thousand to me quickly! It'll be too late otherwise. I'll definitely pay you back right away, trust me! I'm really stressed out right now, just help me out, thanks bro.",
+          speechTextZh: "喂，你为什么要问这些东西啊？我不是 Jason 还会是谁啊？我现在真的好急好赶时间，你快点转八千块给我啦！迟了就不够用了。我转头一定还给你，信我啦！我现在心好乱，你就当帮下我啦，谢谢你啊兄弟。"
+        },
+        inputConfig: {
+          placeholder: "輸入你想核實的方式…（例如：打電話俾 Jason / 問暗號）",
+          placeholderEn: "Type how you'd verify… (e.g. call Jason / ask a secret code)",
+          placeholderZh: "输入你想核实的方式…（例如：打电话给 Jason / 问暗号）",
+          goodNextSceneId: "l5_s3_safe",
+          badNextSceneId: "l5_s3_loss",
+          neutralNextSceneId: "l5_s2b_invest",
+          maxNeutralAttempts: 2,
+          goodFeedback: "✅ 你選擇用獨立渠道/暗號核實——這是對抗 Deepfake 換臉最有效的方法。Deepfake 可以換臉，但換不到只有你們知道的記憶。",
+          goodFeedbackEn: "✅ You chose to verify via an independent channel/secret code — the most effective way to defeat Deepfakes. They can swap faces, but not shared memories only the two of you know.",
+          goodFeedbackZh: "✅ 你选择用独立渠道/暗号核实——这是对抗 Deepfake 换脸最有效的方法。Deepfake 可以换脸，但换不到只有你们知道的记忆。",
+          badFeedback: "⚠️ 你仍然傾向轉賬——Deepfake 換臉技術已非常成熟，視像通話不再能證明身份。必須用獨立渠道核實。",
+          badFeedbackEn: "⚠️ You still leaned toward transferring — Deepfake tech is now mature; video calls can no longer prove identity. You must verify via an independent channel.",
+          badFeedbackZh: "⚠️ 你仍然倾向转账——Deepfake 换脸技术已非常成熟，视像通话不再能证明身份。必须用独立渠道核实。",
+          neutralFeedback: "🤔 「Jason」見你沒轉帳，開始另一套話術：「不如你幫我投資一個高回報項目，順便幫我周轉？」再想想你會怎麼做。",
+          neutralFeedbackEn: "🤔 Seeing you won't transfer, 'Jason' shifts tactics: 'How about you invest in a high-return project, and help me out at the same time?' Think again.",
+          neutralFeedbackZh: "🤔 「Jason」见你没转账，开始另一套话术：「不如你帮我投资一个高回报项目，顺便帮我周转？」再想想你会怎么做。"
+        }
+      },
+      // ── 場景 2b：轉向投資騙局 ──
+      {
+        id: "l5_s2b_invest",
+        type: "chat",
+        speaker: "scammer",
+        text: "「Jason」發來一個投資平台連結：「我最近在這個虛擬貨幣平台賺了很多，保證週回報 15%。你幫我投資，順便自己也賺一筆。機會難得，最後 3 個名額！」",
+        textEn: "'Jason' sends a link to an investment platform: 'I've been making a lot on this crypto platform — guaranteed 15% weekly returns. Invest for me and earn for yourself too. Limited opportunity, last 3 spots!'",
+        textZh: "「Jason」发来一个投资平台链接：「我最近在这个虚拟货币平台赚了很多，保证周回报 15%。你帮我投资，顺便自己也赚一笔。机会难得，最后 3 个名额！」",
+        visual: {
+          type: "phishing_card",
+          url: "https://crypto-pro-invest.example/login",
+          realUrl: "可疑投資平台（不在 HKMA 持牌名單）",
+          pageTitle: "Crypto Pro Invest — 15% Weekly Guaranteed",
+          pageIcon: "📈",
+          redFlags: [
+            { icon: "🚫", text: "保證回報 15%/週——任何保證高回報都是詐騙" },
+            { icon: "⏰", text: "「最後 3 個名額」FOMO 壓力" },
+            { icon: "🔗", text: "域名 crypto-pro-invest.example 不在 HKMA 持牌名單" },
+            { icon: "💰", text: "要求轉賬到虛擬貨幣錢包（無法追回）" }
+          ]
+        },
+        choices: [
+          {
+            id: "l5_c2b_verify",
+            text: "🔍 我要在 HKMA 持牌名單查核這個平台",
+            textEn: "🔍 I'll check this platform on HKMA's licensed list",
+            textZh: "🔍 我要在 HKMA 持牌名单核查这个平台",
+            effects: { alertness: 25, information: 25, riskScore: -20 },
+            nextSceneId: "l5_s3_safe",
+            feedback: "✅ 你堅持查核投資平台——HKMA 持牌名單是核實投資平台真偽的官方渠道。任何保證高回報都是詐騙。",
+            feedbackEn: "✅ You insisted on checking the platform — HKMA's licensed list is the official way to verify investment platforms. Any guaranteed high return is a scam.",
+            feedbackZh: "✅ 你坚持核查投资平台——HKMA 持牌名单是核实投资平台真伪的官方渠道。任何保证高回报都是诈骗。",
+            feedbackType: "good"
+          },
+          {
+            id: "l5_c2b_invest",
+            text: "📈 15% 回報太吸引，我試投 $5,000",
+            textEn: "📈 15% return is tempting, I'll try $5,000",
+            textZh: "📈 15% 回报太吸引，我试投 $5,000",
+            effects: { riskScore: 40, money: -25, information: -15 },
+            nextSceneId: "l5_s3_loss",
+            feedback: "⚠️ 你被「保證回報」誘惑——記住：任何保證高回報的投資都是詐騙。虛擬貨幣轉帳一旦完成，無法追回。",
+            feedbackEn: "⚠️ You were tempted by 'guaranteed returns' — remember: any guaranteed high-return investment is a scam. Crypto transfers cannot be reversed once complete.",
+            feedbackZh: "⚠️ 你被「保证回报」诱惑——记住：任何保证高回报的投资都是诈骗。虚拟货币转账一旦完成，无法追回。",
+            feedbackType: "bad"
+          }
+        ]
+      },
+      // ── 場景 3A：安全路徑——識破 Deepfake ──
+      {
+        id: "l5_s3_safe",
+        type: "result",
+        speaker: "official",
+        text: "你掛斷視像通話，用你手機通訊錄裡 Jason 的號碼打過去。真正的 Jason 接聽：「吓？我喺屋企睇 Netflix 啊，邊有打俾你？」你確認剛才的「Jason」是 Deepfake 換臉。你接著把投資平台域名輸入防騙視伏器——高危詐騙。",
+        textEn: "You hang up the video call and dial Jason's number from your contacts. The real Jason answers: 'Huh? I'm at home watching Netflix, I never called you.' You confirm the 'Jason' earlier was a Deepfake. You enter the investment platform's domain in Scameter — high-risk scam.",
+        textZh: "你挂断视像通话，用你手机通讯录里 Jason 的号码打过去。真正的 Jason 接听：「吓？我在家看 Netflix 啊，哪有打给你？」你确认刚才的「Jason」是 Deepfake 换脸。你接着把投资平台域名输入防骗视伏器——高危诈骗。",
+        visual: {
+          type: "safe_result",
+          content: "✅ Deepfake 識破\n\n真 Jason 確認：在家中，未致電\n模擬投資平台 crypto-pro-invest.example\n防騙視伏器：🔴 高危投資詐騙（72 舉報）\n\n建議：\n• 封鎖假 Jason\n• 致電 18222 報案\n• 提醒朋友這類 Deepfake 騙局"
+        },
+        choices: [
+          {
+            id: "l5_c3s_report",
+            text: "🚫 封鎖並向 18222 舉報",
+            textEn: "🚫 Block and report to 18222",
+            textZh: "🚫 拉黑并向 18222 举报",
+            effects: { alertness: 20, information: 20, riskScore: -20 },
+            nextSceneId: "l5_s3b_mixed",
+            feedback: "✅ 你用獨立渠道核實——這是對抗 Deepfake 換臉最有效的方法。AI 換臉技術只會越來越成熟，獨立核實是唯一防線。",
+            feedbackEn: "✅ You verified via an independent channel — the most effective way to defeat Deepfakes. AI face-swap tech will only get better; independent verification is the only defense.",
+            feedbackZh: "✅ 你用独立渠道核实——这是对抗 Deepfake 换脸最有效的方法。AI 换脸技术只会越来越成熟，独立核实是唯一防线。",
+            feedbackType: "good"
+          }
+        ]
+      },
+      // ── 場景 3B：混合輸入——總結 Deepfake 騙局（3 預設 + 自由輸入）──
+      {
+        id: "l5_s3b_mixed",
+        type: "mixed_input",
+        speaker: "system",
+        text: "你成功識破了 Deepfake 騙局。朋友問你：「呢個新式騙局點樣形容佢？我點樣先可以避免中招？」\n\n你會點樣總結？（可選擇預設答案，或撳「其他」自己輸入）",
+        textEn: "You successfully spotted the Deepfake scam. A friend asks: 'How would you describe this new scam? How can I avoid falling for it?'\n\nHow do you summarize? (Pick a preset option, or tap 'Other' to type your own.)",
+        textZh: "你成功识破了 Deepfake 骗局。朋友问你：「这个新式骗局怎么样形容它？我怎么样才可以避免中招？」\n\n你会怎么样总结？（可选择预设答案，或按「其他」自己输入）",
+        mixedConfig: {
+          choices: [
+            {
+              id: "l5_mixed1",
+              text: "AI 換臉太真，以後視像通話都唔可以信",
+              textEn: "AI face-swap is too real; video calls can't be trusted anymore",
+              textZh: "AI 换脸太真，以后视频通话都不能信",
+              effects: { alertness: 5, information: 5 },
+              nextSceneId: "l5_s4_done",
+              feedback: "🤔 部分正確但太絕對。AI 換臉雖然逼真，但仍有破綻（眨眼、光影、嘴角），而且獨立渠道核實可以有效防範。唔好因為「信唔過」就完全拒絕視像，而係要學識「用第二個渠道核實」。",
+              feedbackEn: "🤔 Partially correct but too absolute. AI face-swap is realistic but has flaws (blinking, lighting, mouth corners); independent verification works. Don't refuse all video calls — learn to verify via another channel.",
+              feedbackZh: "🤔 部分正确但太绝对。AI 换脸虽然逼真，但仍有破绽（眨眼、光影、嘴角），而且独立渠道核实可以有效防范。不要因为「信不过」就完全拒绝视频，而是要学会「用另一个渠道核实」。",
+              feedbackType: "mid"
+            },
+            {
+              id: "l5_mixed2",
+              text: "任何要求轉帳到陌生帳戶嘅都要警惕，獨立核實",
+              textEn: "Be wary of any transfer to unknown accounts; verify independently",
+              textZh: "任何要求转账到陌生账户的都要警惕，独立核实",
+              effects: { alertness: 15, information: 15, riskScore: -10, xp: 25, score: 50 },
+              nextSceneId: "l5_s4_done",
+              feedback: "✅ 正確！無論對方係邊個（即使視像見到樣），任何要求轉帳到陌生帳戶都必須高度警惕。Deepfake 嘅出現令「見到樣」再唔係身份保證，獨立渠道核實（例如自己打返畀對方）係唯一可靠防線。",
+              feedbackEn: "✅ Correct! No matter who the caller is (even on video), any transfer to unknown accounts must be treated with high alert. Deepfake means 'seeing the face' is no longer proof of identity; verifying via an independent channel (e.g., calling them yourself) is the only reliable defense.",
+              feedbackZh: "✅ 正确！无论对方是谁（即使视频见到样），任何要求转账到陌生账户都必须高度警惕。Deepfake 的出现令「见到样」再不是身份保证，独立渠道核实（例如自己打回给对方）是唯一可靠防线。",
+              feedbackType: "good"
+            },
+            {
+              id: "l5_mixed3",
+              text: "政府部門唔會電話執法，更加唔會要求轉帳到「安全帳戶」",
+              textEn: "Government never enforces by phone, never asks for transfers to 'safe accounts'",
+              textZh: "政府部门不会电话执法，更加不会要求转账到「安全账户」",
+              effects: { alertness: 15, information: 15, riskScore: -10, xp: 25, score: 50 },
+              nextSceneId: "l5_s4_done",
+              feedback: "✅ 正確！雖然呢關係 Deepfake，但好多複合騙局會扮入境處、警察。記住：政府部門絕唔會電話執法、預錄語音威脅、要求提供 HKID 或轉帳到「安全帳戶」。呢個係識破假冒政府詐騙嘅關鍵。",
+              feedbackEn: "✅ Correct! This level was about Deepfake, but many composite scams impersonate Immigration or Police. Remember: government never enforces by phone, never uses pre-recorded threats, never asks for HKID or transfers to 'safe accounts'. This is the key to spotting government impersonation.",
+              feedbackZh: "✅ 正确！虽然这关是 Deepfake，但很多复合骗局会扮入境处、警察。记住：政府部门绝不会电话执法、预录语音威胁、要求提供 HKID 或转账到「安全账户」。这个是识破假冒政府诈骗的关键。",
+              feedbackType: "good"
+            }
+          ],
+          inputConfig: {
+            placeholder: "輸入你嘅總結…（例如：遇到視像借錢，一定用第二個渠道核實）",
+            placeholderEn: "Type your summary… (e.g. For video call money requests, always verify via another channel)",
+            placeholderZh: "输入你的总结…（例如：遇到视频借钱，一定用另一个渠道核实）",
+            goodKeywords: ["核實", "查證", "獨立", "官方渠道", "18222", "防騙視伏器", "scameter", "回撥", "回電", "自己打", "另一個渠道", "第二個渠道", "別信", "唔信", "不信", "不轉", "唔轉", "舉報", "報警", "報案", "掛斷", "掛線", "收線", "核對", "確認", "verify", "call back", "report", "hotline"],
+            badKeywords: ["轉賬", "轉帳", "匯款", "畀密碼", "俾密碼", "给密码", "直接轉", "即轉", "相信佢", "信佢", "相信他", "冇問題", "沒問題", "没问题", "照轉", "照給", "俾錢", "给钱", "轉錢", "转账", "transfer", "send money", "password"],
+            goodFeedback: "✅ 你嘅總結提到核實/查證/獨立渠道——呢個係防範 Deepfake 騙局嘅核心。記住：視像通話已經唔足以證明身份，任何金錢請求都必須用已知嘅另一個渠道獨立核實，先至再決定。",
+            goodFeedbackEn: "✅ Your summary mentions verifying / independent channels — the core of defending against Deepfake scams. Remember: video calls alone can no longer prove identity; any money request must be verified via another known channel before acting.",
+            goodFeedbackZh: "✅ 你的总结提到核实/查证/独立渠道——这个是防范 Deepfake 骗局的核心。记住：视频通话已经不足以证明身份，任何金钱请求都必须用已知的另一个渠道独立核实，然后再决定。",
+            badFeedback: "⚠️ 你嘅總結提到轉賬/相信對方/直接畀——呢個正正係騙徒最想見到嘅反應。Deepfake 嘅出現令「見到樣」再唔係身份保證，任何涉及金錢嘅請求都必須嚴格核實，唔可以因為「見到樣」就放鬆警惕。",
+            badFeedbackEn: "⚠️ Your summary mentions transferring / trusting / paying directly — exactly what scammers want. Deepfake means 'seeing the face' is no longer proof of identity; any money request must be strictly verified, never relaxed just because you 'saw the face'.",
+            badFeedbackZh: "⚠️ 你的总结提到转账/相信对方/直接给——这个正是骗子最想见到的反应。Deepfake 的出现令「见到样」再不是身份保证，任何涉及金钱的请求都必须严格核实，不可以因为「见到样」就放松警惕。",
+            neutralFeedback: "🤔 你嘅總結比較籠統。建議強調：遇到熟人視像借錢，務必用其他已知聯絡方式（例如回撥手機）獨立核實；任何保證高回報嘅投資都係詐騙；有懷疑即撥 18222。",
+            neutralFeedbackEn: "🤔 Your summary is a bit vague. Suggest emphasizing: For video money requests from acquaintances, always verify via another known contact (e.g., call their mobile); any guaranteed high-return investment is a scam; when in doubt, call 18222.",
+            neutralFeedbackZh: "🤔 你的总结比较笼统。建议强调：遇到熟人视频借钱，务必用其他已知联系方式（例如回拨手机）独立核实；任何保证高回报的投资都是诈骗；有怀疑即拨 18222。",
+            goodNextSceneId: "l5_s4_done",
+            badNextSceneId: "l5_s4_done",
+            neutralNextSceneId: "l5_s4_done"
+          }
+        },
+        choices: []
+      },
+      // ── 場景 3C：危險路徑——被騙 ──
+      {
+        id: "l5_s3_loss",
+        type: "result",
+        speaker: "system",
+        text: "你轉了 $8,000 給「Jason」並投資了 $5,000 到「Crypto Pro Invest」。第二天平台顯示「賺了 $3,000」——但當你嘗試提現，系統要求再充值 $5,000「手續費」。你這才意識到不對。三天後，平台消失，帳號被封鎖。",
+        textEn: "You transfer $8,000 to 'Jason' and invest $5,000 in 'Crypto Pro Invest'. The next day the platform shows you 'earned $3,000' — but when you try to withdraw, the system demands another $5,000 'fee'. You finally realize. Three days later, the platform vanishes and the account is blocked.",
+        textZh: "你转了 $8,000 给「Jason」并投资了 $5,000 到「Crypto Pro Invest」。第二天平台显示「赚了 $3,000」——但当你尝试提现，系统要求再充值 $5,000「手续费」。你这才意识到不对。三天后，平台消失，账号被封禁。",
+        visual: {
+          type: "warning_page",
+          content: "⚠️ 雙重損失\n\nFPS 轉賬給假 Jason：HK$8,000\nCrypto Pro Invest 投資：HK$5,000\n總損失：HK$13,000\n\n平台狀態：已消失\n提現：永遠無法\n\n💡 Deepfake + 投資騙局\n是 2024-2025 新興複合詐騙"
+        },
+        choices: [
+          {
+            id: "l5_c3l_report",
+            text: "📞 立刻致電 18222 報案",
+            textEn: "📞 Call 18222 to report now",
+            textZh: "📞 立刻致电 18222 报案",
+            effects: { money: -65, riskScore: 45, information: 15 },
+            nextSceneId: "l5_s4_done",
+            feedback: "⚠️ Deepfake 換臉 + 虛擬貨幣投資是最新型態詐騙。記住：視像通話不再能證明身份，任何保證高回報都是詐騙。",
+            feedbackEn: "⚠️ Deepfake + crypto investment is the newest scam type. Remember: video calls can no longer prove identity, and any guaranteed high return is a scam.",
+            feedbackZh: "⚠️ Deepfake 换脸 + 虚拟货币投资是最新形态诈骗。记住：视像通话不再能证明身份，任何保证高回报都是诈骗。",
+            feedbackType: "bad"
+          }
+        ]
+      },
+      // ── 場景 4：本關結束（最終）──
+      {
+        id: "l5_s4_done",
+        type: "result",
+        speaker: "system",
+        text: "【第五關完成】你應對了 Deepfake 與投資騙局——這是 2024-2025 最新型態的複合詐騙。\n\n記住三件事：視像通話不再能證明身份、用獨立渠道核實、任何保證高回報都是詐騙。恭喜完成全部 5 關！",
+        textEn: "[Level 5 Complete] You handled the Deepfake and investment scam — the newest composite scam of 2024-2025.\n\nRemember three things: video calls can no longer prove identity, verify via independent channels, any guaranteed high return is a scam. Congratulations on completing all 5 levels!",
+        textZh: "【第五关完成】你应对了 Deepfake 与投资骗局——这是 2024-2025 最新形态的复合诈骗。\n\n记住三件事：视像通话不再能证明身份、用独立渠道核实、任何保证高回报都是诈骗。恭喜完成全部 5 关！",
+        visual: { type: "safe_result", content: "🤖 第五關：Deepfake 與投資騙局\n狀態：已完成 ✅\n\n全部 5 關完成 🎉" },
+        choices: [
+          {
+            id: "l5_c4_end",
+            text: "🏁 查看你的反詐等級",
+            textEn: "🏁 See your anti-scam rank",
+            textZh: "🏁 查看你的反诈等级",
+            effects: {},
+            nextSceneId: "__ending__",
+            feedbackType: "mid"
+          }
+        ]
+      }
+    ]
+  }
+];
+
+// ===================================================================
 // ===== 結局資料 =====
+// ===================================================================
 const endings = [
   {
     id: "ending_deep_scammed",
     icon: "💸",
     title: "被騙了，但這不是你的錯",
-    titleEn: "You Were Scammed — But It Isn't Your Fault",
+    titleEn: "Scammed — But Not Your Fault",
+    titleZh: "被骗了，但这不是你的错",
     color: "#F87171",
-    condition: s => s.money <= 10 && s.riskScore >= 70,
-    description: "你在連環的壓力下連續做出了危險決定，損失不小。但說真的——這些騙局設計得非常精密，針對的就是剛進大學、正在適應新環境的你。",
-    descriptionEn: "Under sustained pressure, you made several risky decisions and suffered a serious loss. These scams are carefully engineered to target students who are still adapting to a new environment.",
+    condition: s => s.money <= 15 && s.riskScore >= 70,
+    description: "你在連環壓力下做出了危險決定，損失不小。但這些騙局設計精密，針對的就是剛到香港、正在適應新環境的學生。",
+    descriptionEn: "You made risky decisions under cascading pressure and lost money. But these scams are精密ly designed to target students new to Hong Kong.",
+    descriptionZh: "你在连环压力下做出了危险决定，损失不小。但这些骗局设计精密，针对的就是刚到香港、正在适应新环境的学生。",
     advice: [
       "騙子刻意製造「再不處理就來不及」的感覺，目的就是讓你沒時間思考。",
-      "任何要你立刻轉帳或填銀行卡的，先掛電話、關頁面，再用官方渠道查。",
-      "已經被騙了也不要慌，立刻聯絡銀行凍結，同時向警方報案，保留所有記錄。",
-      "被騙不代表你笨，代表你遇到了真正的職業騙子。下次你一定識得出來。"
+      "香港反詐資源：防騙易 18222 熱線、防騙視伏器 (Scameter) 網站、HKPF 反詐騙協調中心 (ADCC)。",
+      "已經被騙了也不要慌，立刻致電 18222 報案，聯絡銀行凍結帳戶，保留所有記錄。",
+      "被騙不代表你笨，代表你遇到了職業騙子。下次你一定識得出來。"
     ]
   },
   {
     id: "ending_high_risk_trap",
     icon: "⛔",
     title: "差點中招",
-    titleEn: "That Was Close",
+    titleEn: "Close Call",
+    titleZh: "差点中招",
     color: "#EF4444",
-    condition: s => s.riskScore >= 80 && s.information <= 30,
-    description: "你走在一個非常高風險的路上，而且手上掌握的資訊很少。這種組合是騙子最喜歡的——什麼都不確定，只能聽對方說。",
-    descriptionEn: "You were on a high-risk path with very little reliable information. That is exactly what scammers want: uncertainty that makes their story feel like the only answer.",
+    condition: s => s.riskScore >= 60 && s.information <= 35,
+    description: "你走在一個高風險的路上，而且手上掌握的資訊很少。這種組合是騙子最喜歡的——什麼都不確定，只能聽對方說。",
+    descriptionEn: "You're on a high-risk path with little information — the combination scammers love most: uncertain about everything, only able to listen to them.",
+    descriptionZh: "你走在一个高风险的路上，而且手上掌握的资讯很少。这种组合是骗子最喜欢的——什么都不确定，只能听对方说。",
     advice: [
-      "資訊越少，越容易被帶著走。遇到任何要求，先搜索，再決定。",
-      "護照、簽證、身份文件這些東西，提供之前一定要確認對方是誰。",
-      "學校的 International Office 和使領館，是海外學生最可靠的求助點。"
+      "資訊越少，越容易被帶著走。遇到任何要求，先搜索、再決定。",
+      "香港身份證、護照、銀行帳戶——提供前一定要確認對方身份。",
+      "校方學生事務處、防騙易 18222 是你最可靠的求助點。"
     ]
   },
   {
     id: "ending_anti_scam_expert",
     icon: "🏆",
     title: "反詐達人，完全沒被騙到",
-    titleEn: "Anti-Scam Expert — Completely Safe",
+    titleEn: "Anti-Scam Master — Untouched",
+    titleZh: "反诈达人，完全没被骗到",
     color: "#34D399",
-    condition: s => s.information >= 75 && s.alertness >= 70 && s.money >= 70,
-    description: "你沒有上當，還把整件事查清楚了。你識別出了限時話術、假連結和身份偽裝，並且每次都選擇從官方渠道核實。教科書級別的操作。",
-    descriptionEn: "You avoided the scam and verified the whole story. You spotted urgency tactics, fake links, and impersonation, then checked through official channels every time.",
+    condition: s => s.information >= 75 && s.alertness >= 70 && s.money >= 75,
+    description: "你沒有上當，還把整件事查清楚了。你識破了 Deepfake、釣魚連結、假冒政府，每次都從官方渠道核實。教科書級別的操作。",
+    descriptionEn: "You didn't fall for it and verified everything. You spotted Deepfakes, phishing links, and government impersonation — verifying via official channels every time. Textbook performance.",
+    descriptionZh: "你没有上当，还把整件事查清楚了。你识破了 Deepfake、钓鱼链接、假冒政府，每次都从官方渠道核实。教科书级别的操作。",
     advice: [
       "你已經掌握了最重要的反詐技能：不管對方說什麼，先掛電話，自己查。",
-      "真的官方機構，不會怕你核實。怕你查的，才是騙子。",
-      "把這個思路分享給你的室友和同學，多一個人知道，少一個人被騙。"
+      "把防騙易 18222 存到手機：香港反詐騙協調中心 (ADCC) 24 小時熱線。",
+      "把這個遊戲分享給你的室友和同學——多一個人知道，少一個人被騙。"
     ]
   },
   {
     id: "ending_calm_verifier",
     icon: "🧘",
     title: "沉住氣了，做得不錯",
-    titleEn: "You Stayed Calm — Well Done",
+    titleEn: "Stayed Calm — Well Done",
+    titleZh: "沉住气了，做得不错",
     color: "#60A5FA",
-    condition: s => s.information >= 65 && s.riskScore <= 35,
+    condition: s => s.information >= 60 && s.riskScore <= 35,
     description: "你沒有急著跟著對方走，而是選擇先查清楚。結果發現——果然是詐騙。這種「停一下」的習慣，比你想像的更難得。",
-    descriptionEn: "You did not let the caller rush you. You paused, checked the facts, and confirmed it was a scam. That habit of stopping first is a powerful defense.",
+    descriptionEn: "You didn't rush to follow them; you chose to verify first. And found — indeed, a scam. This 'pause a moment' habit is rarer than you think.",
+    descriptionZh: "你没有急着跟着对方走，而是选择先查清楚。结果发现——果然是诈骗。这种「停一下」的习惯，比你想象的更难得。",
     advice: [
-      "你最大的優點是不被「緊迫感」帶走。這個習慣要繼續保持。",
-      "下次遇到類似情況，也可以直接搜索「XX 是詐騙嗎」，通常能找到一堆受害者分享。",
-      "各地的反詐騙熱線都值得存到手機裡：大陸 96110，台灣 165，香港 18222。"
-    ]
-  },
-  {
-    id: "ending_over_suspicious",
-    icon: "🤨",
-    title: "太多疑了，啥都沒查",
-    titleEn: "Suspicious, But You Didn't Verify",
-    color: "#A78BFA",
-    condition: s => s.trust <= 15 && s.information <= 40,
-    description: "你對所有事情都保持懷疑，但懷疑本身不等於安全。你沒有主動去核實，只是選擇不理——萬一真的有問題，你也不知道。",
-    descriptionEn: "You remained suspicious, but suspicion alone is not verification. Ignoring everything can still leave you unsure when a real problem occurs.",
-    advice: [
-      "反詐的正確姿勢不是「拒絕一切」，而是「懂得核實」。",
-      "懷疑訊息是對的，但下一步應該是查——打官方電話，開官方 App，不是直接忽略。",
-      "有些真正重要的通知（比如學校、銀行）也可能因為你一直忽略而錯過。"
+      "你最大的優點是不被「緊迫感」帶走——這個習慣要繼續保持。",
+      "香港反詐三寶：防騙易 18222、防騙視伏器 (Scameter)、HKPF ADCC。",
+      "下次遇到類似情況，可以直接把可疑號碼/連結輸入 Scameter 搜尋。"
     ]
   },
   {
     id: "ending_data_leak",
     icon: "🔓",
     title: "錢沒丟，但資料可能洩露了",
-    titleEn: "No Money Lost, But Your Data May Be Exposed",
+    titleEn: "Money Safe — But Data May Be Leaked",
+    titleZh: "钱没丢，但资料可能泄露了",
     color: "#FBBF24",
-    condition: s => s.riskScore >= 45 && s.money >= 70,
-    description: "你的帳戶餘額沒有直接損失，但你可能在某個環節洩露了個人資料。騙子拿到你的資訊，可以慢慢用——有時候影響比當場轉帳還大。",
-    descriptionEn: "You did not lose money directly, but you may have exposed personal information. Scammers can reuse that data later, sometimes causing more harm than an immediate transfer.",
+    condition: s => s.riskScore >= 40 && s.money >= 60,
+    description: "你的帳戶餘額沒有直接損失，但你可能在某個環節洩露了個人資料。騙子拿到你的 HKID、護照資料，可以慢慢用——有時候影響比當場轉帳還大。",
+    descriptionEn: "Your balance is intact, but you may have leaked personal data in some step. With your HKID and passport info, scammers can use them slowly — sometimes the impact is worse than an immediate transfer.",
+    descriptionZh: "你的账户余额没有直接损失，但你可能在某个环节泄露了个人资料。骗子拿到你的 HKID、护照资料，可以慢慢用——有时候影响比当场转账还大。",
     advice: [
-      "沒有損失金錢，不代表安全。手機號、身份證號、銀行卡號一旦洩露，後患很多。",
+      "沒有損失金錢，不代表安全。HKID 號碼、護照號碼一旦洩露，後患很多。",
       "建議立刻更改相關帳戶密碼，並告知銀行留意異常操作。",
-      "以後在任何非官方頁面填資料之前，先看清楚網址域名。"
+      "考慮向入境處反映 HKID 洩露情況，必要時更換身份證。"
     ]
   },
   {
     id: "ending_small_loss",
     icon: "💰",
     title: "損失了一點，但及時踩了剎車",
-    titleEn: "A Small Loss, But You Stopped in Time",
+    titleEn: "Small Loss, Timely Brake",
+    titleZh: "损失了一点，但及时踩了刹车",
     color: "#FB923C",
-    condition: s => s.money < 70 && s.money > 10,
-    description: "你在某個關鍵時刻沒有及時識破，造成了一些損失。但好在你及時停手了，沒有繼續陷進去。",
-    descriptionEn: "You missed a warning sign and suffered a loss, but you stopped before the situation became worse. Cutting off a scam early matters.",
+    condition: s => s.money < 65 && s.money > 15,
+    description: "你在某個關鍵時刻沒有及時識破，造成了一些損失。但好在你及時停手了，沒有繼續陷進去。及時止損，比追回損失重要一百倍。",
+    descriptionEn: "You didn't spot it in time at a critical moment and lost some money. But you stopped in time and didn't go deeper. Cutting losses is 100x more important than chasing them.",
+    descriptionZh: "你在某个关键时刻没有及时识破，造成了一些损失。但好在你及时停手了，没有继续陷进去。及时止损，比追回损失重要一百倍。",
     advice: [
-      "及時停損比繼續投入重要一百倍。「已經虧了，再投一點說不定能回本」是騙子最常用的話術。",
-      "遇到損失，第一時間聯絡銀行，第二時間報警，保留所有截圖和通話記錄。",
-      "下次遇到要求轉帳或填卡號的情況，無論理由多充分，先掛電話再說。"
+      "及時止損比繼續投入重要一百倍——「已經虧了，再投一點說不定能回本」是騙子最常用的話術。",
+      "遇到損失，第一時間致電防騙易 18222，第二時間聯絡銀行，保留所有截圖和通話記錄。",
+      "香港警方 ADCC 反詐騙協調中心專責處理這類案件。"
     ]
   },
   {
     id: "ending_safe_but_lucky",
     icon: "😅",
     title: "這次沒事，但不是因為你夠厲害",
-    titleEn: "Safe This Time — Mostly Through Luck",
+    titleEn: "Safe This Time — But Not Because You're Good",
+    titleZh: "这次没事，但不是因为你够厉害",
     color: "#38BDF8",
     condition: s => true,
     description: "你沒有受到重大損失，但說實話，有幾個關鍵判斷更像是運氣，而不是你主動識別出來的。下次碰到更精心設計的騙局，可能就不那麼幸運了。",
-    descriptionEn: "You avoided a major loss, but several key decisions were based more on luck than active verification. A more convincing scam may not be as forgiving next time.",
+    descriptionEn: "You avoided major losses, but honestly, several key judgments were luck rather than active detection. Next time you meet a more elaborate scam, you might not be so lucky.",
+    descriptionZh: "你没有受到重大损失，但说实话，有几个关键判断更像是运气，而不是你主动识别出来的。下次碰到更精心设计的骗局，可能就不那么幸运了。",
     advice: [
       "運氣不是反詐技能，主動查證才是。",
-      "下次遇到類似情況，試著主動搜索、打官方電話，而不是靠感覺判斷。",
-      "把各地反詐熱線存起來：大陸 96110，台灣 165，香港 18222——以備不時之需。"
+      "把防騙易 18222 和防騙視伏器 (Scameter) 存到書籤——以備不時之需。",
+      "下次遇到類似情況，試著主動搜索、打官方電話，而不是靠感覺判斷。"
     ]
   }
 ];
 
-// ===== 劇情庫 =====
-const scenarioLibrary = {
+// ===================================================================
+// ===== 配置覆蓋：如果 levels.js 已定義 LEVELS（8 關新配置），
+// ===== 就用 LEVELS 覆蓋舊 5 關，確保 game.js 讀到新關卡。
+// ===================================================================
+if (typeof window !== 'undefined') {
+  // 延遲到下一 tick，確保 levels.js 已執行完畢（載入順序：data.js → levels.js）
+  // 但若 levels.js 先賦值咗 window.levels，呢度唔會改佢。
+  const overrideLater = () => {
+    try {
+      if (typeof LEVELS !== 'undefined' && LEVELS.length > 0
+          && (typeof window.levels === 'undefined' || !window.levels || window.levels.length < LEVELS.length)) {
+        Object.defineProperty(window, 'levels', { value: LEVELS, writable: true, configurable: true });
+      }
+    } catch(e) { try { window.levels = LEVELS; } catch(e2){} }
+  };
+  if (document && document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', overrideLater, { once: true });
+  } else {
+    overrideLater();
+  }
+}
 
-  // ==================== 中國大陸 ====================
-  mainland_china: [
-    {
-      id: "cn_express_address_problem",
-      region: "mainland_china",
-      title: "快遞釣魚：連環話術",
-      titleEn: "Delivery Phishing: A Chain of Pressure Tactics",
-      scamType: "快遞釣魚 + 假客服二次施壓詐騙",
-      scamTypeEn: "Delivery phishing + follow-up pressure from fake customer service",
-      suitableIdentities: ["mainland_student", "hmt_student"],
-      redFlags: [
-        "短訊連結域名不是官方快遞公司（cn-track.xyz 不是順豐/中通域名）",
-        "填寫資料後「官方客服」打電話跟進——真正的快遞客服不會主動打電話催你填資料",
-        "「客服」掌握你的姓名和部分快遞單號——這些資料可能早已洩露",
-        "要求輸入銀行卡號和驗證碼才能「重新寄送」",
-        "「今天 18:00 前」的限時壓力話術"
-      ],
-      redFlagsEn: [
-        "The link is not an official courier domain (cn-track.xyz is not SF Express or ZTO)",
-        "A fake support agent calls after you submit data; real couriers do not call to pressure you into forms",
-        "The caller knows your name and part of a tracking number, but that data may already have leaked",
-        "They demand a bank-card number and verification code to ‘redeliver’ a parcel",
-        "They create urgency with a deadline such as ‘before 6 PM today’"
-      ],
-      officialChannels: [
-        "直接打開快遞官方 App（順豐/中通/菜鳥）查詢包裹狀態",
-        "自己搜索快遞公司官網電話，主動撥打客服確認",
-        "永遠不要在短訊連結的頁面填寫銀行卡或驗證碼"
-      ],
-      officialChannelsEn: [
-        "Open the courier's official app to check the parcel status",
-        "Find the courier's official phone number yourself and call to verify",
-        "Never enter a bank-card number or verification code on a page opened from a text message"
-      ],
-      pressureSource: ["包裹退回壓力", "限時壓力", "假客服二次施壓"],
-      scenes: [
-        // ── 場景1：鋪墊——收到可疑短訊 ──
-        {
-          id: "cn_s1_sms",
-          type: "message",
-          speaker: "system",
-          text: "下午四點，你正在宿舍背單詞。你確實在等一個網購包裹，所以這條短訊第一眼看起來好像是真的。",
-          textEn: "It's 4 PM and you're memorizing vocabulary in your dorm. You are indeed expecting an online shopping package, so this text message looks real at first glance.",
-          visual: {
-            type: "sms",
-            sender: "【順豐快遞】",
-            content: "尊敬的客戶，您的包裹因收件地址信息不完整，快遞員無法正常派送。請在今日18:00前點擊以下連結補充地址，否則將自動退回發件方。",
-            link: "http://sf-update.cn-track.xyz/addr?id=8812"
-          },
-          choices: [
-            {
-              id: "cn_c1_click",
-              text: "📲 點開連結看看，填一下地址應該沒事",
-              textEn: "📲 Click the link and check — filling in the address should be fine",
-              effects: { riskScore: 20, information: -5 },
-              nextSceneId: "cn_s2_fake_page",
-              feedback: "⚠️ 注意看網址——「cn-track.xyz」完全不是順豐的域名（sf-express.com 才是）。點進去，你已經踏進了騙子的地盤。",
-              feedbackType: "bad"
-            },
-            {
-              id: "cn_c1_app",
-              text: "📦 先不急，打開順豐 App 查一下包裹狀態",
-              textEn: "📦 Hold on, open the SF Express app to check the package status",
-              effects: { information: 20, alertness: 15, riskScore: -5 },
-              nextSceneId: "cn_s2_app_check",
-              feedback: "✅ 好習慣。官方 App 是唯一可靠的查詢方式，不管短訊怎麼說，先查 App。",
-              feedbackType: "good"
-            },
-            {
-              id: "cn_c1_ignore",
-              text: "🙈 感覺像詐騙，先不管它",
-              textEn: "🙈 Feels like a scam, just ignore it",
-              effects: { alertness: 5, stress: 5 },
-              nextSceneId: "cn_s2_ignore_then",
-              feedback: "🤔 不點連結是對的。但如果你真的有包裹在等，什麼都不查會讓你越來越焦慮。",
-              feedbackType: "mid"
-            },
-            {
-              id: "cn_c1_search",
-              text: "🔍 搜索這個短訊，看看有沒有人反映過",
-              textEn: "🔍 Search this message to see if anyone else has reported it",
-              effects: { information: 20, alertness: 15, riskScore: -5 },
-              nextSceneId: "cn_s2_search_result",
-              feedback: "✅ 聰明！搜索「快遞地址異常詐騙」，你會看到幾百個一模一樣的案例。",
-              feedbackType: "good"
-            }
-          ]
-        },
-        // ── 場景2A：點了連結——假頁面 ──
-        {
-          id: "cn_s2_fake_page",
-          type: "webpage",
-          speaker: "system",
-          text: "頁面設計得很像快遞公司，UI 挺精緻的。但仔細看——網址欄顯示「cn-track.xyz」，不是任何一家快遞公司的官方域名。頁面要你填姓名、手機號、地址，還有一欄「身份驗證」，需要銀行卡號。",
-          textEn: "The page looks just like a courier company's site — the UI is quite polished. But look closely — the URL shows 'cn-track.xyz', not any official courier domain. The page asks for your name, phone number, address, and an 'identity verification' section requiring your bank card number.",
-          visual: {
-            type: "warning_page",
-            content: "⚠️ 網址：cn-track.xyz（非官方！）\n正規順豐域名：sf-express.com\n\n表單內容：\n• 姓名、手機、地址（普通，但也是個資）\n• 銀行卡號 ← 快遞公司不需要這個！\n• 手機驗證碼 ← 填了等於授權轉帳"
-          },
-          choices: [
-            {
-              id: "cn_c2_fill_name_phone",
-              text: "📝 姓名和手機填一下，銀行卡先不填",
-              textEn: "📝 Fill in name and phone, but not the bank card",
-              effects: { riskScore: 15, information: -10, stress: -5 },
-              nextSceneId: "cn_s3_scammer_calls",
-              feedback: "⚠️ 就算只填了姓名和手機，騙子也拿到了你的真實資料。接下來他們會「主動打電話跟進」。",
-              feedbackType: "bad"
-            },
-            {
-              id: "cn_c2_fill_all",
-              text: "📝 全填上，包裹退回就麻煩了",
-              textEn: "📝 Fill in everything — it'd be a hassle if the package gets returned",
-              effects: { money: -40, riskScore: 55, information: -20, stress: -10 },
-              nextSceneId: "cn_s3_otp_demand",
-              feedback: "❌ 銀行卡號 + 驗證碼，騙子直接就能登入你的網銀，你的帳戶已經不安全了。",
-              feedbackType: "bad"
-            },
-            {
-              id: "cn_c2_url_notice",
-              text: "🔍 等等，這個網址根本不是順豐的……立刻關掉！",
-              textEn: "🔍 Wait — this URL isn't SF Express at all... Close it immediately!",
-              effects: { alertness: 25, information: 20, riskScore: -15 },
-              nextSceneId: "cn_s3_verify_app",
-              feedback: "✅ 你在這一關識破了！看域名是判斷釣魚網站最有效的方法。",
-              feedbackType: "good"
-            },
-            {
-              id: "cn_c2_ask_friend",
-              text: "📸 截圖發給室友問問是不是真的",
-              textEn: "📸 Screenshot and send to roommate to ask if it's real",
-              effects: { information: 10, socialPressure: 5 },
-              nextSceneId: "cn_s3_roommate_reply",
-              feedback: "🤔 找室友問是個好主意，但趁等回覆的時間別手賤亂填。",
-              feedbackType: "mid"
-            }
-          ]
-        },
-        // ── 場景2B：查了 App ──
-        {
-          id: "cn_s2_app_check",
-          type: "result",
-          speaker: "system",
-          text: "你打開順豐 App，輸入手機號查詢。App 顯示：包裹正常派送中，預計明天上午送到，沒有任何地址問題。你放下手機準備繼續學習——但十分鐘後，電話響了。",
-          textEn: "You open the SF Express app and check with your phone number. The app shows: package is being delivered normally, expected arrival tomorrow morning, no address issues. You put down your phone ready to study — but ten minutes later, the phone rings.",
-          visual: {
-            type: "safe_result",
-            content: "📦 快遞狀態：正常派送中\n📍 地址：確認無誤\n🔔 預計到達：明日上午 09:00-12:00\n\n那條短訊是假的。但故事還沒完……"
-          },
-          choices: [
-            {
-              id: "cn_c2b_ignore_call",
-              text: "📵 陌生號碼，不接",
-              textEn: "📵 Unknown number, don't answer",
-              effects: { alertness: 10, riskScore: -5 },
-              nextSceneId: "cn_s3_missed_call_msg",
-              feedback: "✅ 不接陌生電話是個謹慎做法。但騙子留了語音，你要怎麼處理？",
-              feedbackType: "good"
-            },
-            {
-              id: "cn_c2b_answer_call",
-              text: "📞 接了，對方說是「快遞客服」",
-              textEn: "📞 Answered, they said they're 'Courier Customer Service'",
-              effects: { stress: 10, riskScore: 10 },
-              nextSceneId: "cn_s3_scammer_calls",
-              feedback: "⚠️ 你查過了 App 知道包裹沒問題，但騙子還是打來了。保持警惕！",
-              feedbackType: "mid"
-            }
-          ]
-        },
-        // ── 場景2C：搜索結果 ──
-        {
-          id: "cn_s2_search_result",
-          type: "result",
-          speaker: "system",
-          text: "搜索結果第一條就是「快遞地址異常詐騙警示」，點進去一看：跟你收到的短訊幾乎一字不差，連連結格式都一樣。評論區幾百人說「差點上當」。你放下手機，但一小時後，電話響了——顯示「快遞客服」。",
-          textEn: "The first search result is 'Delivery Address Scam Warning' — clicking in, it's almost word-for-word identical to the message you received, even the link format. Hundreds in the comments say 'almost fell for it'. You put down your phone, but an hour later, it rings — showing 'Courier Customer Service'.",
-          visual: {
-            type: "safe_result",
-            content: "🔍 搜索結果：\n\n「快遞地址異常詐騙」\n——這類短訊已被警方多次發文警示。\n連結域名特征：cn-track.xyz、kd-update.xyz\n\n但接下來騙子還有另一招……"
-          },
-          choices: [
-            {
-              id: "cn_c2c_answer",
-              text: "📞 接電話，看看對方說什麼",
-              textEn: "📞 Answer the call and see what they say",
-              effects: { stress: 10, riskScore: 10 },
-              nextSceneId: "cn_s3_scammer_calls",
-              feedback: "⚠️ 你有資訊優勢了，但騙子的電話更有說服力——準備好應對。",
-              feedbackType: "mid"
-            },
-            {
-              id: "cn_c2c_ignore",
-              text: "📵 看到「快遞客服」顯示就不接，搜索這個號碼",
-              textEn: "📵 Seeing 'Courier Customer Service' — don't answer, search the number instead",
-              effects: { alertness: 20, information: 15, riskScore: -10 },
-              nextSceneId: "cn_s4_search_phone",
-              feedback: "✅ 先搜索號碼是個很好的習慣。騙子喜歡偽裝成「客服顯示號碼」。",
-              feedbackType: "good"
-            }
-          ]
-        },
-        // ── 場景2D：沒管短訊 ──
-        {
-          id: "cn_s2_ignore_then",
-          type: "result",
-          speaker: "system",
-          text: "你把短訊放在一邊。半小時後，你開始擔心：萬一包裹真的被退回怎麼辦？買的東西挺貴的。這時候電話又響了，顯示「快遞客服」。",
-          textEn: "You set the message aside. Half an hour later, you start worrying: what if the package really gets returned? The item was quite expensive. Then the phone rings again, showing 'Courier Customer Service'.",
-          visual: { type: "safe_result", content: "📱 來電：快遞客服\n\n你的焦慮正好給了騙子可乘之機——\n他們已經知道你收過那條短訊，現在要「跟進確認」。" },
-          choices: [
-            {
-              id: "cn_c2d_answer",
-              text: "📞 先接了，聽聽什麼事",
-              textEn: "📞 Answer first, hear what it's about",
-              effects: { stress: 15, riskScore: 15 },
-              nextSceneId: "cn_s3_scammer_calls",
-              feedback: "⚠️ 你的焦慮讓你更容易被電話騙子說服。記住：你有權隨時掛電話。",
-              feedbackType: "mid"
-            },
-            {
-              id: "cn_c2d_app_now",
-              text: "📦 等等，先打開快遞 App 查一下再說",
-              textEn: "📦 Wait, open the courier app to check first",
-              effects: { information: 20, alertness: 15, riskScore: -10 },
-              nextSceneId: "cn_s2_app_check",
-              feedback: "✅ 好！先查 App，有了真實資訊再決定要不要接電話。",
-              feedbackType: "good"
-            }
-          ]
-        },
-        // ── 場景3：騙子電話——加壓 ──
-        {
-          id: "cn_s3_scammer_calls",
-          type: "phone_call",
-          speaker: "scammer",
-          pressure: true,
-          text: "電話裡是一個普通話很標準的女聲，語氣像客服又像通知。她說話很快，你跟不上就插不進去。",
-          textEn: "On the phone is a woman with standard Mandarin, her tone like a customer service agent delivering a notice. She speaks fast — you can't keep up or get a word in.",
-          visual: {
-            type: "phone_call",
-            caller: "顯示：順豐速運客服",
-            content: "您好，我是順豐客服，您的包裹因為地址系統更新，必須在今晚12點前完成身份核驗，否則直接退回並收取退件費45元。核驗只需要一分鐘，請問您現在方便嗎？我來引導您操作。"
-          },
-          choices: [
-            {
-              id: "cn_c3_follow",
-              text: "😰 好吧，你說怎麼操作？",
-              textEn: "😰 Alright, tell me what to do",
-              effects: { stress: -10, riskScore: 25, information: -10 },
-              nextSceneId: "cn_s4_ask_card",
-              feedback: "⚠️ 你跟著對方走了。接下來她會一步步問你要資料。",
-              feedbackType: "bad"
-            },
-            {
-              id: "cn_c3_question",
-              text: "🤔 我查過 App 了，包裹沒問題，你為什麼說地址有問題？",
-              textEn: "🤔 I checked the app — the package is fine. Why are you saying there's an address issue?",
-              effects: { alertness: 15, stress: 10, riskScore: 5 },
-              nextSceneId: "cn_s4_scammer_excuse",
-              feedback: "🤔 好問題！騙子會有準備好的答案，但看她怎麼回應很能說明問題。",
-              feedbackType: "mid"
-            },
-            {
-              id: "cn_c3_hangup",
-              text: "📵 掛電話，這個電話不對勁",
-              textEn: "📵 Hang up, this call feels wrong",
-              effects: { alertness: 20, riskScore: -20, stress: -5 },
-              nextSceneId: "cn_s4_after_hangup",
-              feedback: "✅ 你掛了！掛電話不會有任何損失，騙子說的「不配合會怎樣」全是嚇你的。",
-              feedbackType: "good"
-            },
-            {
-              id: "cn_c3_verify_number",
-              text: "🔍 先問她：你們的官方電話是多少？我查一下",
-              textEn: "🔍 First ask her: what's your official phone number? Let me verify",
-              effects: { alertness: 15, information: 15, riskScore: -5 },
-              nextSceneId: "cn_s4_scammer_dodge",
-              feedback: "✅ 要求對方提供可核實的信息，是判斷真假客服的好方法。看她怎麼回答。",
-              feedbackType: "good"
-            }
-          ]
-        },
-        // ── 場景3B：室友回覆 ──
-        {
-          id: "cn_s3_roommate_reply",
-          type: "chat",
-          speaker: "friend",
-          text: "室友小王回覆了，但你發現他的判斷有點讓你意外。",
-          textEn: "Your roommate Xiao Wang replies, but his judgment surprises you a bit.",
-          visual: {
-            type: "chat",
-            app: "微信",
-            appIcon: "💬",
-            messages: [
-              { type: "outgoing", name: "你", text: "[截圖：快遞網頁]" },
-              { type: "incoming", name: "小王", text: "這個……不確定欸，我上週也收到類似的" },
-              { type: "incoming", name: "小王", text: "我填了姓名和電話，後來沒事的" },
-              { type: "incoming", name: "小王", text: "你就填一下地址應該沒事吧？銀行卡不填就好了" }
-            ]
-          },
-          choices: [
-            {
-              id: "cn_c3r_trust_roommate",
-              text: "😅 室友說沒事，那我就填地址和手機",
-              textEn: "😅 My roommate says it's fine, so I'll fill in the address and phone",
-              effects: { riskScore: 15, information: -10, socialPressure: -10 },
-              nextSceneId: "cn_s3_scammer_calls",
-              feedback: "⚠️ 室友「上次沒事」不代表這次安全。你的手機號現在已在騙子資料庫裡，他們會打電話跟進。",
-              feedbackType: "bad"
-            },
-            {
-              id: "cn_c3r_own_research",
-              text: "🔍 室友也不確定，我自己搜索一下再決定",
-              textEn: "🔍 My roommate isn't sure either, I'll search and decide myself",
-              effects: { information: 20, alertness: 10, riskScore: -5 },
-              nextSceneId: "cn_s2_search_result",
-              feedback: "✅ 不能靠別人的「我上次沒事」來判斷安全性。自己搜索才是正確的。",
-              feedbackType: "good"
-            },
-            {
-              id: "cn_c3r_app_check",
-              text: "📦 算了，直接打開快遞 App 查包裹",
-              textEn: "📦 Forget it, just open the courier app to check the package",
-              effects: { information: 20, alertness: 15, riskScore: -10 },
-              nextSceneId: "cn_s2_app_check",
-              feedback: "✅ 官方 App 比朋友的判斷更可靠。你做了正確的選擇。",
-              feedbackType: "good"
-            }
-          ]
-        },
-        // ── 場景3C：沒接電話後 ──
-        {
-          id: "cn_s3_missed_call_msg",
-          type: "message",
-          speaker: "system",
-          text: "你沒接電話，對方留了語音：「您好，這裡是順豐客服，您有包裹需要地址核驗，請在今晚12點前回電，逾期作退件處理，感謝配合。」——聽起來還挺官方的。",
-          textEn: "You didn't answer. They left a voicemail: 'Hello, this is SF Express customer service. You have a package requiring address verification. Please call back before midnight tonight, or it will be returned. Thank you for your cooperation.' — Sounds quite official.",
-          visual: {
-            type: "sms",
-            sender: "語音留言",
-            content: "「您好，這裡是順豐客服，您有包裹需要地址核驗，請在今晚12點前回電 136-XXXX-XXXX，逾期作退件處理，感謝配合。」"
-          },
-          choices: [
-            {
-              id: "cn_c3m_call_back",
-              text: "📞 這個號碼聽起來挺正式，回電問一下",
-              textEn: "📞 This number sounds quite official, I'll call back and ask",
-              effects: { stress: 10, riskScore: 15 },
-              nextSceneId: "cn_s3_scammer_calls",
-              feedback: "⚠️ 注意！你是在回電給騙子的號碼，不是官方順豐電話。語音聽起來官方，但來電號碼可以偽裝。",
-              feedbackType: "bad"
-            },
-            {
-              id: "cn_c3m_official_check",
-              text: "🔍 先搜索順豐官方客服電話，對比一下",
-              textEn: "🔍 First search for SF Express's official customer service number and compare",
-              effects: { information: 20, alertness: 15, riskScore: -10 },
-              nextSceneId: "cn_s4_search_phone",
-              feedback: "✅ 對！順豐官方客服只有 95338，任何其他號碼都不可信。",
-              feedbackType: "good"
-            },
-            {
-              id: "cn_c3m_app_again",
-              text: "📦 我 App 查過了包裹沒問題，這語音是假的，直接忽略",
-              textEn: "📦 I checked the app — the package is fine. This voicemail is fake, just ignore it",
-              effects: { alertness: 15, information: 5, riskScore: -10 },
-              nextSceneId: "cn_s4_after_hangup",
-              feedback: "✅ 你有 App 的核實作支撐，判斷完全正確。語音留言是詐騙流程的一部分。",
-              feedbackType: "good"
-            }
-          ]
-        },
-        // ── 場景4A：騙子索要銀行卡 ──
-        {
-          id: "cn_s4_ask_card",
-          type: "phone_call",
-          speaker: "scammer",
-          pressure: true,
-          text: "對方引導你進入「核驗流程」，說為了確認你的身份，需要核對你的銀行卡尾號。",
-          textEn: "They guide you into the 'verification process', saying they need to confirm your identity by checking the last digits of your bank card.",
-          visual: {
-            type: "phone_call",
-            caller: "「順豐客服」",
-            content: "好的，核驗一下您的銀行卡尾號就可以了，這是系統要求的標準流程，我們只核對最後四位數字。請問您的銀行卡尾號是多少？"
-          },
-          choices: [
-            {
-              id: "cn_c4a_give_tail",
-              text: "😅 只是後四位嗎……那應該沒事，告訴她",
-              textEn: "😅 Just the last four digits... that should be fine, tell her",
-              effects: { riskScore: 20, information: -10 },
-              nextSceneId: "cn_s5_full_card_demand",
-              feedback: "⚠️ 後四位只是第一步。接下來她會說「確認不上，需要完整號碼」。這是套牌手法。",
-              feedbackType: "bad"
-            },
-            {
-              id: "cn_c4a_hangup_now",
-              text: "📵 等等，客服怎麼需要銀行卡資料？掛電話！",
-              textEn: "📵 Wait — why would customer service need bank card info? Hang up!",
-              effects: { alertness: 25, riskScore: -20 },
-              nextSceneId: "cn_s4_after_hangup",
-              feedback: "✅ 快遞客服處理地址問題，根本不需要任何銀行資料。這是詐騙的核心特徵！",
-              feedbackType: "good"
-            },
-            {
-              id: "cn_c4a_stall",
-              text: "🤔 我說：等我查一下官方客服電話再回電",
-              textEn: "🤔 I'll say: let me check the official customer service number and call back",
-              effects: { alertness: 20, information: 10, riskScore: -10 },
-              nextSceneId: "cn_s4_search_phone",
-              feedback: "✅ 要求暫停去核實，騙子通常會變得更急——這本身就說明問題了。",
-              feedbackType: "good"
-            }
-          ]
-        },
-        // ── 場景4B：騙子解釋 App 數據「延遲」──
-        {
-          id: "cn_s4_scammer_excuse",
-          type: "phone_call",
-          speaker: "scammer",
-          pressure: true,
-          text: "騙子沒有慌，她有備而來。",
-          textEn: "The scammer doesn't panic — she came prepared.",
-          visual: {
-            type: "phone_call",
-            caller: "「順豐客服」",
-            content: "您的 App 顯示的是舊數據，我們系統更新後地址格式有變更，App 的同步大概要 24 小時。您現在 App 看到「正常」，其實是昨天的狀態。如果您不信，可以致電確認，但今晚 12 點前不處理就會自動退件。"
-          },
-          choices: [
-            {
-              id: "cn_c4b_believe",
-              text: "😟 好吧，聽起來說得通……那我怎麼核驗？",
-              textEn: "😟 Okay, that sounds reasonable... so how do I verify?",
-              effects: { stress: -5, riskScore: 20, information: -10, trust: 10 },
-              nextSceneId: "cn_s4_ask_card",
-              feedback: "⚠️ 「App 數據延遲」是騙子應對「我查了 App」的標準台詞。他說得越流利越可疑。",
-              feedbackType: "bad"
-            },
-            {
-              id: "cn_c4b_test",
-              text: "🔍 你說「可以致電確認」——那給我你們官方電話",
-              textEn: "🔍 You said 'you can call to confirm' — then give me your official number",
-              effects: { alertness: 20, information: 15, riskScore: -5 },
-              nextSceneId: "cn_s4_scammer_dodge",
-              feedback: "✅ 你在測試他！正規客服能直接給你官方電話讓你驗證，騙子做不到。",
-              feedbackType: "good"
-            },
-            {
-              id: "cn_c4b_hangup",
-              text: "📵 說得越多越像詐騙，掛電話",
-              textEn: "📵 The more they talk, the more it sounds like a scam. Hang up",
-              effects: { alertness: 25, riskScore: -20 },
-              nextSceneId: "cn_s4_after_hangup",
-              feedback: "✅ 正確！「系統更新延遲」是百搭藉口，用來推翻你用 App 核實的結果。掛掉是對的。",
-              feedbackType: "good"
-            }
-          ]
-        },
-        // ── 場景4C：騙子躲避提供官方電話 ──
-        {
-          id: "cn_s4_scammer_dodge",
-          type: "phone_call",
-          speaker: "scammer",
-          pressure: true,
-          text: "你要求對方提供官方電話讓你核實，她的回答讓你心裡一涼。",
-          textEn: "You ask them to provide an official phone number for you to verify. Their answer sends a chill down your spine.",
-          visual: {
-            type: "phone_call",
-            caller: "「順豐客服」",
-            content: "我這邊是系統分配的工單號，致電核實的話需要您重新排隊等候，最少 40 分鐘。您的包裹今晚12點截止，現在真的沒有時間讓您去排隊了。我現在可以幫您直接處理，配合的話五分鐘就好。"
-          },
-          choices: [
-            {
-              id: "cn_c4c_give_up",
-              text: "😰 算了排隊太麻煩了，你幫我直接處理吧",
-              textEn: "😰 Forget it, queuing is too much trouble. Just handle it for me",
-              effects: { riskScore: 25, stress: -5, information: -10 },
-              nextSceneId: "cn_s4_ask_card",
-              feedback: "⚠️ 「排隊太麻煩」正是騙子製造的心理壓力。他讓你覺得「配合他更省事」。",
-              feedbackType: "bad"
-            },
-            {
-              id: "cn_c4c_hangup_firm",
-              text: "📵 你給不了官方電話——那你不是真的客服。掛了。",
-              textEn: "📵 You can't give an official number — then you're not real customer service. Hanging up.",
-              effects: { alertness: 30, information: 20, riskScore: -25 },
-              nextSceneId: "cn_s4_after_hangup",
-              feedback: "✅ 完美邏輯！真正的客服可以隨時給你官方聯絡方式。給不出來，就是騙子。",
-              feedbackType: "good"
-            },
-            {
-              id: "cn_c4c_call_official",
-              text: "🔍 掛電話，自己搜索順豐官方客服致電",
-              textEn: "🔍 Hang up, search for SF Express's official number and call them",
-              effects: { alertness: 25, information: 25, riskScore: -20 },
-              nextSceneId: "cn_s4_search_phone",
-              feedback: "✅ 這才是正確操作。順豐官方只有 95338，打過去兩分鐘就確認了。",
-              feedbackType: "good"
-            }
-          ]
-        },
-        // ── 場景4D：搜索電話號碼 ──
-        {
-          id: "cn_s4_search_phone",
-          type: "result",
-          speaker: "system",
-          text: "你搜索了那個「客服電話」。結果出來了：",
-          textEn: "You searched for that 'customer service number'. Here are the results:",
-          visual: {
-            type: "warning_page",
-            content: "🔍 搜索結果：\n\n「136-XXXX-XXXX 詐騙」——搜索結果一大把\n\n最新帖子（2小時前）：\n「接到這個號碼說是順豐客服，要求核驗銀行卡，差點上當！」\n\n⚠️ 順豐官方客服只有 95338\n其他聲稱「順豐」的號碼均為詐騙"
-          },
-          choices: [
-            {
-              id: "cn_c4d_confirmed",
-              text: "✅ 確認是詐騙了，舉報這個號碼",
-              textEn: "✅ Confirmed it's a scam, report this number",
-              effects: { alertness: 20, information: 20, riskScore: -15 },
-              nextSceneId: "cn_s5_report",
-              feedback: "✅ 你用搜索技巧識破了詐騙。舉報這個號碼，幫助保護下一個收到電話的人。",
-              feedbackType: "good"
-            },
-            {
-              id: "cn_c4d_call_real",
-              text: "📞 打 95338 再確認一下包裹",
-              textEn: "📞 Call 95338 to double-check the package",
-              effects: { alertness: 15, information: 15, riskScore: -10 },
-              nextSceneId: "cn_s5_official_confirm",
-              feedback: "✅ 雙重確認！打官方電話徹底安心。",
-              feedbackType: "good"
-            }
-          ]
-        },
-        // ── 場景4E：掛電話後 ──
-        {
-          id: "cn_s4_after_hangup",
-          type: "result",
-          speaker: "system",
-          text: "你掛了電話。對方馬上再次來電，你沒接。然後發來一條短訊：「您已放棄核驗，包裹將按退件處理，退件費 45 元將從您的帳戶扣除。」——這條短訊是最後一次測試你的。",
-          textEn: "You hung up. They call again immediately — you don't answer. Then they send a text: 'You have abandoned verification. The package will be returned. A return fee of 45 yuan will be deducted from your account.' — This text is the final test.",
-          visual: {
-            type: "sms",
-            sender: "顯示：快遞客服",
-            content: "您已放棄核驗，包裹將按退件處理。退件費 45 元將從您的帳戶扣除，如需撤銷請在 30 分鐘內點擊連結：http://sf-cancel.cn-track.xyz/fee"
-          },
-          choices: [
-            {
-              id: "cn_c4e_click_cancel",
-              text: "😰 被扣款？！點連結看看怎麼撤銷",
-              textEn: "😰 Charged?! Click the link to see how to cancel it",
-              effects: { riskScore: 25, stress: 5, information: -10 },
-              nextSceneId: "cn_s5_second_trap",
-              feedback: "⚠️ 這是第二個陷阱。你已經識破了電話騙局，不要又被這條短訊拉回去。",
-              feedbackType: "bad"
-            },
-            {
-              id: "cn_c4e_app_confirm",
-              text: "📦 打開 App 看一下帳戶，順豐扣款要通過官方 App 才有記錄",
-              textEn: "📦 Open the app to check the account — SF Express charges only show up in the official app",
-              effects: { alertness: 25, information: 20, riskScore: -15 },
-              nextSceneId: "cn_s5_official_confirm",
-              feedback: "✅ 任何快遞費用都會在官方 App 裡有記錄。短訊裡的連結永遠不要點。",
-              feedbackType: "good"
-            },
-            {
-              id: "cn_c4e_ignore",
-              text: "🙈 騙子最後的掙扎，無視它",
-              textEn: "🙈 The scammer's last struggle, ignore it",
-              effects: { alertness: 20, riskScore: -10 },
-              nextSceneId: "cn_s5_official_confirm",
-              feedback: "✅ 你識別了後續的短訊也是詐騙套路。沒有任何損失。",
-              feedbackType: "good"
-            }
-          ]
-        },
-        // ── 場景5A：索要完整卡號 ──
-        {
-          id: "cn_s5_full_card_demand",
-          type: "phone_call",
-          speaker: "scammer",
-          pressure: true,
-          text: "你告訴了對方銀行卡後四位，她說「後四位比對不上，可能是主副卡問題，需要完整卡號和驗證碼核對一下」。",
-          textEn: "You gave them the last four digits of your bank card. They say 'The last four digits don't match — might be a primary/secondary card issue. We need the full card number and verification code.'",
-          visual: {
-            type: "phone_call",
-            caller: "「順豐客服」",
-            content: "後四位顯示記錄有兩張卡，我這邊無法確認是哪一張，需要您提供完整卡號、有效期和驗證碼，系統才能匹配。這是系統要求的，我們是加密傳輸，完全安全的。"
-          },
-          choices: [
-            {
-              id: "cn_c5a_full_card",
-              text: "😰 她說加密很安全……那就告訴她",
-              textEn: "😰 She says encryption is safe... then I'll tell her",
-              effects: { money: -60, riskScore: 50, information: -20 },
-              nextSceneId: "cn_s_end_loss",
-              feedback: "❌ 「加密安全」是騙子百搭台詞。CVV + 卡號 + 有效期，等同於把你的信用卡拱手相讓。",
-              feedbackType: "bad"
-            },
-            {
-              id: "cn_c5a_refuse_hangup",
-              text: "📵 等等——快遞核驗憑什麼要信用卡 CVV？掛了！",
-              textEn: "📵 Wait — why would courier verification need a credit card CVV? Hanging up!",
-              effects: { alertness: 30, riskScore: -25 },
-              nextSceneId: "cn_s4_after_hangup",
-              feedback: "✅ 你在最危險的一步識破了！CVV 是信用卡安全碼，任何真正的快遞服務都不需要這個。",
-              feedbackType: "good"
-            }
-          ]
-        },
-        // ── 場景5B：第二個陷阱 ──
-        {
-          id: "cn_s5_second_trap",
-          type: "webpage",
-          speaker: "system",
-          text: "你點開了「撤銷退件費」的連結，還是那個熟悉的假頁面，只不過這次頁面上方寫著「退款處理中，請輸入銀行卡確認身份，退款將在 5 分鐘內到帳」。",
-          textEn: "You clicked the 'cancel return fee' link — it's that familiar fake page again, but this time it says 'Refund in progress. Enter bank card to verify identity. Refund will arrive within 5 minutes.'",
-          visual: {
-            type: "warning_page",
-            content: "⚠️ 網址：sf-cancel.cn-track.xyz（同一個詐騙域名！）\n\n這次頁面說：輸入銀行卡號和驗證碼\n→「退款 45 元到你帳戶」\n\n事實：他們不是要退給你 45 元\n而是要盜走你帳戶裡所有的錢"
-          },
-          choices: [
-            {
-              id: "cn_c5b_fill_card",
-              text: "💳 退款 45 元，輸入一下應該沒事",
-              textEn: "💳 A 45 yuan refund, entering it should be fine",
-              effects: { money: -60, riskScore: 50 },
-              nextSceneId: "cn_s_end_loss",
-              feedback: "❌ 「退小錢給你」是釣大魚的套路。你輸入卡號和驗證碼，他們拿走的是你帳戶全部餘額。",
-              feedbackType: "bad"
-            },
-            {
-              id: "cn_c5b_recognize",
-              text: "🔍 這個域名跟之前那個一樣！這是同一個騙局！",
-              textEn: "🔍 This domain is the same as before! It's the same scam!",
-              effects: { alertness: 30, information: 20, riskScore: -20 },
-              nextSceneId: "cn_s5_report",
-              feedback: "✅ 你認出了同一個詐騙域名！這是一個連環局——短訊、電話、退款連結，都是同一夥人。",
-              feedbackType: "good"
-            }
-          ]
-        },
-        // ── 場景5C：官方確認 ──
-        {
-          id: "cn_s5_official_confirm",
-          type: "result",
-          speaker: "system",
-          text: "你打開順豐 App，查看帳戶和包裹狀態。一切完全正常——沒有任何費用、沒有任何退件記錄。你也搜索了那個「客服號碼」，確認是詐騙號碼。",
-          textEn: "You open the SF Express app to check your account and package status. Everything is completely normal — no fees, no return records. You also searched that 'customer service number' and confirmed it's a scam number.",
-          visual: {
-            type: "safe_result",
-            content: "📦 包裹狀態：正常派送中\n💳 帳戶記錄：無任何異常費用\n\n🔍 那個「客服號碼」搜索結果：\n——已被多人舉報為快遞詐騙\n\n你全程沒有洩露任何資料。👏"
-          },
-          choices: [
-            {
-              id: "cn_c5c_report",
-              text: "📢 舉報這個詐騙號碼和短訊連結",
-              textEn: "📢 Report this scam number and SMS link",
-              effects: { alertness: 15, information: 10 },
-              nextSceneId: "cn_s5_report",
-              feedback: "✅ 主動舉報，幫助警方追蹤和封鎖詐騙。",
-              feedbackType: "good"
-            },
-            {
-              id: "cn_c5c_done",
-              text: "✅ 確認安全，繼續我的事",
-              textEn: "✅ Confirmed safe, back to what I was doing",
-              effects: { alertness: 10, stress: -10 },
-              nextSceneId: "cn_s_end_safe",
-              feedback: "✅ 全程清醒，一分損失都沒有。",
-              feedbackType: "good"
-            }
-          ]
-        },
-        // ── 場景5D：舉報 ──
-        {
-          id: "cn_s5_report",
-          type: "result",
-          speaker: "system",
-          text: "你決定舉報這整個詐騙流程，把短訊截圖和電話號碼都提交了。這一步很多人懶得做，但正是這些舉報資料，幫助警方封鎖和追蹤詐騙集團。",
-          textEn: "You decide to report the entire scam — submitting screenshots of the text and the phone number. Many people skip this step, but these reports help police block and track scam operations.",
-          visual: {
-            type: "safe_result",
-            content: "🛡️ 舉報渠道：\n• 國家反詐中心 App → 「我要舉報」\n• 12321.cn（工信部）→ 舉報釣魚域名\n• 長按短訊 → 舉報垃圾短訊\n• 96110（反詐騙熱線）\n\n每一次舉報都在保護下一個可能被騙的人。"
-          },
-          choices: [
-            {
-              id: "cn_c5d_done",
-              text: "📱 舉報完成，這類詐騙以後一眼就認出來了",
-              textEn: "📱 Report complete, I'll recognize this type of scam from now on",
-              effects: { alertness: 15, information: 10, riskScore: -5 },
-              nextSceneId: "cn_s_end_safe",
-              feedback: "✅ 識別 → 核實 → 舉報，你完成了最完整的應對流程。",
-              feedbackType: "good"
-            }
-          ]
-        },
-        // ── 結局場景 ──
-        {
-          id: "cn_s_end_safe",
-          type: "ending",
-          speaker: "system",
-          text: "你全程沒有點陌生連結，沒有洩露任何個人資料，也沒有按騙子的指示操作 ATM 或轉帳。你用官方 App 確認了包裹一切正常，識破了這個短訊＋電話的連環詐騙套路。",
-          textEn: "You didn't click any suspicious links, didn't leak any personal information, and didn't follow the scammer's instructions to use an ATM or transfer money. You used the official app to confirm everything was fine, seeing through this SMS + phone call连环 scam.",
-          choices: [{ id: "cn_end_safe_go", text: "查看結局", textEn: "View ending", effects: {}, nextSceneId: "__ending__", feedback: "", feedbackType: "good" }]
-        },
-        {
-          id: "cn_s_end_loss",
-          type: "ending",
-          speaker: "system",
-          text: "幾分鐘後，銀行發來轉帳提醒——4,800 元、3,200 元，共兩筆，對方是陌生帳號。你打電話給順豐客服（95338），對方確認從未聯絡過你，也沒有發過那條短訊。你的銀行卡資料在一個假頁面和一通電話之間，就這樣交出去了。",
-          textEn: "Minutes later, the bank sends transfer alerts — 4,800 yuan, 3,200 yuan, two transactions to unknown accounts. You call SF Express customer service (95338), who confirm they never contacted you or sent that message. Your bank card details were given away through a fake page and a phone call.",
-          choices: [{ id: "cn_end_loss_go", text: "查看結局", textEn: "View ending", effects: {}, nextSceneId: "__ending__", feedback: "", feedbackType: "bad" }]
-        },
-        {
-          id: "cn_s_end_partial",
-          type: "ending",
-          speaker: "system",
-          text: "你洩露了手機號和姓名，但沒有提供銀行卡。這次財務上沒有直接損失——但你的個人信息現在已在詐騙數據庫裡。接下來幾個月，你可能會收到更多「針對你」的詐騙電話，因為他們知道你是真實存在的目標。",
-          textEn: "You leaked your phone number and name, but didn't provide your bank card. No direct financial loss this time — but your personal info is now in the scammers' database. Over the next few months, you may receive more 'targeted' scam calls because they know you're a real person.",
-          choices: [{ id: "cn_end_partial_go", text: "查看結局", textEn: "View ending", effects: {}, nextSceneId: "__ending__", feedback: "", feedbackType: "mid" }]
-        }
-      ]
-    }
-  ],
-
-  // ==================== 港澳 ====================
-  hong_kong_macao: [
-    {
-      id: "hkm_bank_security_sms",
-      region: "hong_kong_macao",
-      title: "銀行安全驗證：OTP 陷阱",
-      titleEn: "Bank Security Verification: The OTP Trap",
-      scamType: "假銀行短訊 + 假客服電話 + OTP 釣魚",
-      scamTypeEn: "Fake bank text + fake support call + OTP phishing",
-      suitableIdentities: ["mainland_student", "hmt_student"],
-      redFlags: [
-        "短訊連結域名「account-secure.net」不是 HSBC 官方（hsbc.com.hk）",
-        "電話「客服」主動打來跟進，口音標準、說法流利，但無法提供可核實的工號",
-        "要求輸入 OTP 一次性密碼——銀行客服絕對不會電話要你報 OTP",
-        "「帳戶將在 30 分鐘內凍結」的緊迫話術",
-        "對方知道你的帳戶尾號——這些資料可能已從其他平台洩露"
-      ],
-      redFlagsEn: [
-        "account-secure.net is not HSBC's official hsbc.com.hk domain",
-        "The caller sounds professional but cannot provide a verifiable employee ID",
-        "They ask for a one-time password; bank staff never ask you to read an OTP over the phone",
-        "They threaten to freeze the account within 30 minutes",
-        "Knowing part of your account number does not prove identity; that data may have leaked elsewhere"
-      ],
-      officialChannels: [
-        "打開 HSBC 官方 App（hsbchk.com.hk）直接查帳戶",
-        "致電銀行卡背面客服電話——香港匯豐 2233 3000",
-        "自己手動輸入官方網址，絕不點短訊連結"
-      ],
-      officialChannelsEn: [
-        "Open the official HSBC app and inspect the account directly",
-        "Call the number printed on the back of your bank card",
-        "Type the official website address yourself and never use the link in the text message"
-      ],
-      pressureSource: ["帳戶凍結壓力", "30 分鐘限時壓力", "假客服情感操控"],
-      scenes: [
-        // ── 場景1：鋪墊——收到銀行短訊 ──
-        {
-          id: "hkm_s1_sms",
-          type: "message",
-          speaker: "system",
-          text: "你下課回到宿舍，準備打開 YouTube 放鬆一下。手機震了一下——看起來是 HSBC 發的短訊。你最近確實有刷過幾次卡，心裡稍微緊了一下。",
-          textEn: "You return to your dorm after class, ready to relax with YouTube. Your phone buzzes — looks like a message from HSBC. You have used your card a few times recently, so your heart tightens a bit.",
-          visual: {
-            type: "sms",
-            sender: "HSBC-Alert",
-            content: "We detected suspicious login from an overseas IP address. Your account may be compromised. Please verify your identity within 30 minutes to avoid suspension. Tap to verify:",
-            link: "https://hsbc-hk-verify.account-secure.net/login"
-          },
-          choices: [
-            {
-              id: "hkm_c1_click",
-              text: "📲 30 分鐘很急，先點連結看看怎麼回事",
-              textEn: "📲 30 minutes is urgent, click the link to see what's going on",
-              effects: { riskScore: 25, information: -10 },
-              nextSceneId: "hkm_s2_fake_login",
-              feedback: "⚠️ 仔細看網址——「account-secure.net」根本不是匯豐的域名。匯豐香港的官方域名是 hsbc.com.hk。",
-              feedbackType: "bad"
-            },
-            {
-              id: "hkm_c1_app",
-              text: "📱 不點連結，直接打開 HSBC App 查帳戶",
-              textEn: "📱 Don't click the link, open the HSBC app directly to check",
-              effects: { information: 25, alertness: 15, riskScore: -10 },
-              nextSceneId: "hkm_s2_app_normal",
-              feedback: "✅ 正確！任何涉及帳戶的事，永遠從官方 App 入手，不要點短訊連結。",
-              feedbackType: "good"
-            },
-            {
-              id: "hkm_c1_call_bank",
-              text: "📞 先不急，翻出銀行卡背面電話打過去",
-              textEn: "📞 No rush, find the phone number on the back of the bank card and call",
-              effects: { information: 30, alertness: 20, riskScore: -15 },
-              nextSceneId: "hkm_s2_call_bank",
-              feedback: "✅ 銀行卡背面的電話是最可靠的核實方式。任何懷疑，打過去兩分鐘就清楚。",
-              feedbackType: "good"
-            },
-            {
-              id: "hkm_c1_check_url",
-              text: "🔍 先看一下這個連結的域名",
-              textEn: "🔍 First check the domain of this link",
-              effects: { alertness: 20, information: 15, riskScore: -5 },
-              nextSceneId: "hkm_s2_url_analysis",
-              feedback: "✅ 看域名是識別釣魚短訊最快的方法。你的直覺是對的。",
-              feedbackType: "good"
-            }
-          ]
-        },
-        // ── 場景2A：點了連結——假登入頁 ──
-        {
-          id: "hkm_s2_fake_login",
-          type: "webpage",
-          speaker: "system",
-          text: "頁面打開了，設計得非常像 HSBC 官網——獅子標誌、紅白配色、英文界面。你幾乎要輸入密碼了，但突然瞄到網址欄。",
-          textEn: "The page loads — it looks just like the HSBC official site: lion logo, red and white colors, English interface. You're about to enter your password when you glance at the URL bar.",
-          visual: {
-            type: "warning_page",
-            content: "⚠️ 網址：account-secure.net（偽裝頁面！）\n真正 HSBC 香港官網：hsbc.com.hk\n\n頁面要求：\n• Personal Internet Banking Username\n• Password\n• One-Time Password (OTP) ← 填了等於帳戶拱手相讓\n\n它還有倒計時：「Session expires in 18:32」"
-          },
-          choices: [
-            {
-              id: "hkm_c2_enter_all",
-              text: "🔢 帳號密碼先填，OTP 等短訊來了再輸",
-              textEn: "🔢 Fill in username and password first, enter OTP when the SMS arrives",
-              effects: { riskScore: 30, information: -15 },
-              nextSceneId: "hkm_s3_otp_arrives",
-              feedback: "⚠️ 你已填入帳號密碼，騙子觸發了真正的 OTP 短訊到你手機——現在他們在等你把這個驗證碼也交出去。",
-              feedbackType: "bad"
-            },
-            {
-              id: "hkm_c2_notice_url",
-              text: "🔍 等等——「account-secure.net」不是 hsbc.com.hk！立刻關掉！",
-              textEn: "🔍 Wait — 'account-secure.net' isn't hsbc.com.hk! Close it immediately!",
-              effects: { alertness: 30, information: 20, riskScore: -20 },
-              nextSceneId: "hkm_s3_url_escape",
-              feedback: "✅ 你在關鍵一刻識破了假網站！網址域名是防釣魚最有效的工具。",
-              feedbackType: "good"
-            },
-            {
-              id: "hkm_c2_call_now",
-              text: "📞 先不填，打銀行官方電話確認再說",
-              textEn: "📞 Don't fill anything in yet, call the bank's official number to confirm first",
-              effects: { information: 25, alertness: 20, riskScore: -15 },
-              nextSceneId: "hkm_s2_call_bank",
-              feedback: "✅ 正確！暫停一下打電話，是在假網站前最好的選擇。",
-              feedbackType: "good"
-            }
-          ]
-        },
-        // ── 場景2B：查了 App——帳戶正常 ──
-        {
-          id: "hkm_s2_app_normal",
-          type: "result",
-          speaker: "system",
-          text: "HSBC App 顯示帳戶完全正常，沒有任何異常登入記錄，也沒有任何安全警報。你放下心來——但20分鐘後，電話響了。顯示是「HSBC Customer Service」。",
-          textEn: "The HSBC app shows your account is completely normal — no unusual login records, no security alerts. You relax — but 20 minutes later, the phone rings. It shows 'HSBC Customer Service'.",
-          visual: {
-            type: "safe_result",
-            content: "✅ 帳戶狀態：正常\n🔒 最近登入：你本人，香港，剛才\n⚠️ 安全警報：無\n\n那條短訊是假的。但騙子知道你查了 App——他們有後招……"
-          },
-          choices: [
-            {
-              id: "hkm_c2b_answer",
-              text: "📞 接電話，可能是銀行跟進",
-              textEn: "📞 Answer the call, it might be the bank following up",
-              effects: { stress: 10, riskScore: 15 },
-              nextSceneId: "hkm_s3_phone_followup",
-              feedback: "⚠️ 你查了 App 知道帳戶沒問題，但騙子的電話很有說服力——保持警惕！",
-              feedbackType: "mid"
-            },
-            {
-              id: "hkm_c2b_ignore",
-              text: "📵 不接，App 顯示沒問題就沒問題",
-              textEn: "📵 Don't answer — if the app shows nothing wrong, then nothing is wrong",
-              effects: { alertness: 15, riskScore: -10 },
-              nextSceneId: "hkm_s3_missed_then_sms",
-              feedback: "✅ 你有 App 的核實作支撐，不接陌生電話完全合理。",
-              feedbackType: "good"
-            }
-          ]
-        },
-        // ── 場景2C：打銀行官方電話 ──
-        {
-          id: "hkm_s2_call_bank",
-          type: "result",
-          speaker: "system",
-          text: "你撥打了銀行卡背面的 HSBC 客服電話（2233 3000）。系統先要你輸入帳戶資料驗證身份，然後真人客服接聽了。",
-          textEn: "You call the HSBC customer service number on the back of your card (2233 3000). The system first asks you to verify your identity, then a real agent answers.",
-          visual: {
-            type: "safe_result",
-            content: "📞 HSBC 客服確認：\n\n✅ 你的帳戶：完全正常\n✅ 過去 30 天：無異常登入\n✅ 無任何安全問題\n\n客服補充：HSBC 絕不會在短訊裡發連結要你登入。\n如收到可疑短訊，請截圖舉報至 phishing@hsbc.com.hk"
-          },
-          choices: [
-            {
-              id: "hkm_c2c_report",
-              text: "📧 馬上截圖舉報這條假短訊",
-              textEn: "📧 Screenshot and report this fake SMS immediately",
-              effects: { alertness: 15, information: 10, riskScore: -10 },
-              nextSceneId: "hkm_s4_report",
-              feedback: "✅ 向銀行舉報假短訊，他們會追蹤和封鎖釣魚域名。",
-              feedbackType: "good"
-            },
-            {
-              id: "hkm_c2c_learn",
-              text: "🔍 問客服：怎麼識別假短訊？",
-              textEn: "🔍 Ask customer service: how to identify fake SMS?",
-              effects: { information: 20, alertness: 10 },
-              nextSceneId: "hkm_s4_analysis",
-              feedback: "✅ 主動學習識別方法，比被動避開詐騙更有效。",
-              feedbackType: "good"
-            }
-          ]
-        },
-        // ── 場景2D：分析網址 ──
-        {
-          id: "hkm_s2_url_analysis",
-          type: "result",
-          speaker: "system",
-          text: "你仔細看了那個連結的域名。",
-          textEn: "You carefully examine the domain of that link.",
-          visual: {
-            type: "warning_page",
-            content: "🔍 連結分析：\n\nhttps://hsbc-hk-verify.account-secure.net/login\n\n真正的域名：account-secure.net（最後面那個才是主域名！）\n不是：hsbc.com.hk\n\n騙子把「hsbc-hk-verify」放在前面，讓你以為這是官方的。\n真正的 HSBC 香港網址：https://www.hsbc.com.hk"
-          },
-          choices: [
-            {
-              id: "hkm_c2d_app",
-              text: "📱 確認是假的，打開 HSBC App 查帳戶",
-              textEn: "📱 Confirmed it's fake, open the HSBC app to check the account",
-              effects: { information: 20, alertness: 15, riskScore: -10 },
-              nextSceneId: "hkm_s2_app_normal",
-              feedback: "✅ 識破連結後，用官方 App 核實，這是完整的應對流程。",
-              feedbackType: "good"
-            },
-            {
-              id: "hkm_c2d_report_now",
-              text: "📧 直接截圖，舉報給 HSBC",
-              textEn: "📧 Screenshot it directly and report to HSBC",
-              effects: { information: 15, alertness: 20, riskScore: -5 },
-              nextSceneId: "hkm_s4_report",
-              feedback: "✅ 你分析了域名技巧，識破並舉報——做得很好！",
-              feedbackType: "good"
-            }
-          ]
-        },
-        // ── 場景3A：你填了帳密，騙子觸發了真 OTP ──
-        {
-          id: "hkm_s3_otp_arrives",
-          type: "message",
-          speaker: "system",
-          text: "你剛填完帳號密碼，手機馬上收到一條 HSBC 發的真 OTP 短訊（號碼是真正的 HSBC）。假網站上出現一個輸入框：「Please enter your OTP」。",
-          textEn: "Right after you enter your username and password, your phone receives a real OTP text from HSBC (from the real HSBC number). The fake site shows an input box: 'Please enter your OTP'.",
-          visual: {
-            type: "sms",
-            sender: "HSBC",
-            content: "Your One-Time Password is: 847291\nDo NOT share this code with anyone. HSBC will never ask for this OTP via call or message."
-          },
-          choices: [
-            {
-              id: "hkm_c3_enter_otp",
-              text: "🔢 填上 OTP，完成「驗證」",
-              textEn: "🔢 Enter the OTP to complete the 'verification'",
-              effects: { money: -80, riskScore: 60, information: -20 },
-              nextSceneId: "hkm_s_end_loss",
-              feedback: "❌ OTP 是你帳戶的最後一道防線！一旦填上，騙子立刻登入並轉走你所有的錢。HSBC 短訊明確說「Do NOT share this code」。",
-              feedbackType: "bad"
-            },
-            {
-              id: "hkm_c3_stop_otp",
-              text: "🚫 等等——短訊說「Do NOT share this code」！立刻關閉頁面",
-              textEn: "🚫 Wait — the SMS says 'Do NOT share this code'! Close the page immediately",
-              effects: { alertness: 30, information: 20, riskScore: -20 },
-              nextSceneId: "hkm_s3_url_escape",
-              feedback: "✅ 你讀了 OTP 短訊的警告！銀行的 OTP 只能在官方 App 或你自己打開的官方網址上使用，絕不在別的地方輸入。",
-              feedbackType: "good"
-            },
-            {
-              id: "hkm_c3_call_bank_urgent",
-              text: "📞 收到奇怪的 OTP——立刻打電話給 HSBC 問清楚",
-              textEn: "📞 Received a strange OTP — call HSBC immediately to ask",
-              effects: { alertness: 25, information: 25, riskScore: -15 },
-              nextSceneId: "hkm_s2_call_bank",
-              feedback: "✅ 對！收到不是自己觸發的 OTP，立刻致電銀行，說明情況並要求凍結可疑操作。",
-              feedbackType: "good"
-            }
-          ]
-        },
-        // ── 場景3B：假電話——「HSBC客服」跟進 ──
-        {
-          id: "hkm_s3_phone_followup",
-          type: "phone_call",
-          speaker: "scammer",
-          pressure: true,
-          text: "你接了電話，對方聲音專業，口音標準，自我介紹是「HSBC 安全部門的 Karen」，她聽起來很真實。",
-          textEn: "You answer the call. The voice is professional, accent standard — she introduces herself as 'Karen from HSBC Security Department'. She sounds very real.",
-          visual: {
-            type: "phone_call",
-            caller: "顯示：HSBC Customer Service",
-            content: "Good afternoon, this is Karen from HSBC Security Department. We've detected your account may have been accessed by a third party earlier today. I need to verify your identity to secure your account. Can you please confirm your last 4 digits of your card and the OTP we just sent you?"
-          },
-          choices: [
-            {
-              id: "hkm_c3b_give_otp",
-              text: "😰 她知道 HSBC 剛發了 OTP……給她吧",
-              textEn: "😰 She knows HSBC just sent an OTP... give it to her",
-              effects: { money: -75, riskScore: 55, information: -20 },
-              nextSceneId: "hkm_s_end_loss",
-              feedback: "❌ 騙子「知道」OTP 是因為她就是觸發那個 OTP 的人！她在用你的帳號密碼登入，需要 OTP 完成最後一步。",
-              feedbackType: "bad"
-            },
-            {
-              id: "hkm_c3b_question",
-              text: "🤔 問她：我 App 查了帳戶完全正常，你說的「第三方登入」是什麼？",
-              textEn: "🤔 Ask her: I checked the app and my account is completely normal — what 'third-party login' are you talking about?",
-              effects: { alertness: 20, information: 10, stress: 10 },
-              nextSceneId: "hkm_s4_scammer_excuse",
-              feedback: "🤔 好問題！騙子會有備而來。看她的回答能不能自圓其說。",
-              feedbackType: "mid"
-            },
-            {
-              id: "hkm_c3b_hangup",
-              text: "📵 銀行客服不會電話要 OTP——掛掉，打卡背電話核實",
-              textEn: "📵 Bank customer service won't ask for OTP over the phone — hang up, call the number on the card to verify",
-              effects: { alertness: 30, information: 25, riskScore: -25 },
-              nextSceneId: "hkm_s2_call_bank",
-              feedback: "✅ 完全正確！HSBC 不會主動打電話要求你提供 OTP，任何這樣要求的電話都是詐騙。",
-              feedbackType: "good"
-            },
-            {
-              id: "hkm_c3b_verify_number",
-              text: "🔍 問她：你們這通電話的工號和官方客服電話是多少？",
-              textEn: "🔍 Ask her: what's your employee ID and official customer service number for this call?",
-              effects: { alertness: 20, information: 15, riskScore: -10 },
-              nextSceneId: "hkm_s4_phone_test",
-              feedback: "✅ 要求可核實的信息——真正的客服可以提供，騙子做不到。",
-              feedbackType: "good"
-            }
-          ]
-        },
-        // ── 場景3C：沒接電話，然後發短訊 ──
-        {
-          id: "hkm_s3_missed_then_sms",
-          type: "message",
-          speaker: "system",
-          text: "你沒接電話，對方發來一條短訊：",
-          textEn: "You don't answer. They send a text message:",
-          visual: {
-            type: "sms",
-            sender: "HSBC-Security",
-            content: "This is HSBC Security. We tried to call you regarding suspicious activity on your account. If you do not verify within 15 minutes, your account will be temporarily suspended. Click here: https://hsbc-secure-verify.account-secure.net"
-          },
-          choices: [
-            {
-              id: "hkm_c3c_click",
-              text: "😰 帳戶真的會被停用？點一下看看",
-              textEn: "😰 Will the account really be suspended? Click and see",
-              effects: { riskScore: 25, information: -10 },
-              nextSceneId: "hkm_s2_fake_login",
-              feedback: "⚠️ 這條短訊也是假的——同一個域名 account-secure.net！騙子在多管齊下。",
-              feedbackType: "bad"
-            },
-            {
-              id: "hkm_c3c_same_domain",
-              text: "🔍 等等，這個連結的域名跟之前那條一樣！",
-              textEn: "🔍 Wait — this link's domain is the same as the previous one!",
-              effects: { alertness: 25, information: 20, riskScore: -15 },
-              nextSceneId: "hkm_s4_analysis",
-              feedback: "✅ 你認出了同一個詐騙域名！這是同一夥人的連環局——短訊、電話、再短訊。",
-              feedbackType: "good"
-            },
-            {
-              id: "hkm_c3c_ignore_report",
-              text: "🛡️ 這個域名不對，直接舉報並忽略",
-              textEn: "🛡️ This domain is wrong, just report and ignore it",
-              effects: { alertness: 20, information: 15, riskScore: -10 },
-              nextSceneId: "hkm_s4_report",
-              feedback: "✅ 你識別了兩條假短訊都是同一個域名。直接舉報，保護自己也保護其他人。",
-              feedbackType: "good"
-            }
-          ]
-        },
-        // ── 場景3D：識破假網站後 ──
-        {
-          id: "hkm_s3_url_escape",
-          type: "result",
-          speaker: "system",
-          text: "你關掉了假網站。但你意識到：如果你已經填過帳號密碼，現在帳戶可能有風險。如果你沒填，你也想確認一下帳戶狀態。",
-          textEn: "You closed the fake site. But you realize: if you already entered your username and password, your account might be at risk. If you didn't, you still want to confirm your account status.",
-          visual: {
-            type: "safe_result",
-            content: "✅ 你識破了假網站——做得好！\n\n但是……\n如果你之前填過任何資料：\n→ 立刻打 HSBC 客服（2233 3000）\n→ 或在官方 App 更改密碼\n\n如果沒填任何資料：\n→ 只需查一下官方 App 確認帳戶正常即可"
-          },
-          choices: [
-            {
-              id: "hkm_c3e_filled_before",
-              text: "😰 我填了帳號密碼——要立刻打電話！",
-              textEn: "😰 I already entered my username and password — need to call immediately!",
-              effects: { stress: 15, alertness: 10 },
-              nextSceneId: "hkm_s2_call_bank",
-              feedback: "✅ 正確行動！帳號密碼洩露後，立刻聯絡銀行比什麼都重要。",
-              feedbackType: "good"
-            },
-            {
-              id: "hkm_c3e_not_filled",
-              text: "✅ 我什麼都沒填，打開 App 確認一下",
-              textEn: "✅ I didn't enter anything, open the app to confirm",
-              effects: { information: 15, alertness: 10, riskScore: -5 },
-              nextSceneId: "hkm_s2_app_normal",
-              feedback: "✅ 沒填就沒有洩露。查一下 App 確認安全，然後舉報這條假短訊。",
-              feedbackType: "good"
-            }
-          ]
-        },
-        // ── 場景4A：騙子解釋 App「沒顯示」──
-        {
-          id: "hkm_s4_scammer_excuse",
-          type: "phone_call",
-          speaker: "scammer",
-          pressure: true,
-          text: "你問了騙子，她準備了答案。",
-          textEn: "You questioned the scammer. She has an answer ready.",
-          visual: {
-            type: "phone_call",
-            caller: "「Karen / HSBC 安全部」",
-            content: "The App has a 20-minute delay in security alerts — by the time you see it there, the transaction may already be processed. That's exactly why I'm calling you now, before it shows up. I just need your OTP to put a temporary hold on the suspicious activity."
-          },
-          choices: [
-            {
-              id: "hkm_c4a_believe",
-              text: "😟 聽起來說得通……那 OTP 是多少？",
-              textEn: "😟 That sounds reasonable... so what's the OTP?",
-              effects: { money: -75, riskScore: 55, information: -20 },
-              nextSceneId: "hkm_s_end_loss",
-              feedback: "❌ 「App 有延遲」是騙子應對「我查了帳戶沒問題」的標準台詞。你說什麼她都有準備好的答案——這本身就是最大的紅旗。",
-              feedbackType: "bad"
-            },
-            {
-              id: "hkm_c4a_hangup",
-              text: "📵 每個質疑她都有解釋——這反而讓我更懷疑。掛電話，打卡背電話。",
-              textEn: "📵 She has an answer for every question — that makes me more suspicious. Hang up, call the number on the card.",
-              effects: { alertness: 30, information: 20, riskScore: -25 },
-              nextSceneId: "hkm_s2_call_bank",
-              feedback: "✅ 你識破了「萬能借口」套路！越流利地回答所有問題，越可疑。真正的客服會鼓勵你掛電話自己打官方電話核實。",
-              feedbackType: "good"
-            }
-          ]
-        },
-        // ── 場景4B：測試電話號碼 ──
-        {
-          id: "hkm_s4_phone_test",
-          type: "phone_call",
-          speaker: "scammer",
-          pressure: true,
-          text: "你要求對方提供工號和官方客服電話讓你核實。對方的回應讓你皺眉。",
-          textEn: "You ask them to provide their employee ID and official customer service number for verification. Their response makes you frown.",
-          visual: {
-            type: "phone_call",
-            caller: "「Karen」",
-            content: "My employee ID is HK-2847. Regarding calling back — I'd strongly advise against it, as the security case will be re-queued and take up to 2 hours. Your account could be compromised in that time. I can resolve this right now in under 5 minutes if you cooperate."
-          },
-          choices: [
-            {
-              id: "hkm_c4b_cooperate",
-              text: "😰 兩小時太久了……那就配合她吧",
-              textEn: "😰 Two hours is too long... I'll just cooperate with her",
-              effects: { riskScore: 30, stress: -5, information: -10 },
-              nextSceneId: "hkm_s4_scammer_excuse",
-              feedback: "⚠️ 「不要掛電話，核實要2小時」——這就是阻止你查證的話術。",
-              feedbackType: "bad"
-            },
-            {
-              id: "hkm_c4b_hangup",
-              text: "📵 你一直在阻止我核實——真客服不會這樣說。掛了！",
-              textEn: "📵 You keep stopping me from verifying — real customer service wouldn't say that. Hanging up!",
-              effects: { alertness: 30, information: 25, riskScore: -25 },
-              nextSceneId: "hkm_s2_call_bank",
-              feedback: "✅ 關鍵識破！真正的銀行客服永遠支持你掛電話再打官方電話確認，而不是阻止你這樣做。",
-              feedbackType: "good"
-            }
-          ]
-        },
-        // ── 場景4C：分析假短訊的套路 ──
-        {
-          id: "hkm_s4_analysis",
-          type: "result",
-          speaker: "system",
-          text: "你搞清楚了這整個詐騙流程的設計邏輯。",
-          textEn: "You've figured out the entire scam's design logic.",
-          visual: {
-            type: "warning_page",
-            content: "🔍 詐騙全流程分析：\n\n① 假短訊：發件人名稱「HSBC-Alert」可偽裝\n② 假域名：hsbc-hk-verify.account-secure.net\n   → 真正主域名：account-secure.net（非官方）\n③ 假網站：設計複製 HSBC 官網，用來釣帳號密碼\n④ 騙子用你的帳密觸發真 OTP，再打電話/發短訊要你交出 OTP\n\n整套流程設計精密，目的是繞過銀行的雙重驗證。"
-          },
-          choices: [
-            {
-              id: "hkm_c4c_report",
-              text: "📧 學到了！舉報假短訊給 HSBC",
-              textEn: "📧 Learned my lesson! Report the fake SMS to HSBC",
-              effects: { alertness: 15, information: 15 },
-              nextSceneId: "hkm_s4_report",
-              feedback: "✅ 了解了整個套路，你以後一眼就能識別這類攻擊。",
-              feedbackType: "good"
-            }
-          ]
-        },
-        // ── 場景4D：舉報 ──
-        {
-          id: "hkm_s4_report",
-          type: "result",
-          speaker: "system",
-          text: "你截圖了可疑短訊，通過以下方式舉報：",
-          textEn: "You screenshot the suspicious message and report it through the following channels:",
-          visual: {
-            type: "safe_result",
-            content: "🛡️ 舉報渠道：\n• 發郵件至 phishing@hsbc.com.hk（含截圖）\n• 香港警方反詐騙協調中心：18222\n• 澳門治安警察局：993\n• scam.org.hk 網上舉報\n\n💡 舉報後：可以要求 HSBC 在帳戶上加設額外安全驗證。"
-          },
-          choices: [
-            {
-              id: "hkm_c4d_done",
-              text: "✅ 舉報完成，帳戶安全確認",
-              textEn: "✅ Report complete, account security confirmed",
-              effects: { alertness: 10, information: 10, riskScore: -5 },
-              nextSceneId: "hkm_s_end_safe",
-              feedback: "✅ 你識別、核實、舉報——完整應對了這次假銀行短訊詐騙。",
-              feedbackType: "good"
-            }
-          ]
-        },
-        // ── 結局 ──
-        {
-          id: "hkm_s_end_safe",
-          type: "ending",
-          speaker: "system",
-          text: "帳戶完全安全。你識破了假短訊、識別了假域名、拒絕了假客服的 OTP 要求。你還清楚了整個「假短訊→假網站→假電話要 OTP」的連環套路。下次看到類似的東西，你能一眼認出來。",
-          textEn: "Your account is completely safe. You spotted the fake SMS, identified the fake domain, and refused the fake客服's OTP request. You now understand the entire 'fake SMS → fake website → fake call asking for OTP' chain. Next time you see something similar, you'll recognize it instantly.",
-          choices: [{ id: "hkm_end_safe", text: "查看結局", textEn: "View ending", effects: {}, nextSceneId: "__ending__", feedback: "", feedbackType: "good" }]
-        },
-        {
-          id: "hkm_s_end_loss",
-          type: "ending",
-          speaker: "system",
-          text: "你交出了 OTP。騙子立刻用你的帳號密碼加上這個 OTP 完成了登入，觸發了多筆轉帳。等你反應過來聯絡 HSBC 時，帳戶已轉出了大部分資金。銀行客服告訴你：OTP 短訊上明確寫著「Do NOT share this code」，一旦輸入在第三方網站，銀行無法撤回已授權的轉帳。",
-          textEn: "You gave away the OTP. The scammer immediately used your credentials plus this OTP to log in and trigger multiple transfers. By the time you contacted HSBC, most of your funds were gone. The bank tells you: the OTP message clearly says 'Do NOT share this code' — once entered on a third-party site, the bank cannot reverse authorized transfers.",
-          choices: [{ id: "hkm_end_loss", text: "查看結局", textEn: "View ending", effects: {}, nextSceneId: "__ending__", feedback: "", feedbackType: "bad" }]
-        }
-      ]
-    }
-  ],
-
-  // ==================== 台灣 ====================
-  taiwan: [
-    {
-      id: "tw_atm_cancel_installment",
-      region: "taiwan",
-      title: "ATM 解除分期：連環施壓",
-      titleEn: "ATM Installment Cancellation: Pressure Tactics",
-      scamType: "冒充電商客服 + ATM 詐騙 + 假銀行截圖施壓",
-      scamTypeEn: "Fake e-commerce support + ATM scam + fake bank screenshots",
-      suitableIdentities: ["mainland_student", "hmt_student"],
-      redFlags: [
-        "ATM 根本沒有「解除分期」這個功能——只有轉帳、提款、查詢、繳費",
-        "「客服」知道你的姓名和訂單金額——這些資料可能從購物平台洩露",
-        "要求跟著電話在 ATM 前一步步操作，不讓你掛電話",
-        "對方傳來「看起來很官方」的銀行截圖——截圖可以輕易偽造",
-        "「今晚 12 點就開始扣款」的緊迫時間壓力"
-      ],
-      redFlagsEn: [
-        "ATMs do not have an ‘installment cancellation’ function",
-        "Knowing your name and order amount does not prove the caller is legitimate",
-        "They keep you on the phone and guide every ATM step",
-        "An official-looking screenshot is easy to fabricate",
-        "They create urgency by claiming charges will begin at midnight"
-      ],
-      officialChannels: [
-        "掛電話後打開蝦皮/PChome/原購物平台查訂單記錄",
-        "自己搜索銀行官方客服電話（不要用對方給的號碼）",
-        "撥打 165 反詐騙專線確認"
-      ],
-      officialChannelsEn: [
-        "Hang up and check the order in the original shopping app",
-        "Find and call the bank's official support number yourself",
-        "Call Taiwan's 165 anti-fraud hotline to verify"
-      ],
-      pressureSource: ["連續扣款恐慌", "假客服身份偽裝", "假銀行截圖製造信任"],
-      scenes: [
-        // ── 場景1：鋪墊——接到「電商客服」電話 ──
-        {
-          id: "tw_s1_call",
-          type: "phone_call",
-          speaker: "system",
-          text: "下午三點，你正在準備明天的作業，突然接到一通電話。對方知道你的姓名，說起話來很自然，一點都不像詐騙電話該有的樣子。",
-          textEn: "It's 3 PM and you're preparing tomorrow's homework when you suddenly receive a call. They know your name and speak naturally — nothing like what you'd expect a scam call to sound like.",
-          visual: {
-            type: "phone_call",
-            caller: "未知號碼 0800-XXXX-XXX",
-            content: "你好，請問是 XXX 同學嗎？我是蝦皮購物的客服部門。我們系統發現您帳號上有一筆訂單被誤設為每月自動扣款方案，如果不取消，從今晚 12 點開始會連續扣款 12 個月，每月 3,200 元，共 38,400 元。我現在可以引導您操作解除，需要配合一下。"
-          },
-          choices: [
-            {
-              id: "tw_c1_follow",
-              text: "😰 38,400 元！那我馬上配合，要怎麼做？",
-              textEn: "😰 38,400 yuan! I'll cooperate right away, what do I need to do?",
-              effects: { stress: -10, riskScore: 30, information: -10 },
-              nextSceneId: "tw_s2_atm_direction",
-              feedback: "⚠️ 你被金額嚇到了，開始跟著走。但先等一下——ATM 根本沒有「解除分期」的功能。",
-              feedbackType: "bad"
-            },
-            {
-              id: "tw_c1_platform_check",
-              text: "🛍️ 先等一下——我掛電話去蝦皮查一下有沒有這個訂單",
-              textEn: "🛍️ Hold on — I'll hang up and check Shopee to see if this order exists",
-              effects: { information: 25, alertness: 20, riskScore: -15 },
-              nextSceneId: "tw_s2_app_check",
-              feedback: "✅ 正確！查原購物平台的訂單記錄，是最直接的核實方式。",
-              feedbackType: "good"
-            },
-            {
-              id: "tw_c1_question",
-              text: "🤔 問對方：訂單編號是多少？我想先查一下",
-              textEn: "🤔 Ask them: what's the order number? I want to check first",
-              effects: { information: 10, alertness: 15, stress: 10 },
-              nextSceneId: "tw_s2_scammer_order_info",
-              feedback: "🤔 好問題。騙子有時候確實有部分訂單資料，看他怎麼回應。",
-              feedbackType: "mid"
-            },
-            {
-              id: "tw_c1_hangup_165",
-              text: "📵 掛電話，打 165 確認有沒有這種事",
-              textEn: "📵 Hang up, call 165 to confirm if this is real",
-              effects: { information: 25, alertness: 20, riskScore: -20 },
-              nextSceneId: "tw_s2_165_confirm",
-              feedback: "✅ 165 是台灣反詐騙專線，打過去可以直接確認。",
-              feedbackType: "good"
-            }
-          ]
-        },
-        // ── 場景2A：騙子指引去 ATM ──
-        {
-          id: "tw_s2_atm_direction",
-          type: "phone_call",
-          speaker: "scammer",
-          pressure: true,
-          text: "對方讓你去附近的 ATM，說會電話引導你一步步完成「解除」。你走到 ATM 前，電話一直沒掛。",
-          textEn: "They tell you to go to a nearby ATM, saying they'll guide you through the 'cancellation' step by step. You stand in front of the ATM, the call still connected.",
-          visual: {
-            type: "phone_call",
-            caller: "「蝦皮客服」",
-            content: "你現在到 ATM 了嗎？很好。你先按「提款或轉帳」，等畫面出來後告訴我顯示什麼。我需要你把帳戶餘額轉到我們的「保管帳號」，這樣才能確保分期不會繼續扣款，操作完成後會立刻退回給你。"
-          },
-          choices: [
-            {
-              id: "tw_c2a_transfer",
-              text: "😰 「保管帳號」聽起來合理……按照她說的轉帳",
-              textEn: "😰 'Safekeeping account' sounds reasonable... transfer as she instructed",
-              effects: { money: -65, riskScore: 55 },
-              nextSceneId: "tw_s_end_loss",
-              feedback: "❌ 世界上沒有「保管帳號」這種東西。那個帳號是騙子的，轉過去的錢不會回來。",
-              feedbackType: "bad"
-            },
-            {
-              id: "tw_c2a_stop_atm",
-              text: "🚫 等等——ATM 哪有「解除分期」的功能？這根本就是轉帳！",
-              textEn: "🚫 Wait — since when does an ATM have a 'cancel installment' function? This is just a transfer!",
-              effects: { alertness: 30, information: 20, riskScore: -25 },
-              nextSceneId: "tw_s3_after_hangup",
-              feedback: "✅ 你在 ATM 前識破了！ATM 只有提款、轉帳、查詢、繳費，完全沒有「解除分期付款」這個選項。",
-              feedbackType: "good"
-            },
-            {
-              id: "tw_c2a_stall",
-              text: "🤔 我先不操作，問她：為什麼要轉到保管帳號才能解除？",
-              textEn: "🤔 I won't do anything yet — ask her: why do I need to transfer to a safekeeping account to cancel it?",
-              effects: { alertness: 15, stress: 10 },
-              nextSceneId: "tw_s3_custody_excuse",
-              feedback: "🤔 你質疑了一個關鍵邏輯。看她的回答能不能說服你。",
-              feedbackType: "mid"
-            }
-          ]
-        },
-        // ── 場景2B：查蝦皮訂單 ──
-        {
-          id: "tw_s2_app_check",
-          type: "result",
-          speaker: "system",
-          text: "你掛電話，打開蝦皮 App 查訂單記錄。翻了好幾頁，看完了所有訂單。",
-          textEn: "You hang up and open the Shopee app to check your order history. You flip through several pages, reviewing all orders.",
-          visual: {
-            type: "safe_result",
-            content: "🛍️ 蝦皮訂單記錄（最近 3 個月）：\n\n• 手機保護殼 — ✅ 已完成，NT$199，一次付清\n• 充電線 — ✅ 已完成，NT$249，一次付清\n• 無線耳機 — ✅ 已完成，NT$890，一次付清\n\n❌ 沒有任何「每月自動扣款」或「分期方案」！\n\n但騙子說的那個號碼等下可能還會打來……"
-          },
-          choices: [
-            {
-              id: "tw_c2b_bank_too",
-              text: "📞 再打銀行官方客服確認一下帳戶",
-              textEn: "📞 Call the bank's official customer service to confirm the account status",
-              effects: { information: 20, alertness: 15, riskScore: -10 },
-              nextSceneId: "tw_s3_bank_confirm",
-              feedback: "✅ 雙重確認更安心！銀行那邊也能告訴你帳戶根本沒有分期設定。",
-              feedbackType: "good"
-            },
-            {
-              id: "tw_c2b_scammer_calls_again",
-              text: "📞 那個號碼又打來了……",
-              textEn: "📞 That number is calling again...",
-              effects: { stress: 10, riskScore: 10 },
-              nextSceneId: "tw_s3_second_call",
-              feedback: "⚠️ 騙子沒有放棄。你有了訂單記錄的核實，但對方還有新話術——保持警惕。",
-              feedbackType: "mid"
-            },
-            {
-              id: "tw_c2b_165",
-              text: "📵 確認沒有分期設定，打 165 舉報這通電話",
-              textEn: "📵 Confirmed there's no installment plan, call 165 to report this call",
-              effects: { information: 15, alertness: 15, riskScore: -10 },
-              nextSceneId: "tw_s4_165_report",
-              feedback: "✅ 有了訂單紀錄為證，舉報給 165 非常有效。",
-              feedbackType: "good"
-            }
-          ]
-        },
-        // ── 場景2C：騙子提供訂單資料 ──
-        {
-          id: "tw_s2_scammer_order_info",
-          type: "phone_call",
-          speaker: "scammer",
-          pressure: true,
-          text: "你問了訂單編號，對方真的說出了一個號碼，聽起來格式像是真實訂單，還說出了你的手機號碼後四碼。",
-          textEn: "You ask for the order number. They actually give you one — it looks like a real order format. They also mention the last four digits of your phone number.",
-          visual: {
-            type: "phone_call",
-            caller: "「蝦皮客服」",
-            content: "您的訂單編號是 210528XXXXXX，您的手機尾碼是 XXXX，對嗎？這個訂單的付款方式在您不知情的情況下被改為分期方案，所以您的訂單頁面可能看不到。您需要配合我們完成解除流程。"
-          },
-          choices: [
-            {
-              id: "tw_c2c_believe",
-              text: "😟 她連手機尾碼都知道……那應該是真的，繼續聽她的",
-              textEn: "😟 She even knows the last digits of my phone... it must be real, keep listening to her",
-              effects: { trust: 15, riskScore: 20, information: -10 },
-              nextSceneId: "tw_s2_atm_direction",
-              feedback: "⚠️ 知道你的手機號和訂單格式不代表她是真客服——這些資料可能從其他平台洩露了。騙子買到資料後會假扮各種客服。",
-              feedbackType: "bad"
-            },
-            {
-              id: "tw_c2c_app_verify",
-              text: "🛍️ 掛電話，打開蝦皮 App 查這個訂單號",
-              textEn: "🛍️ Hang up, open the Shopee app and search for this order number",
-              effects: { information: 25, alertness: 15, riskScore: -10 },
-              nextSceneId: "tw_s2_app_check",
-              feedback: "✅ 正確！就算她說出了訂單號，也要去官方 App 核實。騙子可以準備任何台詞，但你的 App 不會說謊。",
-              feedbackType: "good"
-            },
-            {
-              id: "tw_c2c_test",
-              text: "🔍 讓她說出完整訂單號，我去 App 比對",
-              textEn: "🔍 Ask her to give the full order number, I'll check it in the app",
-              effects: { alertness: 20, information: 15, riskScore: -5 },
-              nextSceneId: "tw_s3_order_mismatch",
-              feedback: "✅ 要求比對完整資料——如果她說出的號碼在你 App 裡對不上，就確認是詐騙了。",
-              feedbackType: "good"
-            }
-          ]
-        },
-        // ── 場景2D：165 確認 ──
-        {
-          id: "tw_s2_165_confirm",
-          type: "result",
-          speaker: "system",
-          text: "你打了 165 反詐騙專線，說明剛才的電話情況。",
-          textEn: "You call the 165 anti-fraud hotline and explain the phone call you just received.",
-          visual: {
-            type: "safe_result",
-            content: "📞 165 反詐騙專線回覆：\n\n✅ 這是典型「假冒電商客服 ATM 解除分期詐騙」\n✅ 蝦皮、MOMO、PChome 都不會主動打電話要你去 ATM\n✅ ATM 沒有「解除分期付款」的功能\n✅ 已記錄該電話號碼\n\n專線建議：去蝦皮 App 再確認一下訂單，100% 沒有問題。"
-          },
-          choices: [
-            {
-              id: "tw_c2d_app_confirm",
-              text: "✅ 打開蝦皮 App 確認一下",
-              textEn: "✅ Open the Shopee app to confirm",
-              effects: { information: 15, alertness: 10, riskScore: -5 },
-              nextSceneId: "tw_s2_app_check",
-              feedback: "✅ 165 確認了，App 再確認一次，徹底安心。",
-              feedbackType: "good"
-            },
-            {
-              id: "tw_c2d_done",
-              text: "👍 確認是詐騙，感謝 165！",
-              textEn: "👍 Confirmed it's a scam, thanks 165!",
-              effects: { alertness: 15, information: 10 },
-              nextSceneId: "tw_s_end_safe",
-              feedback: "✅ 165 救了你。這條熱線存起來，遇到任何可疑電話都可以打。",
-              feedbackType: "good"
-            }
-          ]
-        },
-        // ── 場景3A：保管帳號的解釋 ──
-        {
-          id: "tw_s3_custody_excuse",
-          type: "phone_call",
-          speaker: "scammer",
-          pressure: true,
-          text: "你問了為什麼要轉帳，對方給了一個你差點信了的解釋。",
-          textEn: "You ask why you need to transfer money. They give an explanation you almost believe.",
-          visual: {
-            type: "phone_call",
-            caller: "「蝦皮客服」",
-            content: "這是我們的標準退費流程，轉到保管帳號是為了確保系統能識別到您的操作。因為您的帳號和銀行帳戶之間有連結問題，系統無法直接解除，需要通過這個流程。轉帳後10分鐘內我們會全額退回給您，這個流程每天有幾百個客戶在做，完全正常。"
-          },
-          choices: [
-            {
-              id: "tw_c3a_believe",
-              text: "😟 每天幾百個客戶……聽起來挺正式的，繼續配合",
-              textEn: "😟 Hundreds of customers a day... sounds quite official, keep cooperating",
-              effects: { riskScore: 30, trust: 15, information: -10 },
-              nextSceneId: "tw_s3_fake_screenshot",
-              feedback: "⚠️ 「每天幾百個客戶」是製造正常感的話術。世界上沒有任何正規公司的退費流程需要你先轉錢給他們。",
-              feedbackType: "bad"
-            },
-            {
-              id: "tw_c3a_hangup",
-              text: "📵 「退費要你先轉錢」——這完全不合邏輯，掛電話！",
-              textEn: "📵 'Refund requires you to transfer money first' — that makes no sense at all, hang up!",
-              effects: { alertness: 30, information: 20, riskScore: -25 },
-              nextSceneId: "tw_s3_after_hangup",
-              feedback: "✅ 關鍵識破！任何要你「先轉錢，之後退還給你」的流程都是詐騙，不管解釋多合理。",
-              feedbackType: "good"
-            }
-          ]
-        },
-        // ── 場景3B：騙子傳來假銀行截圖 ──
-        {
-          id: "tw_s3_fake_screenshot",
-          type: "message",
-          speaker: "scammer",
-          pressure: true,
-          text: "你還在猶豫，對方傳來一張截圖，看起來是「官方系統的操作記錄」，顯示你的帳號確實有分期設定。",
-          textEn: "While you're hesitating, they send a screenshot that looks like an 'official system operation record', showing that your account indeed has an installment plan set up.",
-          visual: {
-            type: "warning_page",
-            content: "📱 對方傳來的截圖：\n\n看起來很正式：\n「系統：自動扣款方案 - 已啟用\n帳號：XXX（你的手機號部分）\n金額：NT$3,200/月\n起始日：今晚 24:00」\n\n⚠️ 截圖可以輕易偽造！\n這張圖沒有任何意義。\n只有你自己打開 App 查到的才算數。"
-          },
-          choices: [
-            {
-              id: "tw_c3b_believe_screenshot",
-              text: "😰 看到截圖更相信了，趕快去 ATM",
-              textEn: "😰 Seeing the screenshot makes me believe it more, hurry to the ATM",
-              effects: { riskScore: 30, money: -50, information: -15 },
-              nextSceneId: "tw_s_end_loss",
-              feedback: "❌ 截圖可以在 Photoshop 幾分鐘內做出來。騙子的「系統截圖」沒有任何可信度——只有官方 App 裡查到的才是真實的。",
-              feedbackType: "bad"
-            },
-            {
-              id: "tw_c3b_check_app",
-              text: "🛍️ 截圖可以偽造，掛電話，打開蝦皮 App 自己查",
-              textEn: "🛍️ Screenshots can be faked, hang up and check the Shopee app yourself",
-              effects: { alertness: 30, information: 20, riskScore: -20 },
-              nextSceneId: "tw_s2_app_check",
-              feedback: "✅ 聰明！截圖可以 P 圖，只有你自己在 App 裡查到的才是真實的。你識破了「假截圖增加信任度」的手法。",
-              feedbackType: "good"
-            }
-          ]
-        },
-        // ── 場景3C：二次來電 ──
-        {
-          id: "tw_s3_second_call",
-          type: "phone_call",
-          speaker: "scammer",
-          pressure: true,
-          text: "你接了電話，對方語氣變得更急迫。",
-          textEn: "You answer the call. Their tone becomes more urgent.",
-          visual: {
-            type: "phone_call",
-            caller: "「蝦皮客服」",
-            content: "你好，之前那通電話你掛斷了。我理解你在核實，這是正確的！但我要告訴你，那個訂單確實存在，是你之前一筆消費被系統誤設的，你的蝦皮 App 因為版本問題可能沒有顯示。如果你不信，我現在傳給你我們的工單截圖，你就可以確認。"
-          },
-          choices: [
-            {
-              id: "tw_c3c_want_screenshot",
-              text: "🤔 好，你傳截圖來，我確認了再說",
-              textEn: "🤔 Okay, send me the screenshot, I'll confirm before doing anything",
-              effects: { stress: 10, riskScore: 10 },
-              nextSceneId: "tw_s3_fake_screenshot",
-              feedback: "⚠️ 她知道你查了 App，所以這次換用「截圖」來製造信任感。截圖可以輕易偽造。",
-              feedbackType: "bad"
-            },
-            {
-              id: "tw_c3c_hangup_165",
-              text: "📵 App 顯示沒有，那就沒有。掛電話，打 165",
-              textEn: "📵 The app shows nothing, so there's nothing. Hang up, call 165",
-              effects: { alertness: 25, information: 20, riskScore: -20 },
-              nextSceneId: "tw_s4_165_report",
-              feedback: "✅ 你有了 App 核實作支撐，不被說服。掛電話是正確的。",
-              feedbackType: "good"
-            },
-            {
-              id: "tw_c3c_bank_call",
-              text: "📞 打銀行官方客服確認帳戶有沒有分期",
-              textEn: "📞 Call the bank's official customer service to check if there's an installment plan",
-              effects: { information: 20, alertness: 15, riskScore: -15 },
-              nextSceneId: "tw_s3_bank_confirm",
-              feedback: "✅ 銀行客服能直接查你的帳戶，告訴你有沒有任何分期設定。",
-              feedbackType: "good"
-            }
-          ]
-        },
-        // ── 場景3D：訂單號對不上 ──
-        {
-          id: "tw_s3_order_mismatch",
-          type: "result",
-          speaker: "system",
-          text: "你讓對方說出完整訂單號，然後在蝦皮 App 搜索。",
-          textEn: "You ask them to give you the full order number, then search for it in the Shopee app.",
-          visual: {
-            type: "warning_page",
-            content: "🔍 蝦皮搜索結果：\n\n搜索「210528XXXXXX」：\n❌ 無此訂單\n\n你的帳號所有訂單記錄：\n— 沒有任何分期設定\n— 沒有任何自動扣款\n\n✅ 對方說的訂單號根本不存在！"
-          },
-          choices: [
-            {
-              id: "tw_c3d_confirmed_scam",
-              text: "✅ 確認是詐騙！掛電話，打 165 舉報",
-              textEn: "✅ Confirmed it's a scam! Hang up, call 165 to report",
-              effects: { alertness: 25, information: 20, riskScore: -20 },
-              nextSceneId: "tw_s4_165_report",
-              feedback: "✅ 你用訂單號核實戳穿了騙局。打 165 舉報這個號碼，保護下一個可能接到電話的人。",
-              feedbackType: "good"
-            }
-          ]
-        },
-        // ── 場景3E：掛了電話後 ──
-        {
-          id: "tw_s3_after_hangup",
-          type: "result",
-          speaker: "system",
-          text: "你掛了電話。但對方很快發來一條短訊。",
-          textEn: "You hang up. But they quickly send a text message.",
-          visual: {
-            type: "sms",
-            sender: "蝦皮客服通知",
-            content: "您拒絕配合解除分期方案，系統將於今晚 24:00 自動啟動連續扣款。如需取消，請點擊連結完成操作：https://shopee-tw-cancel.account-fix.net/stop"
-          },
-          choices: [
-            {
-              id: "tw_c3e_click_link",
-              text: "😰 這個連結看起來很正式……點一下看看",
-              textEn: "😰 This link looks very official... click and take a look",
-              effects: { riskScore: 25, information: -10 },
-              nextSceneId: "tw_s4_fake_page",
-              feedback: "⚠️ 你剛才識破了電話詐騙，不要又被這條短訊拉回去。「account-fix.net」不是蝦皮的域名。",
-              feedbackType: "bad"
-            },
-            {
-              id: "tw_c3e_app_check",
-              text: "🛍️ 打開蝦皮 App 查訂單，確認帳戶正常",
-              textEn: "🛍️ Open the Shopee app to check orders, confirm the account is normal",
-              effects: { information: 20, alertness: 15, riskScore: -10 },
-              nextSceneId: "tw_s2_app_check",
-              feedback: "✅ 蝦皮官方 App 才是權威！短訊連結一概不點。",
-              feedbackType: "good"
-            },
-            {
-              id: "tw_c3e_165",
-              text: "📞 不管短訊，打 165 舉報整個流程",
-              textEn: "📞 Ignore the SMS, call 165 to report the entire process",
-              effects: { alertness: 20, information: 15, riskScore: -10 },
-              nextSceneId: "tw_s4_165_report",
-              feedback: "✅ 這是連環詐騙：電話→掛電話→短訊。165 會記錄整個流程。",
-              feedbackType: "good"
-            }
-          ]
-        },
-        // ── 場景4A：銀行確認 ──
-        {
-          id: "tw_s3_bank_confirm",
-          type: "result",
-          speaker: "system",
-          text: "你打電話給銀行官方客服（台新/玉山/國泰等，你自己搜索的號碼），對方查詢後告訴你：",
-          textEn: "You call the bank's official customer service (Taishin/E.Sun/Cathay etc. — the number you searched yourself). After checking, they tell you:",
-          visual: {
-            type: "safe_result",
-            content: "🏦 銀行客服確認：\n\n✅ 你的帳戶：完全正常\n✅ 無任何分期付款設定\n✅ 無任何自動扣款\n\n銀行客服說：\n「我們絕對不會要求客戶去 ATM 操作才能解除分期。\n ATM 沒有這個功能。凡是要你去 ATM 解除分期的，都是詐騙。」"
-          },
-          choices: [
-            {
-              id: "tw_c4a_done",
-              text: "✅ 確認了，謝謝銀行客服！打 165 舉報",
-              textEn: "✅ Confirmed, thanks bank customer service! Call 165 to report",
-              effects: { alertness: 15, information: 10, riskScore: -5 },
-              nextSceneId: "tw_s4_165_report",
-              feedback: "✅ 銀行確認 + 165 舉報，雙管齊下。",
-              feedbackType: "good"
-            }
-          ]
-        },
-        // ── 場景4B：假網頁 ──
-        {
-          id: "tw_s4_fake_page",
-          type: "webpage",
-          speaker: "system",
-          text: "你點開了短訊連結，頁面做得像蝦皮的設計，但網址是「account-fix.net」，不是 shopee.tw。頁面要你輸入銀行帳號和密碼，「確認身份後立刻解除分期」。",
-          textEn: "You click the link in the text. The page looks like Shopee's design, but the URL is 'account-fix.net', not shopee.tw. It asks for your bank account number and password, promising to 'cancel the installment immediately after identity verification'.",
-          visual: {
-            type: "warning_page",
-            content: "⚠️ 網址：account-fix.net（非官方！）\n蝦皮台灣正式域名：shopee.tw\n\n頁面要求：\n• 銀行帳號\n• 網銀密碼\n• 手機驗證碼（OTP）← 填了帳戶直接被控制\n\n這是假網站。"
-          },
-          choices: [
-            {
-              id: "tw_c4b_fill",
-              text: "😰 填一下就解除了……",
-              textEn: "😰 Just fill it in and it'll be cancelled...",
-              effects: { money: -60, riskScore: 55 },
-              nextSceneId: "tw_s_end_loss",
-              feedback: "❌ 你在假網站輸入了銀行密碼和 OTP，帳戶已被攻陷。這是整個連環局的最後一步。",
-              feedbackType: "bad"
-            },
-            {
-              id: "tw_c4b_url_notice",
-              text: "🔍 等等，這個域名是 account-fix.net，不是 shopee.tw！關掉！",
-              textEn: "🔍 Wait — this domain is account-fix.net, not shopee.tw! Close it!",
-              effects: { alertness: 30, information: 20, riskScore: -20 },
-              nextSceneId: "tw_s_end_safe",
-              feedback: "✅ 你識破了電話、識破了假截圖、識破了假短訊連結！這是完整的連環詐騙，你全部躲過了。",
-              feedbackType: "good"
-            }
-          ]
-        },
-        // ── 場景4C：165 舉報 ──
-        {
-          id: "tw_s4_165_report",
-          type: "result",
-          speaker: "system",
-          text: "你撥打 165 反詐騙專線，說明整個過程——電話、訂單號、假截圖、短訊連結，專線人員都記下來了。",
-          textEn: "You call the 165 anti-fraud hotline and explain the entire process — the call, the order number, the fake screenshot, the SMS link. The operator notes everything down.",
-          visual: {
-            type: "safe_result",
-            content: "📞 165 反詐騙專線確認：\n\n✅ 典型「假冒電商客服 + ATM 詐騙」\n✅ 假截圖是這類詐騙的新手法，要特別注意\n✅ 已記錄：電話號碼 + 短訊連結\n\n📍 記住：\n• 蝦皮/PChome/MOMO 不會主動打電話要你去 ATM\n• ATM 沒有解除分期的功能\n• 先轉帳再退還 = 詐騙\n• 看到「先轉，再退還你」立刻掛電話"
-          },
-          choices: [
-            {
-              id: "tw_c4c_done",
-              text: "✅ 舉報完成，已提醒同學注意",
-              textEn: "✅ Report complete, already warned classmates to be careful",
-              effects: { alertness: 15, information: 10, socialPressure: -5 },
-              nextSceneId: "tw_s_end_safe",
-              feedback: "✅ 你完整識破了這個連環詐騙，並舉報保護了其他人。",
-              feedbackType: "good"
-            }
-          ]
-        },
-        // ── 結局 ──
-        {
-          id: "tw_s_end_safe",
-          type: "ending",
-          speaker: "system",
-          text: "你沒有去 ATM 轉帳，也沒有在假網站輸入任何資料。你查了蝦皮 App，確認根本沒有分期設定；打電話給銀行，帳戶完全正常；打 165，確認這是典型的「ATM 解除分期詐騙」。三重核實，三重放心。",
-          textEn: "You didn't transfer money at the ATM or enter any information on the fake site. You checked the Shopee app — no installment plan exists. You called the bank — your account is completely normal. You called 165 — confirmed it's a classic 'ATM installment cancellation scam'. Triple verification, triple peace of mind.",
-          choices: [{ id: "tw_end_safe", text: "查看結局", textEn: "View ending", effects: {}, nextSceneId: "__ending__", feedback: "", feedbackType: "good" }]
-        },
-        {
-          id: "tw_s_end_loss",
-          type: "ending",
-          speaker: "system",
-          text: "帳戶出現多筆轉帳記錄。你打電話給銀行，對方說這些都是你「主動操作」的交易，ATM 轉帳或網銀操作一旦完成，銀行很難撤回。台灣「ATM 解除分期詐騙」每年導致數十億新台幣損失，你成為其中一個受害者——但這不是你的錯，這些騙局被設計得非常精密，每年都有善良的人受騙。",
-          textEn: "Multiple transfer records appear in your account. You call the bank — they say these were 'actively initiated' transactions. Once an ATM transfer or online banking operation is completed, it's very hard to reverse. Taiwan's 'ATM installment cancellation scam' causes billions of NTD in losses every year. You became one of the victims — but it's not your fault. These scams are meticulously designed, and善良 people fall for them every year.",
-          choices: [{ id: "tw_end_loss", text: "查看結局", textEn: "View ending", effects: {}, nextSceneId: "__ending__", feedback: "", feedbackType: "bad" }]
-        }
-      ]
-    }
-  ],
-
-  // ==================== 歐美 ====================
-  western_countries: [
-    {
-      id: "west_fake_immigration_call",
-      region: "western_countries",
-      title: "假移民局：遣返威脅連環局",
-      titleEn: "Fake Immigration Office: The Deportation Threat",
-      scamType: "假冒政府移民局 + 禮品卡付款 + 隔離話術詐騙",
-      scamTypeEn: "Government impersonation + gift-card payment + isolation tactics",
-      suitableIdentities: ["mainland_student", "hmt_student"],
-      redFlags: [
-        "政府機構絕對不會打電話要求立即付款，只會通過書面信件正式通知",
-        "「不能聯絡學校或使館」——真正的政府不會阻止你核實，這才是最大的紅旗",
-        "要求用禮品卡（Gift Cards）或加密貨幣付款——任何政府機構都不收這些",
-        "「如果掛電話就發逮捕令」——這是恐嚇話術，不是事實",
-        "對你的Social Security Number有「問題」的說法——你可能根本沒有SSN"
-      ],
-      redFlagsEn: [
-        "Government agencies do not demand immediate payment by phone; formal action arrives in writing",
-        "Real officials do not stop you from contacting your school or embassy",
-        "No government agency accepts gift cards or cryptocurrency for a fine",
-        "‘Hang up and we will issue an arrest warrant’ is intimidation, not procedure",
-        "Claims about a problem with your Social Security number may make no sense if you do not have one"
-      ],
-      officialChannels: [
-        "直接去學校 International Office——他們每學期都會遇到這類詐騙舉報",
-        "登入 SEVIS（美國）或官方移民局網站自己查簽證狀態",
-        "聯絡中國大使館或台港澳各地辦事處"
-      ],
-      officialChannelsEn: [
-        "Go directly to your school's International Office",
-        "Log in to SEVIS or the official immigration website to check your status",
-        "Contact your embassy or the appropriate regional representative office"
-      ],
-      pressureSource: ["簽證遣返威脅", "語言壓力", "身份焦慮", "隔離策略（不讓你聯絡任何人）"],
-      scenes: [
-        // ── 場景1：鋪墊——接到「移民局」電話 ──
-        {
-          id: "west_s1_call",
-          type: "phone_call",
-          speaker: "system",
-          text: "你剛上完課，一個人走回宿舍。手機響了，是陌生的美國號碼。你猶豫了一下，還是接了。",
-          textEn: "You just finished class and are walking back to your dorm alone. Your phone rings — an unfamiliar US number. You hesitate, then answer.",
-          visual: {
-            type: "phone_call",
-            caller: "Unknown +1-202-XXX-XXXX",
-            content: "Hello, this is Officer Williams from US Immigration Services. Your student visa has been flagged for suspicious activity linked to your Social Security number. This is a serious matter — if not resolved immediately, you will face deportation. You need to pay a $2,000 security deposit right now to stop the process. Do NOT hang up or contact anyone — that will only make things worse."
-          },
-          choices: [
-            {
-              id: "west_c1_pay",
-              text: "😰 Deportation？我腿都軟了……怎麼付款？",
-              textEn: "😰 Deportation? My legs are weak... how do I pay?",
-              effects: { money: -60, riskScore: 50, identityAnxiety: -10 },
-              nextSceneId: "west_s2_giftcard_demand",
-              feedback: "❌ 聽到 deportation 慌了是人之常情。但政府部門絕不會打電話要求立即付款——他們只會寄書面通知。",
-              feedbackType: "bad"
-            },
-            {
-              id: "west_c1_keep_talking",
-              text: "😟 不敢掛電話，繼續聽他說",
-              textEn: "😟 Don't dare to hang up, keep listening to him",
-              effects: { stress: 20, identityAnxiety: 20, riskScore: 20 },
-              nextSceneId: "west_s2_scammer_pressure",
-              feedback: "⚠️ 你被對方的語氣壓住了。但你有權掛電話——掛了不會被逮捕，那只是嚇你的。",
-              feedbackType: "bad"
-            },
-            {
-              id: "west_c1_roommate",
-              text: "🤔 先讓她等一下，我問室友怎麼處理",
-              textEn: "🤔 Ask her to hold on, I'll ask my roommate what to do",
-              effects: { information: 10, socialPressure: 10 },
-              nextSceneId: "west_s2_roommate_advice",
-              feedback: "🤔 找室友商量是個自然反應，但室友可能也不知道正確答案。",
-              feedbackType: "mid"
-            },
-            {
-              id: "west_c1_io",
-              text: "📵 掛電話，直接去 International Office",
-              textEn: "📵 Hang up, go directly to the International Office",
-              effects: { information: 30, alertness: 20, riskScore: -25, identityAnxiety: -10 },
-              nextSceneId: "west_s3_io_confirm",
-              feedback: "✅ International Office 就是處理這種事的！他們每學期都會遇到這類詐騙舉報。",
-              feedbackType: "good"
-            },
-            {
-              id: "west_c1_website",
-              text: "🌐 掛電話，自己登入 SEVIS 查簽證狀態",
-              textEn: "🌐 Hang up, log into SEVIS myself to check visa status",
-              effects: { information: 30, alertness: 20, riskScore: -20 },
-              nextSceneId: "west_s3_visa_check",
-              feedback: "✅ 對！SEVIS 官方系統可以直接查你的簽證狀態，是最權威的核實方式。",
-              feedbackType: "good"
-            }
-          ]
-        },
-        // ── 場景2A：騙子要求買禮品卡 ──
-        {
-          id: "west_s2_giftcard_demand",
-          type: "phone_call",
-          speaker: "scammer",
-          pressure: true,
-          text: "你問了怎麼付款，對方的指令讓你心裡有點不安。",
-          textEn: "You ask how to pay. Their instructions make you feel uneasy.",
-          visual: {
-            type: "phone_call",
-            caller: "「Officer Williams / 移民局」",
-            content: "We accept payment via Google Play gift cards. Go to the nearest convenience store — 7-Eleven or CVS. Buy $2,000 worth of Google Play cards. Once you have the cards, read me the redemption codes. You have 30 minutes before the warrant is issued. Do NOT tell the cashier what this is for. Do NOT call anyone."
-          },
-          choices: [
-            {
-              id: "west_c2a_buy_cards",
-              text: "😰 禮品卡……聽起來怪怪的，但為了簽證還是去買吧",
-              textEn: "😰 Gift cards... sounds weird, but for the visa I'll go buy them anyway",
-              effects: { money: -50, riskScore: 55, identityAnxiety: -5 },
-              nextSceneId: "west_s_end_loss",
-              feedback: "❌ 美國政府部門絕對不收 Google Play 禮品卡！任何要求用禮品卡、比特幣、西聯匯款付款的，100% 是詐騙。",
-              feedbackType: "bad"
-            },
-            {
-              id: "west_c2a_question_giftcard",
-              text: "🤔 問他：政府為什麼收禮品卡？這不合理",
-              textEn: "🤔 Ask him: why would the government accept gift cards? That doesn't make sense",
-              effects: { alertness: 20, information: 10, stress: 10 },
-              nextSceneId: "west_s3_scammer_excuse_gc",
-              feedback: "🤔 好問題！看騙子怎麼圓這個謊——他的回答會暴露更多矛盾。",
-              feedbackType: "mid"
-            },
-            {
-              id: "west_c2a_hangup_io",
-              text: "📵 「不能聯絡任何人」？這太可疑了——掛電話，去 International Office",
-              textEn: "📵 'Can't contact anyone'? That's too suspicious — hang up, go to the International Office",
-              effects: { alertness: 30, information: 25, riskScore: -30, identityAnxiety: -10 },
-              nextSceneId: "west_s3_io_confirm",
-              feedback: "✅ 關鍵識破！「Do NOT contact anyone」本身就是最大的紅旗。真正的政府不會阻止你核實。",
-              feedbackType: "good"
-            }
-          ]
-        },
-        // ── 場景2B：騙子繼續施壓 ──
-        {
-          id: "west_s2_scammer_pressure",
-          type: "phone_call",
-          speaker: "scammer",
-          pressure: true,
-          text: "你沒有掛電話。對方察覺到你的猶豫，語氣變得更嚴厲。",
-          textEn: "You didn't hang up. They sense your hesitation and their tone becomes harsher.",
-          visual: {
-            type: "phone_call",
-            caller: "「Officer Williams」",
-            content: "You need to understand the seriousness of this situation. If you don't comply right now, a warrant will be issued for your arrest. You will be taken into custody and your student visa will be permanently revoked. This is your only chance. Do you want to be deported?"
-          },
-          choices: [
-            {
-              id: "west_c2b_comply",
-              text: "😰 我不想被遣返……你說怎麼做就怎麼做",
-              textEn: "😰 I don't want to be deported... I'll do whatever you say",
-              effects: { riskScore: 40, identityAnxiety: -5, money: -40 },
-              nextSceneId: "west_s2_giftcard_demand",
-              feedback: "⚠️ 你被恐嚇話術壓倒了。但記住：真正的移民局不會用這種方式處理問題。你有權掛電話。",
-              feedbackType: "bad"
-            },
-            {
-              id: "west_c2b_hangup",
-              text: "📵 等等——真正的政府人員不會這樣說話。掛電話！",
-              textEn: "📵 Wait — real government officials wouldn't talk like this. Hang up!",
-              effects: { alertness: 30, information: 20, riskScore: -25, identityAnxiety: -10 },
-              nextSceneId: "west_s3_after_hangup",
-              feedback: "✅ 你識破了恐嚇話術！真正的移民局官員不會用「逮捕」「遣返」來威脅你立即付款。",
-              feedbackType: "good"
-            }
-          ]
-        },
-        // ── 場景2C：室友建議 ──
-        {
-          id: "west_s2_roommate_advice",
-          type: "chat",
-          speaker: "friend",
-          text: "你壓低聲音問室友，室友的反應讓你更猶豫了。",
-          textEn: "You lower your voice and ask your roommate. Their reaction makes you even more hesitant.",
-          visual: {
-            type: "chat",
-            app: "iMessage",
-            appIcon: "💬",
-            messages: [
-              { type: "outgoing", name: "你", text: "有人打來說是移民局，說我簽證有問題，要我付錢" },
-              { type: "incoming", name: "Mike（室友）", text: "靠真假？我聽學長說過這種，好像是詐騙" },
-              { type: "incoming", name: "Mike（室友）", text: "但……萬一是真的呢？你簽證確實辦了很久" },
-              { type: "incoming", name: "Mike（室友）", text: "你要不要去 International Office 問一下？" }
-            ]
-          },
-          choices: [
-            {
-              id: "west_c2c_keep_listening",
-              text: "😟 室友也不確定……還是繼續聽對方說什麼",
-              textEn: "😟 My roommate isn't sure either... I'll keep listening to what they say",
-              effects: { stress: 15, riskScore: 20 },
-              nextSceneId: "west_s2_scammer_pressure",
-              feedback: "⚠️ 室友的「萬一是真的」讓你更猶豫了。但 International Office 才是正確答案。",
-              feedbackType: "bad"
-            },
-            {
-              id: "west_c2c_io",
-              text: "📵 室友說去 International Office，那就去吧",
-              textEn: "📵 My roommate says go to the International Office, so I'll go",
-              effects: { information: 25, alertness: 15, riskScore: -20 },
-              nextSceneId: "west_s3_io_confirm",
-              feedback: "✅ 室友的建議是對的——International Office 是最可靠的求助點。",
-              feedbackType: "good"
-            },
-            {
-              id: "west_c2c_visa_website",
-              text: "🌐 先登入 SEVIS 查簽證狀態",
-              textEn: "🌐 First log into SEVIS to check visa status",
-              effects: { information: 25, alertness: 15, riskScore: -15 },
-              nextSceneId: "west_s3_visa_check",
-              feedback: "✅ SEVIS 官方系統是最權威的簽證狀態查詢方式。",
-              feedbackType: "good"
-            }
-          ]
-        },
-        // ── 場景3A：騙子解釋禮品卡 ──
-        {
-          id: "west_s3_scammer_excuse_gc",
-          type: "phone_call",
-          speaker: "scammer",
-          pressure: true,
-          text: "你問了為什麼收禮品卡，對方顯然被問過很多次，有準備好的答案。",
-          textEn: "You ask why they accept gift cards. They've clearly been asked this before and have a ready answer.",
-          visual: {
-            type: "phone_call",
-            caller: "「Officer Williams」",
-            content: "This is a standard procedure for international students without a US bank account. The gift card system is used by the Treasury Department to process emergency security deposits. It's faster and trackable. Once your identity is verified, the full amount will be refunded to your bank account within 24 hours."
-          },
-          choices: [
-            {
-              id: "west_c3a_believe",
-              text: "😟 他說得挺流利的……聽起來像真的",
-              textEn: "😟 He speaks quite fluently... sounds real",
-              effects: { riskScore: 30, trust: 15, information: -10 },
-              nextSceneId: "west_s2_giftcard_demand",
-              feedback: "⚠️ 騙子準備了各種「解釋」來應對你的質疑。說得越流利越可疑——真正的政府流程不會這麼「靈活」。",
-              feedbackType: "bad"
-            },
-            {
-              id: "west_c3a_hangup",
-              text: "📵 美國財政部用禮品卡退款？這太扯了。掛電話，去 International Office",
-              textEn: "📵 The US Treasury uses gift cards for refunds? That's ridiculous. Hang up, go to the International Office",
-              effects: { alertness: 30, information: 25, riskScore: -30 },
-              nextSceneId: "west_s3_io_confirm",
-              feedback: "✅ 你識破了！美國政府沒有任何部門會用禮品卡處理任何費用。這是最明顯的詐騙特徵。",
-              feedbackType: "good"
-            }
-          ]
-        },
-        // ── 場景3B：掛電話後 ──
-        {
-          id: "west_s3_after_hangup",
-          type: "result",
-          speaker: "system",
-          text: "你掛了電話。對方立刻又打來，你沒接。然後收到一條語音留言——語氣比剛才更嚴厲。",
-          textEn: "You hang up. They call back immediately — you don't answer. Then you receive a voicemail — the tone is even harsher than before.",
-          visual: {
-            type: "warning_page",
-            content: "📱 語音留言（+1-202-XXX-XXXX）：\n\n「This is Officer Williams. You have made a very serious mistake by hanging up. A warrant has been issued for your arrest. If you call back within 15 minutes and complete the payment, we can stop the warrant. If not, campus police will be dispatched to your location.」\n\n⚠️ 這是經典的「升級恐嚇」話術。\n他們在測試你的心理極限。"
-          },
-          choices: [
-            {
-              id: "west_c3b_call_back",
-              text: "😰 校警要來抓我？打回去！",
-              textEn: "😰 Campus police are coming to get me? Call back!",
-              effects: { riskScore: 30, stress: 20, identityAnxiety: 15 },
-              nextSceneId: "west_s2_giftcard_demand",
-              feedback: "⚠️ 騙子在利用「升級恐嚇」讓你失去判斷能力。校警不會因為你掛電話就來抓你。",
-              feedbackType: "bad"
-            },
-            {
-              id: "west_c3b_io",
-              text: "📵 語音留言的語氣更兇了——這反而證明是詐騙。去 International Office",
-              textEn: "📵 The voicemail tone is even harsher — that actually proves it's a scam. Go to the International Office",
-              effects: { alertness: 25, information: 20, riskScore: -25 },
-              nextSceneId: "west_s3_io_confirm",
-              feedback: "✅ 你識破了！騙子在你掛電話後會「升級」威脅，目的是讓你因為害怕而回電。",
-              feedbackType: "good"
-            },
-            {
-              id: "west_c3b_check_sevis",
-              text: "🌐 登入 SEVIS 查簽證狀態，用事實說話",
-              textEn: "🌐 Log into SEVIS to check visa status, let facts speak for themselves",
-              effects: { information: 25, alertness: 15, riskScore: -20 },
-              nextSceneId: "west_s3_visa_check",
-              feedback: "✅ 用官方系統查詢是最理性的做法。SEVIS 不會說謊。",
-              feedbackType: "good"
-            }
-          ]
-        },
-        // ── 場景3C：International Office 確認 ──
-        {
-          id: "west_s3_io_confirm",
-          type: "result",
-          speaker: "system",
-          text: "你到了 International Office，工作人員聽你描述完整個情況後，一點都不驚訝。",
-          textEn: "You arrive at the International Office. After hearing your full story, the staff member isn't surprised at all.",
-          visual: {
-            type: "safe_result",
-            content: "🏫 International Office 確認：\n\n✅ 你的簽證狀態：完全正常\n✅ 過去 30 天：無任何移民局通知\n✅ 移民局不會打電話要求立即付款\n✅ 「不能聯絡學校」是詐騙的標誌\n\n工作人員補充：\n「這類詐騙我們每學期都會遇到。\n 記住：真正的移民局只通過書面信件聯繫學生。\n 任何電話要求付款的都是詐騙。」"
-          },
-          choices: [
-            {
-              id: "west_c3c_report",
-              text: "📋 謝謝！我應該怎麼舉報這通電話？",
-              textEn: "📋 Thank you! How should I report this call?",
-              effects: { information: 15, alertness: 10 },
-              nextSceneId: "west_s4_report",
-              feedback: "✅ 主動舉報可以幫助保護下一個可能接到同樣電話的同學。",
-              feedbackType: "good"
-            },
-            {
-              id: "west_c3c_see_visa",
-              text: "🌐 能幫我登入 SEVIS 看一下簽證狀態嗎？",
-              textEn: "🌐 Can you help me log into SEVIS to check my visa status?",
-              effects: { information: 10, identityAnxiety: -15, stress: -10 },
-              nextSceneId: "west_s3_visa_check",
-              feedback: "✅ 親眼看到簽證狀態正常，才能徹底消除那種說不清楚的焦慮。",
-              feedbackType: "good"
-            }
-          ]
-        },
-        // ── 場景3D：SEVIS 查詢 ──
-        {
-          id: "west_s3_visa_check",
-          type: "result",
-          speaker: "system",
-          text: "你登入 SEVIS 系統，輸入你的 SEVIS ID 和個人資料。系統顯示：",
-          textEn: "You log into the SEVIS system, enter your SEVIS ID and personal information. The system shows:",
-          visual: {
-            type: "safe_result",
-            content: "📋 SEVIS 官方系統：\n\nStudent Visa Status: ✅ ACTIVE\nSEVIS Record: ✅ Active\nExpiry Date: 正常有效\nApplication History: No issues\n\n📌 移民局從不通過電話要求付款。\n📌 任何簽證問題只通過書面信件或官方系統通知。\n📌 如果你真的簽證有問題，學校會先收到通知。"
-          },
-          choices: [
-            {
-              id: "west_c3d_relieved",
-              text: "😌 親眼看到才放心！謝謝",
-              textEn: "😌 Only feel relieved after seeing it myself! Thank you",
-              effects: { identityAnxiety: -20, stress: -15, information: 10 },
-              nextSceneId: "west_s4_report",
-              feedback: "✅ 簽證焦慮是騙子針對留學生的主要攻擊點。有問題去官方渠道查，不要聽電話裡的說法。",
-              feedbackType: "good"
-            }
-          ]
-        },
-        // ── 場景4：舉報 ──
-        {
-          id: "west_s4_report",
-          type: "result",
-          speaker: "system",
-          text: "你決定舉報這通詐騙電話。International Office 幫你記錄了騙子的號碼，並提供了以下舉報渠道。",
-          textEn: "You decide to report this scam call. The International Office records the scammer's number and provides the following reporting channels.",
-          visual: {
-            type: "safe_result",
-            content: "🛡️ 美國舉報渠道：\n• FTC：reportfraud.ftc.gov\n• IC3.gov（FBI 網絡犯罪舉報中心）\n• 學校 Campus Safety\n• 聯絡使領館（若涉及護照/簽證問題）\n\n💡 建議：\n• 在手機上把這個號碼封鎖\n• 告訴身邊的留學生朋友\n• 以後接到類似電話，直接掛斷"
-          },
-          choices: [
-            {
-              id: "west_c4_done",
-              text: "✅ 舉報完成，學到了！",
-              textEn: "✅ Report complete, learned my lesson!",
-              effects: { alertness: 15, information: 10, riskScore: -5, identityAnxiety: -10 },
-              nextSceneId: "west_s_end_safe",
-              feedback: "✅ 你識別了假移民局詐騙、沒有付款、向 International Office 核實、舉報了騙子。整套流程完美。",
-              feedbackType: "good"
-            }
-          ]
-        },
-        // ── 結局 ──
-        {
-          id: "west_s_end_safe",
-          type: "ending",
-          speaker: "system",
-          text: "你沒有被「遣返威脅」嚇到，沒有買禮品卡，沒有付款。你去了 International Office 確認簽證完全正常，還舉報了詐騙電話。這類「假移民局」詐騙每年騙走海外學生幾千萬美元，而你成功識破了它。",
-          textEn: "You weren't intimidated by the 'deportation threat'. You didn't buy gift cards or make any payment. You went to the International Office to confirm your visa is completely fine, and reported the scam call. These 'fake immigration' scams steal tens of millions of dollars from overseas students every year — and you successfully saw through it.",
-          choices: [{ id: "west_end_safe", text: "查看結局", textEn: "View ending", effects: {}, nextSceneId: "__ending__", feedback: "", feedbackType: "good" }]
-        },
-        {
-          id: "west_s_end_loss",
-          type: "ending",
-          speaker: "system",
-          text: "你按要求買了 Google Play 禮品卡，把號碼給了對方。對方說「處理中，24 小時內退款」，然後掛了電話。你的簽證當然沒有任何問題——因為從一開始就沒問題。你損失了 2,000 美元，而騙子拿到的是無法追回的禮品卡號碼。政府部門永遠不會通過電話要求立即付款，更不會接受禮品卡。",
-          textEn: "You bought Google Play gift cards as instructed and gave them the codes. They said 'processing, refund within 24 hours' and hung up. Your visa was never in trouble — because it was never an issue. You lost $2,000, and the scammers got untraceable gift card codes. Government agencies never demand immediate payment over the phone, and certainly never accept gift cards.",
-          choices: [{ id: "west_end_loss", text: "查看結局", textEn: "View ending", effects: {}, nextSceneId: "__ending__", feedback: "", feedbackType: "bad" }]
-        }
-      ]
-    }
-  ],
-
-  // ==================== 東南亞 ====================
-  southeast_asia: [
-    {
-      id: "sea_hotel_payment_problem",
-      region: "southeast_asia",
-      title: "酒店付款異常：連環釣魚",
-      titleEn: "Hotel Payment Problem: A Phishing Chain",
-      scamType: "旅遊平台釣魚 + 假前台電話 + 信用卡資料詐騙",
-      scamTypeEn: "Travel-platform phishing + fake front-desk call + card-data theft",
-      suitableIdentities: ["mainland_student", "hmt_student"],
-      redFlags: [
-        "短訊連結域名是「hotel-confirm.net」——不是 booking.com 或 agoda.com",
-        "短訊後「酒店前台」主動打電話來——真正的酒店前台不會打電話催你重新付款",
-        "要求提供信用卡完整資料（卡號 + 有效期 + CVV）——正規付款不需要在第三方頁面填這些",
-        "「30 分鐘內不處理就取消房間」——剛到異地的焦慮被精準利用",
-        "對方知道你姓名和訂單號——這些資料可能從酒店系統洩露或旅行社外流"
-      ],
-      redFlagsEn: [
-        "hotel-confirm.net is not booking.com or agoda.com",
-        "A fake front desk calls after the text; real hotel staff do not pressure guests to repay this way",
-        "They demand the full card number, expiry date, and CVV on a third-party page",
-        "They exploit travel anxiety with a 30-minute room-cancellation threat",
-        "Knowing your name and booking number may only mean booking data was leaked"
-      ],
-      officialChannels: [
-        "打開原訂房 App（Booking.com / Agoda）查看訂單狀態",
-        "直接致電酒店官方電話（從訂單確認頁或 Google 搜索，不要用對方給的號碼）",
-        "直接前往酒店前台辦理入住——前台有你的訂單記錄"
-      ],
-      officialChannelsEn: [
-        "Open the original booking app and inspect the reservation status",
-        "Call the hotel's official number from the booking confirmation or a trusted listing",
-        "Go directly to the hotel front desk, where staff can access the real reservation"
-      ],
-      pressureSource: ["剛到陌生國家的焦慮", "擔心沒有住宿", "語言不通壓力", "假前台電話增加信任感"],
-      scenes: [
-        // ── 場景1：鋪墊——剛到機場收到短訊 ──
-        {
-          id: "sea_s1_sms",
-          type: "message",
-          speaker: "system",
-          text: "你剛踏出曼谷機場，熱浪撲面而來。你拉著行李、拿著手機，正準備叫車去酒店——手機震了。",
-          textEn: "You just step out of Bangkok airport, hit by a wave of heat. Luggage in hand, phone in the other, you're about to call a ride to your hotel — your phone buzzes.",
-          visual: {
-            type: "sms",
-            sender: "Booking Notification",
-            content: "Your hotel payment has failed. Please complete payment again within 30 minutes, or your room reservation will be automatically cancelled. Tap here to re-enter payment details:",
-            link: "https://booking-payment-verify.hotel-confirm.net/retry"
-          },
-          choices: [
-            {
-              id: "sea_c1_click",
-              text: "😰 剛到就說付款失敗？！點連結重新付",
-              textEn: "😰 Payment failed right after arrival?! Click the link to pay again",
-              effects: { riskScore: 30, stress: -5, information: -10 },
-              nextSceneId: "sea_s2_fake_payment",
-              feedback: "⚠️ 人剛到陌生地方最容易被這類訊息騙到——因為你慌了。先看網址：hotel-confirm.net 不是 Booking.com 的域名。",
-              feedbackType: "bad"
-            },
-            {
-              id: "sea_c1_app",
-              text: "📱 先不急，打開 Booking.com App 查看訂單",
-              textEn: "📱 No rush, open the Booking.com app to check the order",
-              effects: { information: 25, alertness: 15, riskScore: -15 },
-              nextSceneId: "sea_s2_app_ok",
-              feedback: "✅ 對！官方 App 看訂單才是正確做法。短訊連結一律不點。",
-              feedbackType: "good"
-            },
-            {
-              id: "sea_c1_call_hotel",
-              text: "📞 打電話給酒店前台直接問",
-              textEn: "📞 Call the hotel front desk directly to ask",
-              effects: { information: 30, alertness: 15, riskScore: -20, stress: -10 },
-              nextSceneId: "sea_s2_hotel_confirm",
-              feedback: "✅ 直接聯絡酒店是最直接的核實！他們有你的預訂記錄。",
-              feedbackType: "good"
-            },
-            {
-              id: "sea_c1_ignore_go",
-              text: "🚕 不理會短訊，直接打車去酒店",
-              textEn: "🚕 Ignore the SMS, just take a taxi to the hotel",
-              effects: { information: 15, stress: 5, riskScore: -5 },
-              nextSceneId: "sea_s2_arrive_hotel",
-              feedback: "✅ 直接去前台是最安全的！酒店有你的預訂記錄，假訊息騙不走你的房間。",
-              feedbackType: "good"
-            },
-            {
-              id: "sea_c1_search",
-              text: "🔍 搜索這個短訊的網址",
-              textEn: "🔍 Search for this SMS's URL",
-              effects: { information: 20, alertness: 15, riskScore: -5 },
-              nextSceneId: "sea_s2_search_url",
-              feedback: "✅ 搜索域名是好習慣！hotel-confirm.net 是已知詐騙域名。",
-              feedbackType: "good"
-            }
-          ]
-        },
-        // ── 場景2A：點了連結——假付款頁 ──
-        {
-          id: "sea_s2_fake_payment",
-          type: "webpage",
-          speaker: "system",
-          text: "頁面打開了，設計得很像 Booking.com，藍色配色、Logo 位置都對。但網址欄清楚寫著「hotel-confirm.net」。頁面要你重新輸入信用卡資料。",
-          textEn: "The page loads — it looks just like Booking.com, blue color scheme, logo in the right place. But the URL bar clearly shows 'hotel-confirm.net'. It asks you to re-enter your credit card details.",
-          visual: {
-            type: "warning_page",
-            content: "⚠️ 網址：hotel-confirm.net（假的！）\n真正 Booking.com 域名：booking.com\n\n頁面要求：\n• 信用卡號碼（16 位）← 洩露了很麻煩\n• 到期日\n• CVV 安全碼 ← 高風險！\n• OTP 一次性驗證碼 ← 填了等於授權刷卡\n\n頁面還有倒計時：「Session expires in 14:32」"
-          },
-          choices: [
-            {
-              id: "sea_c2a_enter_card",
-              text: "💳 填信用卡資料，重新付款",
-              textEn: "💳 Fill in credit card details and pay again",
-              effects: { money: -60, riskScore: 50, information: -20 },
-              nextSceneId: "sea_s_end_loss",
-              feedback: "❌ 你的信用卡資料被盜了——卡號 + CVV + OTP，騙子可以用這些在全世界任何地方消費。",
-              feedbackType: "bad"
-            },
-            {
-              id: "sea_c2a_notice_url",
-              text: "🔍 等等——hotel-confirm.net 不是 booking.com！關掉！",
-              textEn: "🔍 Wait — hotel-confirm.net isn't booking.com! Close it!",
-              effects: { alertness: 30, information: 20, riskScore: -20 },
-              nextSceneId: "sea_s3_after_close",
-              feedback: "✅ 你在緊張的環境下還能注意網址，非常了不起！看域名是防釣魚最有效的方法。",
-              feedbackType: "good"
-            },
-            {
-              id: "sea_c2a_call_hotel_now",
-              text: "📞 先不填，打電話給酒店前台確認",
-              textEn: "📞 Don't fill anything in yet, call the hotel front desk to confirm",
-              effects: { information: 25, alertness: 20, riskScore: -15 },
-              nextSceneId: "sea_s2_hotel_confirm",
-              feedback: "✅ 暫停一下打電話，是在假網站前最好的選擇。",
-              feedbackType: "good"
-            }
-          ]
-        },
-        // ── 場景2B：查了 App ──
-        {
-          id: "sea_s2_app_ok",
-          type: "result",
-          speaker: "system",
-          text: "你打開 Booking.com App，登入帳號查看訂單。",
-          textEn: "You open the Booking.com app and log in to check your order.",
-          visual: {
-            type: "safe_result",
-            content: "🏨 Booking.com 訂單狀態：\n\n✅ 付款狀態：已成功\n✅ 房間狀態：已確認\n✅ 入住日期：今天\n✅ 取消政策：今晚 18:00 前免費取消\n\n那條「付款失敗」訊息不是官方發的。\n但 5 分鐘後，你的手機響了——顯示「酒店前台」……"
-          },
-          choices: [
-            {
-              id: "sea_c2b_answer",
-              text: "📞 接電話，可能是酒店前台有事情",
-              textEn: "📞 Answer the call, it might be the hotel front desk about something",
-              effects: { stress: 10, riskScore: 15 },
-              nextSceneId: "sea_s3_fake_front_desk",
-              feedback: "⚠️ 你查了 App 知道訂單沒問題，但騙子還有下一步——假裝酒店前台打電話。",
-              feedbackType: "mid"
-            },
-            {
-              id: "sea_c2b_ignore",
-              text: "📵 App 顯示沒問題，不接陌生電話",
-              textEn: "📵 The app shows nothing wrong, don't answer unknown calls",
-              effects: { alertness: 15, riskScore: -10 },
-              nextSceneId: "sea_s3_missed_call_msg",
-              feedback: "✅ 你有 App 的核實作支撐，不接陌生電話完全合理。",
-              feedbackType: "good"
-            },
-            {
-              id: "sea_c2b_go_hotel",
-              text: "🚕 直接打車去酒店前台辦理入住",
-              textEn: "🚕 Just take a taxi to the hotel front desk and check in",
-              effects: { stress: -10, information: 5 },
-              nextSceneId: "sea_s2_arrive_hotel",
-              feedback: "✅ 直接去前台是最穩妥的方式。",
-              feedbackType: "good"
-            }
-          ]
-        },
-        // ── 場景2C：打給酒店 ──
-        {
-          id: "sea_s2_hotel_confirm",
-          type: "result",
-          speaker: "system",
-          text: "你從訂單確認郵件裡找到酒店官方電話，打過去。前台接電話了。",
-          textEn: "You find the hotel's official phone number from your booking confirmation email and call. The front desk answers.",
-          visual: {
-            type: "safe_result",
-            content: "📞 酒店前台回覆（官方電話）：\n\n✅ 您的預訂：已確認\n✅ 付款：已收到\n✅ 房間：已保留\n✅ 入住時間：下午 2 點後\n\n前台說：「我們不會發短訊要求重新付款。\n如果您收到任何關於付款失敗的訊息，請直接聯繫我們確認。」"
-          },
-          choices: [
-            {
-              id: "sea_c2c_report",
-              text: "📢 謝謝！我收到一條詐騙短訊，想舉報",
-              textEn: "📢 Thank you! I received a scam SMS and want to report it",
-              effects: { alertness: 15, information: 10, riskScore: -5 },
-              nextSceneId: "sea_s4_report",
-              feedback: "✅ 向酒店舉報詐騙短訊，他們可以提醒其他客人。",
-              feedbackType: "good"
-            },
-            {
-              id: "sea_c2c_go",
-              text: "🚕 確認沒問題了，打車去酒店",
-              textEn: "🚕 Confirmed everything is fine, take a taxi to the hotel",
-              effects: { stress: -15, information: 5 },
-              nextSceneId: "sea_s2_arrive_hotel",
-              feedback: "✅ 核實了就放心出發！這個習慣在旅行中非常重要。",
-              feedbackType: "good"
-            }
-          ]
-        },
-        // ── 場景2D：搜索域名 ──
-        {
-          id: "sea_s2_search_url",
-          type: "result",
-          speaker: "system",
-          text: "你搜索了「hotel-confirm.net」，結果很明確。",
-          textEn: "You search for 'hotel-confirm.net'. The results are clear.",
-          visual: {
-            type: "warning_page",
-            content: "🔍 搜索結果：\n\n「hotel-confirm.net 詐騙」\n——超過 200 條結果\n\n最新帖子（3 天前）：\n「收到 Booking.com 付款失敗短訊，連結是 hotel-confirm.net，假的！」\n\n⚠️ 這是已知的釣魚域名。\nBooking.com 官方只使用 booking.com 域名。"
-          },
-          choices: [
-            {
-              id: "sea_c2d_app",
-              text: "📱 確認是詐騙了，打開 App 查訂單",
-              textEn: "📱 Confirmed it's a scam, open the app to check the order",
-              effects: { information: 20, alertness: 15, riskScore: -10 },
-              nextSceneId: "sea_s2_app_ok",
-              feedback: "✅ 搜索確認了，再用 App 查一遍，雙重核實。",
-              feedbackType: "good"
-            },
-            {
-              id: "sea_c2d_report",
-              text: "📢 直接舉報這個域名",
-              textEn: "📢 Report this domain directly",
-              effects: { alertness: 15, information: 10, riskScore: -5 },
-              nextSceneId: "sea_s4_report",
-              feedback: "✅ 舉報釣魚域名可以幫助封鎖它，保護其他旅客。",
-              feedbackType: "good"
-            }
-          ]
-        },
-        // ── 場景2E：直接去酒店 ──
-        {
-          id: "sea_s2_arrive_hotel",
-          type: "result",
-          speaker: "system",
-          text: "你到了酒店，前台微笑著確認了你的預訂。順利辦理入住，拿到了房卡。",
-          textEn: "You arrive at the hotel. The front desk smiles and confirms your reservation. Check-in goes smoothly — you get your room key.",
-          visual: {
-            type: "safe_result",
-            content: "🏨 入住成功！\n\n前台：訂單有效，付款已收到。\n房間已準備好，歡迎入住！\n\n💡 旅行中遇到可疑訊息的黃金法則：\n• 先查官方 App，不點陌生連結\n• 酒店問題直接去前台或打官方電話\n• 出發前把酒店電話存進手機"
-          },
-          choices: [
-            {
-              id: "sea_c2e_done",
-              text: "😊 完美！安全入住，學到了",
-              textEn: "😊 Perfect! Safely checked in, learned my lesson",
-              effects: { stress: -10, information: 5, localFamiliarity: 5 },
-              nextSceneId: "sea_s_end_safe",
-              feedback: "✅ 在陌生環境遇到緊急訊息，先停一下用官方渠道核實，是保護自己最好的方式。",
-              feedbackType: "good"
-            },
-            {
-              id: "sea_c2e_report",
-              text: "📢 順手跟酒店說一下那條詐騙短訊",
-              textEn: "📢 Mention the scam SMS to the hotel while I'm at it",
-              effects: { alertness: 10, information: 5 },
-              nextSceneId: "sea_s4_report",
-              feedback: "✅ 提醒酒店可以幫助他們保護其他客人。",
-              feedbackType: "good"
-            }
-          ]
-        },
-        // ── 場景3A：假前台電話 ──
-        {
-          id: "sea_s3_fake_front_desk",
-          type: "phone_call",
-          speaker: "scammer",
-          pressure: true,
-          text: "你接了電話，對方說自己是酒店前台，口音聽起來像當地人，語氣很專業。",
-          textEn: "You answer the call. They say they're the hotel front desk, with a local accent and a professional tone.",
-          visual: {
-            type: "phone_call",
-            caller: "顯示：Hotel Front Desk",
-            content: "Good afternoon, this is the front desk of your hotel. We received a notification from Booking.com that your payment didn't go through. We need you to confirm your card details over the phone so we can secure your reservation. Otherwise, we may have to release your room to another guest."
-          },
-          choices: [
-            {
-              id: "sea_c3a_give_card",
-              text: "😰 房間要被取消？我報信用卡號碼",
-              textEn: "😰 The room is going to be cancelled? I'll give my credit card number",
-              effects: { money: -55, riskScore: 50, information: -15 },
-              nextSceneId: "sea_s_end_loss",
-              feedback: "❌ 真正的酒店前台不會打電話來要你的信用卡資料！你的訂單已經付款了，他們不需要任何東西。",
-              feedbackType: "bad"
-            },
-            {
-              id: "sea_c3a_question",
-              text: "🤔 問她：我 App 顯示付款成功了，為什麼說沒收到？",
-              textEn: "🤔 Ask her: my app shows payment was successful, why are you saying it wasn't received?",
-              effects: { alertness: 20, information: 10, stress: 10 },
-              nextSceneId: "sea_s4_fake_desk_excuse",
-              feedback: "🤔 好問題。真正的酒店可以查系統確認付款狀態，騙子則需要編理由。",
-              feedbackType: "mid"
-            },
-            {
-              id: "sea_c3a_hangup",
-              text: "📵 掛電話，用剛才打過的官方號碼回撥前台",
-              textEn: "📵 Hang up, call the front desk back using the official number I called before",
-              effects: { alertness: 30, information: 25, riskScore: -25 },
-              nextSceneId: "sea_s2_hotel_confirm",
-              feedback: "✅ 完美操作！掛掉後用你之前確認過的官方號碼回撥——如果是真前台，他們會知道。",
-              feedbackType: "good"
-            },
-            {
-              id: "sea_c3a_go_front",
-              text: "🚶 我就在附近，直接去前台處理",
-              textEn: "🚶 I'm nearby, I'll just go to the front desk and handle it",
-              effects: { alertness: 20, riskScore: -15 },
-              nextSceneId: "sea_s2_arrive_hotel",
-              feedback: "✅ 最直接的方式！人在酒店，直接去前台比電話核實更快更安全。",
-              feedbackType: "good"
-            }
-          ]
-        },
-        // ── 場景3B：沒接電話後收到短訊 ──
-        {
-          id: "sea_s3_missed_call_msg",
-          type: "message",
-          speaker: "system",
-          text: "你沒接電話，對方留了語音，然後又發來一條短訊。",
-          textEn: "You don't answer. They leave a voicemail, then send another text message.",
-          visual: {
-            type: "sms",
-            sender: "Hotel Booking Alert",
-            content: "We tried to contact you regarding your hotel payment. Your reservation is at risk of cancellation. Please complete payment within 1 hour: https://booking-confirm.hotel-confirm.net/pay"
-          },
-          choices: [
-            {
-              id: "sea_c3b_click",
-              text: "😰 又發來了……點開看看吧",
-              textEn: "😰 It came again... let's click and see",
-              effects: { riskScore: 25, information: -10 },
-              nextSceneId: "sea_s2_fake_payment",
-              feedback: "⚠️ 同一個域名 hotel-confirm.net！騙子在多管齊下。",
-              feedbackType: "bad"
-            },
-            {
-              id: "sea_c3b_same_domain",
-              text: "🔍 又是 hotel-confirm.net——跟剛才那條一樣！",
-              textEn: "🔍 It's hotel-confirm.net again — same as the previous one!",
-              effects: { alertness: 25, information: 20, riskScore: -15 },
-              nextSceneId: "sea_s4_report",
-              feedback: "✅ 你認出了同一個詐騙域名！這是同一夥人的連環局。",
-              feedbackType: "good"
-            },
-            {
-              id: "sea_c3b_go_hotel",
-              text: "🚕 不管了，直接去酒店前台",
-              textEn: "🚕 Forget it, just go to the hotel front desk",
-              effects: { alertness: 15, riskScore: -10 },
-              nextSceneId: "sea_s2_arrive_hotel",
-              feedback: "✅ 直接去前台是最穩妥的方式。",
-              feedbackType: "good"
-            }
-          ]
-        },
-        // ── 場景3C：關掉假網站後 ──
-        {
-          id: "sea_s3_after_close",
-          type: "result",
-          speaker: "system",
-          text: "你關掉了假網站。但你還是有點擔心：萬一訂單真的有問題怎麼辦？",
-          textEn: "You closed the fake site. But you're still a bit worried: what if the booking really does have a problem?",
-          visual: {
-            type: "safe_result",
-            content: "✅ 你關掉了假網站——做得好！\n\n現在有幾個選擇：\n• 打開 Booking.com App 查訂單\n• 打電話給酒店前台\n• 直接去酒店\n\n任何一個都比在假網站輸入信用卡資料安全。"
-          },
-          choices: [
-            {
-              id: "sea_c3c_app",
-              text: "📱 打開 App 查訂單",
-              textEn: "📱 Open the app to check the order",
-              effects: { information: 20, alertness: 10, riskScore: -5 },
-              nextSceneId: "sea_s2_app_ok",
-              feedback: "✅ App 是最快的核實方式。",
-              feedbackType: "good"
-            },
-            {
-              id: "sea_c3c_hotel",
-              text: "📞 打電話給酒店",
-              textEn: "📞 Call the hotel",
-              effects: { information: 20, alertness: 10, riskScore: -5 },
-              nextSceneId: "sea_s2_hotel_confirm",
-              feedback: "✅ 打電話確認，徹底安心。",
-              feedbackType: "good"
-            }
-          ]
-        },
-        // ── 場景4A：假前台解釋 ──
-        {
-          id: "sea_s4_fake_desk_excuse",
-          type: "phone_call",
-          speaker: "scammer",
-          pressure: true,
-          text: "你質疑了為什麼 App 顯示付款成功，對方有備而來。",
-          textEn: "You question why the app shows payment successful. They have an answer ready.",
-          visual: {
-            type: "phone_call",
-            caller: "「酒店前台」",
-            content: "The Booking.com App sometimes doesn't update in real-time. Our system shows the payment as 'pending' — it hasn't been processed yet. If you want to keep your room, I need you to read me your card number so I can process it manually. It will take just 2 minutes."
-          },
-          choices: [
-            {
-              id: "sea_c4a_believe",
-              text: "😟 App 沒更新……好吧，我報卡號",
-              textEn: "😟 The app hasn't updated... fine, I'll give my card number",
-              effects: { money: -55, riskScore: 50, information: -15 },
-              nextSceneId: "sea_s_end_loss",
-              feedback: "❌ 「App 沒更新」是騙子的標準台詞。Booking.com 的付款狀態是即時的，沒有延遲一說。",
-              feedbackType: "bad"
-            },
-            {
-              id: "sea_c4a_hangup",
-              text: "📵 我 App 顯示成功，那就是成功。掛電話，去前台",
-              textEn: "📵 My app shows success, so it's successful. Hang up, go to the front desk",
-              effects: { alertness: 30, information: 20, riskScore: -25 },
-              nextSceneId: "sea_s2_arrive_hotel",
-              feedback: "✅ 你相信官方 App 的數據，而不是電話裡的陌生人。這是正確的判斷。",
-              feedbackType: "good"
-            }
-          ]
-        },
-        // ── 場景4B：舉報 ──
-        {
-          id: "sea_s4_report",
-          type: "result",
-          speaker: "system",
-          text: "你決定舉報這個詐騙短訊和假網站。",
-          textEn: "You decide to report this scam text and fake website.",
-          visual: {
-            type: "safe_result",
-            content: "🛡️ 舉報渠道：\n• Booking.com 幫助中心 → 舉報詐騙\n• Agoda 客服 → 回報可疑訊息\n• 當地觀光警察（Tourist Police）\n• 大使館（護照遺失/緊急情況）\n\n💡 你的舉報可以幫助平台封鎖這個假網站！"
-          },
-          choices: [
-            {
-              id: "sea_c4b_done",
-              text: "✅ 舉報完成！現在去酒店入住",
-              textEn: "✅ Report complete! Now heading to the hotel to check in",
-              effects: { alertness: 15, information: 10, riskScore: -5 },
-              nextSceneId: "sea_s_end_safe",
-              feedback: "✅ 識別 → 核實 → 舉報，你保護了自己，也幫助了其他旅客。",
-              feedbackType: "good"
-            }
-          ]
-        },
-        // ── 結局 ──
-        {
-          id: "sea_s_end_safe",
-          type: "ending",
-          speaker: "system",
-          text: "你通過官方 App 確認訂單完全正常，或者直接去酒店前台辦理了入住。那條「付款失敗」短訊是詐騙，假裝酒店前台的電話也是同一夥人。你沒有點連結、沒有洩露信用卡資料、沒有被「房間取消」的威脅嚇到。旅行可以安心開始了。",
-          textEn: "You confirmed through the official app that your booking is completely fine, or went directly to the hotel front desk to check in. That 'payment failed' text was a scam, and the fake front desk call was from the same group. You didn't click any links, didn't leak your credit card info, and weren't intimidated by the 'room cancellation' threat. Your trip can begin without worry.",
-          choices: [{ id: "sea_end_safe", text: "查看結局", textEn: "View ending", effects: {}, nextSceneId: "__ending__", feedback: "", feedbackType: "good" }]
-        },
-        {
-          id: "sea_s_end_loss",
-          type: "ending",
-          speaker: "system",
-          text: "幾分鐘後，你的手機響起一連串消費通知——1,200 美元、680 美元、340 美元……都是未授權消費。你的信用卡資料已經被騙子賣出去了。你立刻聯絡銀行凍結卡片，但部分交易已經完成。假網站和假前台電話——這是同一夥人的連環局，而你剛到異國的第一天就踩中了。",
-          textEn: "Minutes later, your phone buzzes with a series of transaction alerts — $1,200, $680, $340... all unauthorized charges. Your credit card details have already been sold by the scammers. You immediately contact the bank to freeze your card, but some transactions have already gone through. The fake site and fake front desk call — it's all part of the same scam ring, and you fell for it on your first day in a foreign country.",
-          choices: [{ id: "sea_end_loss", text: "查看結局", textEn: "View ending", effects: {}, nextSceneId: "__ending__", feedback: "", feedbackType: "bad" }]
-        }
-      ]
-    }
-  ]
-};
+// ===== 向後相容：保留舊 API（給 game.js 部分未重構的函式使用）=====
+const scenarioLibrary = { _levels: levels };
+const regionNames = { hong_kong: "香港" };

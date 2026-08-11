@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#111820">
+  <meta name="application-version" content="2.0.0">
+  <title>模拟器</title>
+  <link rel="stylesheet" href="phone.css">
+</head>
+<body class="ios-ui">
+  <main class="sim-stage" aria-label="PolyU 学生生活模拟器">
+    <div class="stage-copy" aria-hidden="true">
+      <span class="stage-kicker">POLYU · STUDENT DAY</span>
+      <strong id="stageTitle">模拟器</strong>
+      <p id="stageTagline">完成今天的事。相信谁，由你判断。</p>
+    </div>
+
+    <section class="phone-shell" id="simulator">
+      <div class="phone-bezel">
+        <div class="phone-status" aria-label="手机状态栏">
+          <span id="statusTime">08:30</span>
+          <button class="status-island sound-toggle" id="soundToggle" type="button" aria-label="关闭声音" aria-pressed="true">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 10v4h3l4 3V7L8 10H5Z"/><path class="sound-wave" d="M15 9.2c1.5 1.5 1.5 4.1 0 5.6M17.8 6.5c3 3 3 8 0 11"/></svg>
+          </button>
+          <span class="status-icons">
+            <span class="status-signal" aria-hidden="true">
+              <svg viewBox="0 0 20 14"><path d="M2 11.5h2.5V13H2zm4-3h2.5V13H6zm4-3h2.5V13H10zm4-3h2.5V13H14z"/></svg>
+              <svg viewBox="0 0 20 14"><path d="M2 5.5a12 12 0 0 1 16 0M5 8.5a7.5 7.5 0 0 1 10 0M8.2 11.2a2.7 2.7 0 0 1 3.6 0" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="10" cy="12" r="1"/></svg>
+              <span class="battery"><span></span></span>
+            </span>
+          </span>
+        </div>
+
+        <div class="phone-viewport" id="phoneViewport">
+          <section class="phone-screen lock-screen is-active" id="lockScreen" aria-labelledby="lockTitle">
+            <div class="wallpaper-grid" aria-hidden="true"></div>
+            <div class="simulation-pill" id="simulationPill">教学模拟 · 不使用真实账户</div>
+            <div class="lock-clock">
+              <span id="lockDate">8月11日 星期二</span>
+              <strong id="lockTime">08:30</strong>
+            </div>
+            <div class="lock-brief">
+              <span id="lockBriefLabel">今天</span>
+              <strong id="lockBriefTitle">两件事需要处理</strong>
+            </div>
+            <div class="lock-notifications" id="lockNotifications"></div>
+            <button class="unlock-button" id="unlockButton" type="button">
+              <span id="unlockLabel">向上轻扫以打开</span>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 14 5-5 5 5"/></svg>
+            </button>
+          </section>
+
+          <section class="phone-screen home-screen" id="homeScreen" aria-label="手机主屏幕">
+            <div class="wallpaper-grid" aria-hidden="true"></div>
+            <header class="home-header">
+              <div>
+                <span id="homeDate">8月11日 · 星期二</span>
+                <strong id="homeTitle">模拟器</strong>
+              </div>
+              <button class="avatar-button" id="openTasksShortcut" type="button" aria-label="打开今日任务">CY</button>
+            </header>
+
+            <section class="todo-widget" id="todayCard" role="button" tabindex="0" aria-label="打开今日任务">
+              <header class="todo-widget-head">
+                <div><span class="today-card-label" id="todayLabel">TODAY</span><strong id="todayTitle">今日待办</strong></div>
+                <span id="todayProgress">0 / 2</span>
+              </header>
+              <div class="home-todo-list" id="homeTodoList"></div>
+              <i class="todo-progress"><span id="todayProgressBar"></span></i>
+            </section>
+
+            <div class="app-grid" id="appGrid"></div>
+            <div class="home-page-dot" aria-hidden="true"><span></span></div>
+            <div class="dock" id="appDock"></div>
+          </section>
+
+          <section class="phone-screen app-screen" id="appScreen">
+            <header class="app-header">
+              <button class="app-back" id="appBack" type="button" aria-label="返回主屏幕">
+                <svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg>
+              </button>
+              <div>
+                <span id="appEyebrow">APP</span>
+                <strong id="appTitle" role="heading" aria-level="1">应用</strong>
+              </div>
+              <button class="app-more" id="appMore" type="button" aria-label="更多选项">•••</button>
+            </header>
+            <div class="app-content" id="appContent"></div>
+          </section>
+
+          <div class="toast" id="toast" role="status" aria-live="polite"></div>
+          <div class="overlay-layer" id="overlayLayer" aria-live="assertive"></div>
+        </div>
+
+        <button class="home-indicator" id="homeIndicator" type="button" aria-label="返回主屏幕"></button>
+      </div>
+    </section>
+
+    <aside class="stage-note" aria-hidden="true">
+      <span>08:30—17:00</span>
+      <p><span id="stageNoteLine1">通知不等于事实。</span><br><span id="stageNoteLine2">从你信任的入口重新开始。</span></p>
+    </aside>
+  </main>
+
+  <script src="phone-data.js"></script>
+  <script src="phone-engine.js"></script>
+</body>
+</html>

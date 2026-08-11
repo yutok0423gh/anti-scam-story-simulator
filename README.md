@@ -1,5 +1,72 @@
-# 反詐劇情模擬器  
-# Anti-Scam Story Simulator
+# Scam Buster
+
+**v2.0.0 · Anti-Scam Student Life Simulator**
+
+Scam Buster 是一个面向大学生的浏览器反诈骗情境模拟器。玩家在一部仿 iOS 手机中处理日常来电、邮件、短信、活动通知与校园事务；信息不会预先标明真假，需要结合上下文、来源和核验路径自行判断。
+
+本项目用于反诈骗教育。所有姓名、账号、对话和交易均为模拟内容，不连接真实 PolyU、Outlook、银行或支付账户。
+
+## v2.0.0
+
+Released on 12 August 2026.
+
+- 仿 iOS 手机桌面、锁屏通知与待办组件。
+- 未接来电回拨流程及粤语通话音频。
+- Outlook 风格邮件收件箱与详情页；PolyU 情境邮件使用英文原文，并可从发件人右侧的 `…` 菜单选择翻译。
+- 电话、短信、邮件、浏览器、联系人、银行与 PolyULife 等应用界面。
+- 面向学生的真实感情境：研究邀请、活动缴费、包裹通知、冒充熟人及账号核验等。
+- 一部分邮件和活动只是可选信息，不会全部被包装成任务。
+- 简体中文与英文界面，以及国家/地区格式设置。
+- 保留 v1.x 经典剧情模式。
+
+## Run locally
+
+This is a static web project. Serve it over HTTP so browser audio and storage behave consistently:
+
+```powershell
+python -m http.server 8765
+```
+
+Then open <http://127.0.0.1:8765/>.
+
+- `index.html`: v2 phone simulator (default)
+- `phone-prototype.html`: direct v2 simulator entry
+- `classic.html`: v1.x story mode
+
+## Data and privacy
+
+- No backend or real account integration is used.
+- Messages, calls, payments and identities shown in the simulator are fictional training data.
+- Progress and preferences are stored only in the browser's `localStorage` and can be cleared with the browser's site-data controls.
+- External links shown inside scenarios should be treated as simulated evidence, not as instructions to make a real payment or disclose information.
+
+## Validation
+
+```powershell
+node --check phone-data.js
+node --check phone-engine.js
+node --check phone-smoke-test.mjs
+```
+
+## Project structure
+
+```text
+index.html / phone-prototype.html  v2 simulator shell
+phone.css                         phone and app presentation
+phone-data.js                     scenarios and localized content
+phone-engine.js                   simulator state and interactions
+assets/audio/calls/               simulated call audio
+classic.html                      v1.x story mode
+```
+
+## License
+
+No open-source license is included in this release. Public repository visibility does not grant permission to copy, modify, or redistribute the project; all rights remain with the repository owner unless permission is granted separately.
+
+<details>
+<summary>v1.x classic documentation</summary>
+
+# Anti-Scam Story Simulator v1.x
 
 一款以劇情選擇為核心的網頁端反詐互動遊戲。
 
@@ -152,8 +219,10 @@ This project is currently under development. Planned improvements include:
 
 本專案僅用於反詐教育、情境模擬及互動體驗。
 
-遊戲中的人物、組織、平台、對話及事件均為模擬內容，不代表任何真實個人或機構。
+遊戲中的人物、帳號、對話及事件均為模擬內容。部分真實機構名稱僅用於建立可辨識的教育情境；本專案不代表相關機構，也不獲其背書。
 
 This project is intended solely for anti-scam education, scenario simulation, and interactive learning.
 
-All characters, organisations, platforms, conversations, and events presented in the game are fictional and do not represent any real person or organisation.
+All people, accounts, conversations, and events are simulated. Real organisation names may appear solely to make the training scenario recognisable; this project is neither affiliated with nor endorsed by those organisations.
+
+</details>
