@@ -1224,6 +1224,370 @@
   }
 }
 
+/* Live call workspace --------------------------------------------------- */
+
+.active-call-bar[hidden] {
+  display: none;
+}
+
+.active-call-bar {
+  position: absolute;
+  z-index: 125;
+  top: 47px;
+  left: 12px;
+  right: 12px;
+  min-height: 52px;
+  padding: 5px 6px 5px 12px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 42px;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid rgba(255, 255, 255, .22);
+  border-radius: 17px;
+  color: #fff;
+  background: rgba(30, 132, 73, .94);
+  box-shadow: 0 10px 30px rgba(2, 20, 10, .3);
+  backdrop-filter: blur(20px) saturate(140%);
+  animation: active-call-in .28s cubic-bezier(.2, .8, .2, 1) both;
+}
+
+@keyframes active-call-in {
+  from { opacity: 0; translate: 0 -12px; }
+  to { opacity: 1; translate: 0 0; }
+}
+
+.active-call-bar > button:first-child {
+  min-width: 0;
+  padding: 3px 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 0;
+  color: inherit;
+  background: transparent;
+  text-align: left;
+}
+
+.active-call-bar strong,
+.active-call-bar small {
+  display: block;
+}
+
+.active-call-bar strong {
+  font-size: 13px;
+  line-height: 1.15;
+}
+
+.active-call-bar small {
+  margin-top: 2px;
+  color: rgba(255, 255, 255, .7);
+  font-size: 10px;
+}
+
+.active-call-dot {
+  width: 11px;
+  height: 11px;
+  flex: 0 0 auto;
+  border: 3px solid rgba(255, 255, 255, .3);
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 0 0 rgba(255, 255, 255, .38);
+  animation: active-call-pulse 1.8s ease-out infinite;
+}
+
+@keyframes active-call-pulse {
+  70%, 100% { box-shadow: 0 0 0 9px rgba(255, 255, 255, 0); }
+}
+
+.active-call-bar .active-call-end {
+  width: 38px;
+  height: 38px;
+  padding: 9px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  color: #fff;
+  background: rgba(10, 35, 20, .45);
+}
+
+.active-call-end svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+}
+
+.call-overlay.call-conversation {
+  padding: 44px 14px 10px;
+  gap: 10px;
+  text-align: left;
+  background: linear-gradient(180deg, #121317 0%, #08090b 70%, #030405 100%);
+}
+
+.call-conversation-head {
+  min-height: 46px;
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) 40px;
+  align-items: center;
+  gap: 8px;
+}
+
+.call-conversation-head > div {
+  min-width: 0;
+  text-align: center;
+}
+
+.call-conversation-head span,
+.call-conversation-head strong {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.call-conversation-head span {
+  color: rgba(255, 255, 255, .52);
+  font-size: 10px;
+  letter-spacing: .02em;
+}
+
+.call-conversation-head strong {
+  margin-top: 2px;
+  font-size: 15px;
+}
+
+.call-minimize,
+.call-more,
+.call-replay {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  color: #fff;
+  background: rgba(255, 255, 255, .09);
+  font-size: 21px;
+  line-height: 1;
+}
+
+.call-more {
+  font-size: 15px;
+  letter-spacing: 1px;
+}
+
+.call-replay svg {
+  width: 21px;
+  height: 21px;
+  fill: currentColor;
+}
+
+.call-replay svg path:last-child {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+}
+
+.call-transcript {
+  min-height: 0;
+  flex: 1 1 auto;
+  padding: 8px 3px 3px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+  scrollbar-width: none;
+  mask-image: linear-gradient(to bottom, transparent 0, #000 14px, #000 100%);
+}
+
+.call-transcript::-webkit-scrollbar {
+  display: none;
+}
+
+.call-turn {
+  max-width: 88%;
+}
+
+.call-turn.player {
+  align-self: flex-end;
+}
+
+.call-turn > span {
+  display: block;
+  margin: 0 8px 4px;
+  color: rgba(255, 255, 255, .4);
+  font-size: 9px;
+}
+
+.call-turn.player > span {
+  text-align: right;
+}
+
+.call-turn p {
+  margin: 0;
+  padding: 11px 13px;
+  border: 1px solid rgba(255, 255, 255, .12);
+  border-radius: 17px 17px 17px 6px;
+  color: #fff;
+  background: rgba(255, 255, 255, .08);
+  font-size: 14px;
+  line-height: 1.48;
+}
+
+.call-turn.player p {
+  border-color: rgba(90, 169, 255, .35);
+  border-radius: 17px 17px 6px 17px;
+  background: #0877dd;
+}
+
+.call-suggestions {
+  margin: 0 -14px;
+  padding: 2px 14px 4px;
+  display: flex;
+  gap: 7px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.call-suggestions::-webkit-scrollbar {
+  display: none;
+}
+
+.call-suggestions button {
+  min-height: 34px;
+  padding: 7px 11px;
+  flex: 0 0 auto;
+  border: 1px solid rgba(255, 255, 255, .17);
+  border-radius: 17px;
+  color: rgba(255, 255, 255, .88);
+  background: rgba(255, 255, 255, .07);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.call-reply-form {
+  min-height: 44px;
+  padding: 4px 4px 4px 13px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 36px;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid rgba(255, 255, 255, .17);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, .08);
+}
+
+.call-reply-form input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  color: #fff;
+  background: transparent;
+  font: inherit;
+  font-size: 14px;
+}
+
+.call-reply-form input::placeholder {
+  color: rgba(255, 255, 255, .4);
+}
+
+.call-reply-form button {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  color: #08111a;
+  background: #fff;
+  font-size: 19px;
+  font-weight: 800;
+}
+
+.call-conversation .call-controls {
+  margin-top: 0;
+  flex: 0 0 auto;
+}
+
+.call-conversation .round-call-button {
+  width: 52px;
+  height: 52px;
+}
+
+.call-judgement-overlay {
+  background: rgba(5, 7, 10, .72);
+}
+
+.call-judgement-sheet {
+  max-height: calc(100% - 28px);
+  overflow-y: auto;
+}
+
+.judgement-options,
+.judgement-basis {
+  display: grid;
+  gap: 8px;
+}
+
+.judgement-options {
+  grid-template-columns: 1fr 1fr;
+}
+
+.judgement-options button,
+.judgement-basis button {
+  min-height: 48px;
+  padding: 10px 12px;
+  border: 1px solid #d9dde2;
+  border-radius: 13px;
+  color: #17202a;
+  background: #f7f8fa;
+  font-weight: 700;
+  text-align: left;
+}
+
+.judgement-basis button {
+  display: grid;
+  grid-template-columns: 24px 1fr;
+  align-items: center;
+  gap: 8px;
+}
+
+.judgement-basis i {
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #bec5cd;
+  border-radius: 7px;
+  font-style: normal;
+}
+
+.judgement-basis button[aria-pressed="true"] {
+  border-color: #3a8de0;
+  background: #edf6ff;
+}
+
+.judgement-basis button[aria-pressed="true"] i {
+  color: #fff;
+  border-color: #0877dd;
+  background: #0877dd;
+}
+
+@media (max-height: 760px) {
+  .call-overlay.call-conversation { padding-top: 38px; gap: 7px; }
+  .call-conversation-head { min-height: 40px; }
+  .call-turn p { padding: 9px 11px; font-size: 13px; }
+  .call-suggestions button { min-height: 31px; padding-block: 5px; }
+  .call-conversation .round-call-button { width: 46px; height: 46px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .active-call-bar,
+  .active-call-dot { animation: none; }
+}
+
 @media (max-width: 500px) {
   .ios-ui .outlook-bottom-nav {
     padding-bottom: max(16px, env(safe-area-inset-bottom));

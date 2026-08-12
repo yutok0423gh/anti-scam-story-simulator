@@ -38,7 +38,10 @@
     '回拨': 'Calling back', '未知号码': 'Unknown number', '正在接通…': 'Connecting…', '你正在主动回拨刚才的未接来电': 'You are returning the missed call.', '正在拨打这个号码': 'You are calling this number.', '通话中': 'Call in progress',
     '取消回拨': 'Cancel callback', '结束通话': 'End call', '通话已结束': 'Call ended',
     '今天的收件箱会比较忙': 'Your inbox may get busy today', '开始今天': 'Start the day',
-    '记下信息': 'Save information', '稍后处理': 'Do this later', '提供运单号': 'Provide tracking number', '询问研究邀请': 'Ask about the research invitation', '记下结果': 'Save result', '打开联系人': 'Open Contacts', '关闭': 'Close', '知道了': 'Got it',
+    '记下信息': 'Save information', '稍后处理': 'Do this later', '我收到通知有份文件，想查一下': 'I received a notice about a document and want to check it', '请问这里是什么单位？': 'Which office is this?', '只提供尾号和宿舍': 'Share only the last four digits and hall', '先问是否需要缴费': 'Ask whether any payment is required first', '提供完整运单号': 'Provide the full tracking number', '我想核实一封研究邀请': 'I want to verify a research invitation', '请问这里是什么办公室？': 'Which office is this?', '提供邮件主题和发件地址': 'Share the subject and sender address', '询问研究邀请': 'Ask about the research invitation', '记下结果': 'Save result', '打开联系人': 'Open Contacts', '关闭': 'Close', '知道了': 'Got it',
+    '你那边能看到什么资料？': 'What information can you see there?', '你先说一下现有记录': 'Tell me what your record already shows', '我暂时不提供个人资料': 'I will not share personal information yet', '打开邮件核对资料': 'Open Mail and check the details', '记下这次通话内容': 'Save what was said in this call', '结束并作出判断': 'End and assess the call',
+    '你们最近有招募研究助理吗？': 'Have you recently recruited research assistants?', '返回浏览器核对目录': 'Return to Browser and check the directory', '我只想了解正式招募渠道': 'I only want to know the official recruitment channels', '你先说名字': 'Tell me your name first', '你找我有什么事？': 'Why are you calling me?', '我不确认任何个人资料': 'I will not confirm any personal details',
+    '说一件只有联系人知道的事': 'Tell me something only that contact would know', '说一件只有阿杰知道的事': 'Tell me something only Ah Kit would know', '先去联系人核对': 'Check with a saved contact first', '先发正式文件给我': 'Send the formal documents first', '资料确认前不处理': 'I will not act until the details are verified', '按对方要求处理': 'Proceed with the caller’s request', '不提供更多线索': 'Do not give the caller more clues', '再问一项共同经历': 'Ask about another shared experience',
     '确认私人转账': 'Confirm personal transfer', '确认转账': 'Confirm transfer', '返回通话': 'Return to call', '继续使用': 'Continue', '返回手机桌面': 'Return to Home Screen',
     '转账已提交': 'Transfer submitted', '收发室确认文件正在等待领取': 'Hall reception confirmed the document is ready.', '先确认领取地点和安排': 'Confirm the collection location and arrangements first.', '文件已领取': 'Document collected',
     '已保存短信中的编号': 'Message tracking number saved', '完整运单号已保存': 'Full tracking number saved', '官方查询结果已保存': 'Official result saved', '查询结果已保存': 'Search result saved',
@@ -161,10 +164,14 @@
   function loadState() {
     try {
       const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
-      if (saved && [1, 2, 3, 4, 5, 6, 7, 8, 9].includes(saved.version)) {
+      if (saved && [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].includes(saved.version)) {
         const defaults = DATA.createInitialState();
         const savedVersion = saved.version;
-        saved.version = 9;
+        saved.version = 10;
+        saved.contactVariant = ['real', 'fake', 'grey'].includes(saved.contactVariant)
+          ? saved.contactVariant
+          : (saved.contactIsReal ? 'real' : 'fake');
+        saved.contactIsReal = saved.contactVariant === 'real';
         saved.soundEnabled = saved.soundEnabled !== false;
         saved.openingBriefSeen = saved.openingBriefSeen === true;
         saved.language = saved.language === 'en' ? 'en' : 'zh-CN';
@@ -183,6 +190,8 @@
         saved.mailTab = ['focused', 'other'].includes(saved.mailTab) ? saved.mailTab : 'focused';
         saved.mailUnreadOnly = saved.mailUnreadOnly === true;
         saved.mailTranslations = saved.mailTranslations || {};
+        saved.callJudgements = saved.callJudgements && typeof saved.callJudgements === 'object' ? saved.callJudgements : {};
+        saved.callRecords = Array.isArray(saved.callRecords) ? saved.callRecords.slice(-12) : [];
         saved.taskState = saved.taskState || {};
         Object.entries(defaults.taskState).forEach(([key, task]) => {
           if (!saved.taskState[key]) saved.taskState[key] = task;
@@ -309,14 +318,53 @@
     if ('speechSynthesis' in window) window.speechSynthesis.cancel();
   }
 
-  function playCallerVoice(audioId) {
-    if (!state.soundEnabled || !audioId) return;
+  function speakCallerText(text, notifyOnFailure = false) {
+    if (!state.soundEnabled || !text || !('speechSynthesis' in window)) {
+      if (notifyOnFailure) showToast('这台设备暂时无法播放语音');
+      return;
+    }
+    const cleanText = String(text).replace(/[「」]/g, '').trim();
+    if (!cleanText) return;
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    const voices = window.speechSynthesis.getVoices();
+    const voice = voices.find((item) => /^yue(?:-|$)/i.test(item.lang))
+      || voices.find((item) => /^zh[-_]?hk$/i.test(item.lang))
+      || voices.find((item) => /^zh[-_]?tw$/i.test(item.lang))
+      || voices.find((item) => /^zh/i.test(item.lang));
+    utterance.lang = voice?.lang || 'yue-HK';
+    if (voice) utterance.voice = voice;
+    utterance.rate = 0.94;
+    utterance.pitch = 0.98;
+    utterance.volume = 0.95;
+    utterance.onerror = () => {
+      if (notifyOnFailure) showToast('语音播放失败，请检查浏览器声音权限');
+    };
+    window.speechSynthesis.speak(utterance);
+  }
+
+  function playCallerVoice(audioId, fallbackText = '', notifyOnFailure = false) {
+    if (!state.soundEnabled) {
+      if (notifyOnFailure) showToast('请先打开声音');
+      return;
+    }
     stopSpeech();
+    if (!audioId) {
+      speakCallerText(fallbackText, notifyOnFailure);
+      return;
+    }
+    let usedFallback = false;
+    const fallback = () => {
+      if (usedFallback) return;
+      usedFallback = true;
+      callerAudio = null;
+      speakCallerText(fallbackText, notifyOnFailure);
+    };
     callerAudio = new Audio(`assets/audio/calls/${audioId}.mp3`);
     callerAudio.preload = 'auto';
     callerAudio.volume = 0.92;
     callerAudio.addEventListener('ended', () => { callerAudio = null; }, { once: true });
-    callerAudio.play().catch(() => showToast('点击通话画面以播放粤语对白'));
+    callerAudio.addEventListener('error', fallback, { once: true });
+    callerAudio.play().catch(fallback);
   }
 
   function stopAllAudio() {
@@ -833,7 +881,7 @@
     if (!state.unlocked) return;
     if (els.overlayLayer.firstElementChild) {
       if (els.overlayLayer.querySelector('.outlook-mail-menu-overlay')) closeMailMessageMenu();
-      else if (callSession) endCall();
+      else if (callSession) minimizeCall();
       else closeOverlay();
       return;
     }
@@ -869,8 +917,9 @@
 
   function navigateHome() {
     if (!state.unlocked) return;
-    if (callSession) endCall();
+    if (callSession) minimizeCall();
     goHome();
+    renderActiveCallBar();
   }
 
   function openApp(appId, target) {
@@ -908,6 +957,7 @@
 
   function renderPhone() {
     const keypad = state.phoneView === 'keypad';
+    const assessedCalls = state.callRecords.filter((record) => record.transcript && record.transcript.length).slice(-4).reverse();
     els.appContent.innerHTML = `
       <div class="app-pad">
         <div class="phone-segmented" role="tablist">
@@ -922,8 +972,22 @@
                 <span class="list-copy"><strong>${esc(ui('未知号码'))}</strong><span>${esc(ui(call.direction))} · ${esc(call.number)}</span></span>
                 <span class="list-time">${esc(formatStoredTime(call.time))}</span>
               </button>`).join('')}
-          </div>`}
+          </div>
+          ${assessedCalls.length ? `<span class="section-label">${esc(localized('我的暂时判断', 'My assessments'))}</span><div class="list-card call-assessment-list">${assessedCalls.map((record) => {
+            const judgement = state.callJudgements[record.id];
+            const label = judgement ? callVerdictLabel(judgement.verdict) : localized('尚未判断', 'Not assessed');
+            return `<button class="list-row" type="button" data-action="call-review-judgement" data-id="${esc(record.id)}"><span class="mini-icon" style="--row-bg:#2b7f58;--row-color:#fff">?</span><span class="list-copy"><strong>${esc(ui('未知号码'))}</strong><span>${esc(record.number)} · ${esc(label)}</span></span><span class="list-time">›</span></button>`;
+          }).join('')}</div>` : ''}`}
       </div>`;
+  }
+
+  function callVerdictLabel(verdict) {
+    return ({
+      trusted: localized('暂时可信', 'Probably trustworthy'),
+      suspicious: localized('可疑', 'Suspicious'),
+      insufficient: localized('资料不足', 'Not enough information'),
+      verify: localized('需要其他渠道确认', 'Verify through another channel')
+    })[verdict] || localized('尚未判断', 'Not assessed');
   }
 
   function renderPhoneKeypad() {
@@ -1739,135 +1803,398 @@
   }
 
   function startCallback() {
-    clearTimeout(callbackTimer);
-    stopAllAudio();
-    callSession = { phase: 'dialing', step: 0 };
+    if (callSession) { resumeCall(); showToast('先结束当前通话，再拨打另一个号码'); return; }
+    startCallSession('orientation', '+852 6XXX 8704');
     const missedCall = state.callLog.find((item) => item.id === 'call-unknown');
     if (missedCall) Object.assign(missedCall, { direction: '正在回拨', unread: false });
     markNotification('n-call');
     addHistory('callback-started', '主动回拨未知号码');
     saveState();
-    els.overlayLayer.innerHTML = `
-      <section class="call-overlay">
-        <span class="simulation-tag">${esc(ui('回拨'))} · +852 6XXX 8704</span>
-        <div class="call-avatar">?</div>
-        <h2>${esc(ui('未知号码'))}</h2>
-        <p class="call-state">${esc(ui('正在接通…'))}</p>
-        <div class="callback-pulse" aria-hidden="true"><i></i><i></i><i></i></div>
-        <p class="callback-note">${esc(ui('你正在主动回拨刚才的未接来电'))}</p>
-        <div class="call-controls"><button class="round-call-button" type="button" data-action="end-call" aria-label="${esc(ui('取消回拨'))}">${DATA.icons.hangup}</button></div>
-      </section>`;
-    playCallbackTone();
+    renderCallDialling(ui('回拨'), ui('你正在主动回拨刚才的未接来电'));
     callbackTimer = setTimeout(() => {
-      if (callSession && callSession.phase === 'dialing') connectUnknownCallback();
+      if (callSession && callSession.phase === 'dialing' && callSession.scenario === 'orientation') connectCallSession();
     }, 1450);
   }
 
-  function connectUnknownCallback() {
-    stopRingtone();
-    callSession = { phase: 'connected', step: 0 };
-    state.taskState.contact.steps.strangerSpoken = true;
-    const missedCall = state.callLog.find((item) => item.id === 'call-unknown');
-    if (missedCall) missedCall.direction = '已回拨';
-    addHistory('unknown-call', '回拨后与陌生号码通话');
-    advanceTime(2);
-    renderCallDialogue('「喂，你真係唔記得我呀？上年迎新活動嗰個呀。你再諗下啦。」', [
-      ['call-guess-ajie', '「阿杰？」'],
-      ['call-ask-name', '「你先講你叫咩名。」'],
-      ['call-later', '「我而家唔方便，遲啲再聯絡。」']
-    ], 'callback-intro');
+  function startCallSession(scenario, number, contactId = null) {
+    clearTimeout(callbackTimer);
+    stopAllAudio();
+    callSession = {
+      id: `call-session-${Date.now()}`,
+      scenario,
+      number,
+      contactId,
+      phase: 'dialing',
+      node: 'dialing',
+      step: 0,
+      startedAt: state.time,
+      transcript: [],
+      disclosed: [],
+      claims: [],
+      minimized: false,
+      originApp: state.currentApp || 'phone'
+    };
+    renderActiveCallBar();
   }
 
   function startOfficialCall(contactId) {
     const contact = state.contacts.find((item) => item.id === contactId);
     if (!contact) return;
-    clearTimeout(callbackTimer);
-    stopAllAudio();
-    callSession = { phase: 'dialing', step: 0, contactId };
+    if (callSession) { resumeCall(); showToast('先结束当前通话，再拨打另一个号码'); return; }
+    const scenario = contactId === 'contact-hall' ? 'hall' : 'department';
+    startCallSession(scenario, contact.number, contactId);
     const logItem = state.callLog.find((item) => item.number === contact.number);
     if (logItem) Object.assign(logItem, { direction: '正在拨号', unread: false });
     addHistory('official-call-started', `拨打 ${contact.number}`);
     saveState();
+    renderCallDialling(ui('拨号'), ui('正在拨打这个号码'));
+    callbackTimer = setTimeout(() => {
+      if (callSession && callSession.phase === 'dialing' && callSession.contactId === contactId) connectCallSession();
+    }, 1450);
+  }
+
+  function renderCallDialling(label, note) {
+    if (!callSession) return;
     els.overlayLayer.innerHTML = `
-      <section class="call-overlay">
-        <span class="simulation-tag">${esc(ui('拨号'))} · ${esc(contact.number)}</span>
+      <section class="call-overlay call-dialling">
+        <span class="simulation-tag">${esc(label)} · ${esc(callSession.number)}</span>
         <div class="call-avatar">?</div>
         <h2>${esc(ui('未知号码'))}</h2>
         <p class="call-state">${esc(ui('正在接通…'))}</p>
         <div class="callback-pulse" aria-hidden="true"><i></i><i></i><i></i></div>
-        <p class="callback-note">${esc(ui('正在拨打这个号码'))}</p>
+        <p class="callback-note">${esc(note)}</p>
         <div class="call-controls"><button class="round-call-button" type="button" data-action="end-call" aria-label="${esc(ui('结束通话'))}">${DATA.icons.hangup}</button></div>
       </section>`;
     playCallbackTone();
-    callbackTimer = setTimeout(() => {
-      if (callSession && callSession.phase === 'dialing' && callSession.contactId === contactId) connectOfficialCall(contactId);
-    }, 1450);
   }
 
-  function connectOfficialCall(contactId) {
+  function connectCallSession() {
+    if (!callSession) return;
     stopRingtone();
-    callSession = { phase: 'connected', step: 0, contactId };
-    const contact = state.contacts.find((item) => item.id === contactId);
+    callSession.phase = 'connected';
+    callSession.node = 'intro';
+    callSession.step = 0;
+    const contact = callSession.contactId && state.contacts.find((item) => item.id === callSession.contactId);
     const logItem = contact && state.callLog.find((item) => item.number === contact.number);
     if (logItem) logItem.direction = '已接通';
-    advanceTime(1);
-    if (contactId === 'contact-hall') {
-      renderCallDialogue('「宿舍收發室，你好。請講低完整運單號，我幫你查一下。」', [
-        ['call-hall-provide-tracking', '提供运单号'],
-        ['call-official-later', '稍后处理']
-      ], '');
-      return;
+    if (callSession.scenario === 'orientation') {
+      state.taskState.contact.steps.strangerSpoken = true;
+      const missedCall = state.callLog.find((item) => item.id === 'call-unknown');
+      if (missedCall) missedCall.direction = '已回拨';
+      addHistory('unknown-call', '回拨后与陌生号码通话');
+      advanceTime(2);
+    } else {
+      advanceTime(1);
     }
-    renderCallDialogue('「Department General Office，你好。請問有甚麼可以幫你？」', [
-      ['call-department-ask-research', '询问研究邀请'],
-      ['call-official-later', '稍后处理']
-    ], '');
+    const node = getCallNode(callSession.scenario, 'intro');
+    addCallTurn('caller', resolveCallCopy(node.reply));
+    saveState();
+    renderCallSession(node.audio || '');
   }
 
-  function renderCallDialogue(text, options, audioId) {
+  function resolveCallCopy(value) {
+    return typeof value === 'function' ? value(callSession, state) : value;
+  }
+
+  function addCallTurn(role, text, intent = '') {
+    if (!callSession || !text) return;
+    callSession.transcript.push({ role, text, intent, time: formatTime(state.time) });
+    callSession.transcript = callSession.transcript.slice(-14);
+  }
+
+  function getCallNode(scenario, nodeId) {
+    const variant = state.contactVariant || (state.contactIsReal ? 'real' : 'fake');
+    const scenarios = {
+      hall: {
+        intro: { reply: '「喂，你好。請問你想查咩？」', quick: [['describe_request', '我收到通知有份文件，想查一下'], ['ask_identity', '请问这里是什么单位？'], ['ask_reference', '你那边能看到什么资料？']] },
+        claim: { reply: '「呢度係宿舍收發室。請問你想查邊份文件？」', quick: [['describe_request', '我收到通知有份文件，想查一下'], ['ask_reference', '你先说一下现有记录'], ['refuse_disclosure', '我暂时不提供个人资料']] },
+        need_reference: { reply: '「可以。請講運單號最後四位，同埋文件送去邊間宿舍。」', quick: [['share_partial', '只提供尾号和宿舍'], ['ask_fee', '先问是否需要缴费'], ['hold_research', '打开邮件核对资料']] },
+        fee: { reply: '「一般領取文件唔使網上付款。不過要查到件，我要先核對運單資料。」', quick: [['share_partial', '只提供尾号和宿舍'], ['ask_reference', '你先说一下现有记录'], ['hold_research', '打开邮件核对资料']] },
+        partial: { reply: '「尾號1305，係嗎？我搵到一項紀錄，但要再核對完整編號先可以講送達時間。」', quick: [['share_full', '提供完整运单号'], ['ask_reference', '先说送达日期可以吗？'], ['hold_research', '打开邮件核对资料']] },
+        need_mail: { reply: '「冇完整編號我未能確認係同一份文件。你可以搵返通知再打嚟。」', quick: [['hold_research', '打开邮件核对资料'], ['refuse_disclosure', '我稍后从其他渠道确认']] },
+        result: { reply: '「查到喇：文件08:14送到收發室。今日17:00前帶學生證嚟拎就得，唔需要網上補交費用。」', quick: [['record_result', '记下这次通话内容'], ['ask_fee', '再确认是否需要缴费'], ['finish_judge', '结束并作出判断']] },
+        cautious: { reply: '「冇問題。你可以先核對通知；我哋未確認資料前亦唔會講文件內容。」', quick: [['hold_research', '打开邮件核对资料'], ['finish_judge', '结束并作出判断']] }
+      },
+      department: {
+        intro: { reply: '「喂，你好。請問你想搵邊位？」', quick: [['describe_request', '我想核实一封研究邀请'], ['ask_identity', '请问这里是什么办公室？'], ['ask_reference', '你们最近有招募研究助理吗？']] },
+        claim: { reply: '「呢度係 Department General Office。請問你想查咩事？」', quick: [['describe_request', '我想核实一封研究邀请'], ['ask_reference', '你们最近有招募研究助理吗？'], ['refuse_disclosure', '我暂时不提供个人资料']] },
+        need_mail: { reply: '「可以。你唔使提供個人資料，講封郵件嘅主題同發件地址就得。」', quick: [['share_mail', '提供邮件主题和发件地址'], ['hold_research', '返回浏览器核对目录'], ['refuse_disclosure', '我只想了解正式招募渠道']] },
+        channels: { reply: '「正式招募會經 PolyU 電郵或部門系統，但我未睇過你嗰封信，暫時唔可以判斷係咪同一項目。」', quick: [['share_mail', '提供邮件主题和发件地址'], ['hold_research', '返回浏览器核对目录'], ['finish_judge', '结束并作出判断']] },
+        result: { reply: '「我按主題同地址查過：Prof. Chan 冇發出呢封邀請，學院亦冇叫學生代購禮券。你唔好用信內連結。」', quick: [['record_result', '记下这次通话内容'], ['ask_reference', '请再说明正式招募渠道'], ['finish_judge', '结束并作出判断']] },
+        cautious: { reply: '「可以。唔提供個人資料都得；你可以用官網電郵將主題轉畀辦公室核對。」', quick: [['hold_research', '返回浏览器核对目录'], ['finish_judge', '结束并作出判断']] }
+      },
+      orientation: {
+        intro: { reply: '「喂，你真係唔記得我呀？上年迎新活動嗰個呀。你再諗下啦。」', audio: 'callback-intro', quick: [['ask_identity', '你先说名字'], ['ask_purpose', '你找我有什么事？'], ['refuse_disclosure', '我不确认任何个人资料']] },
+        identity: { reply: () => variant === 'real' ? '「我係阿杰呀，上年迎新喺N座擺攤嗰個。」' : (variant === 'grey' ? '「我係阿倫，之前幫迎新場地做聯絡嗰個。」' : '「吓，你連我個名都唔記得？上年我哋成日見㗎。」'), quick: [['ask_purpose', '你找我有什么事？'], ['ask_reference', '说一件只有联系人知道的事'], ['hold_research', '先去联系人核对']] },
+        guessed: { reply: '「係呀，我咪阿杰囉，終於認得我喇。」', quick: [['ask_purpose', '你找我有什么事？'], ['ask_reference', '说一件只有阿杰知道的事'], ['hold_research', '先去联系人核对']] },
+        purpose: { reply: () => variant === 'real' ? '「我換咗號碼。供應商有份訂金資料想你幫手睇，但唔使你私人付款。」' : (variant === 'grey' ? '「場地方想確認參加人數，你可唔可以send學生名單同電話畀我？」' : '「供應商催訂金，爭HK$1,200。你轉畀我先，今晚還畀你。」'), quick: [['ask_document', '先发正式文件给我'], ['refuse_disclosure', '我不会在这通电话提供资料'], ['hold_research', '先去联系人核对']] },
+        reference: { reply: () => variant === 'real' ? '「上年你負責N座攤位，嘉敏遲到，我哋一齊搬過物資。」' : (variant === 'grey' ? '「我只係供應商聯絡人，係嘉敏畀你號碼我；你可以問返佢。」' : '「咁耐以前邊記得咁清楚？你先講你負責邊一part，我就記得。」'), quick: [['ask_purpose', '继续问来意'], ['refuse_disclosure', '不提供更多线索'], ['hold_research', '先去联系人核对']] },
+        document: { reply: () => variant === 'real' ? '「得，我send學院報價單畀你；款項應該由學院戶口處理。」' : (variant === 'grey' ? '「我只有場地公司張表，冇學院文件。你可以先問嘉敏。」' : '「供應商就收工，唔使搞咁多文件啦，你轉咗先。」'), quick: [['hold_research', '先去联系人核对'], ['refuse_disclosure', '资料确认前不处理'], ['offer_payment', '按对方要求处理']] },
+        cautious: { reply: () => variant === 'fake' ? '「你而家咁唔信我？過咗今日個場就冇㗎喇。」' : '「可以，你問返嘉敏先。確認咗再聯絡。」', quick: [['hold_research', '先去联系人核对'], ['ask_reference', '再问一项共同经历'], ['finish_judge', '结束并作出判断']] },
+        fallback: { reply: '「我唔係好明你想問邊一樣。你可以講清楚少少，或者遲啲再聯絡。」', quick: [['ask_identity', '你先说名字'], ['ask_purpose', '你找我有什么事？'], ['hold_research', '先去联系人核对']] }
+      }
+    };
+    return (scenarios[scenario] && scenarios[scenario][nodeId]) || scenarios[scenario]?.intro || { reply: '「喂？」', quick: [] };
+  }
+
+  function routeCallIntent(intent) {
+    const scenario = callSession.scenario;
+    const current = callSession.node;
+    if (intent === 'finish_judge') return finishCallForJudgement();
+    if (intent === 'end_call') return endCall('玩家结束通话');
+    if (intent === 'hold_research') return minimizeCallAndResearch();
+    if (intent === 'offer_payment') return handleAction('call-transfer', document.createElement('button'));
+    if (intent === 'record_result') {
+      if (scenario === 'hall' && current === 'result') return confirmHall();
+      if (scenario === 'department' && current === 'result') return confirmDepartment();
+    }
+    if (scenario === 'hall') {
+      if (intent === 'ask_identity') return 'claim';
+      if (intent === 'describe_request') return 'need_reference';
+      if (intent === 'ask_fee') return 'fee';
+      if (intent === 'refuse_disclosure') return 'cautious';
+      if (intent === 'share_partial') { markCallDisclosure('tracking-tail'); return 'partial'; }
+      if (intent === 'share_full') {
+        if (!state.taskState.parcel.steps.trackingSaved) return 'need_mail';
+        markCallDisclosure('full-tracking');
+        return 'result';
+      }
+      if (intent === 'ask_reference') return current === 'partial' ? 'partial' : 'need_reference';
+    }
+    if (scenario === 'department') {
+      if (intent === 'ask_identity') return 'claim';
+      if (intent === 'describe_request') return 'need_mail';
+      if (intent === 'ask_reference') return 'channels';
+      if (intent === 'refuse_disclosure') return 'cautious';
+      if (intent === 'share_mail') { markCallDisclosure('mail-metadata'); return 'result'; }
+    }
+    if (scenario === 'orientation') {
+      if (intent === 'guess_name') { markCallDisclosure('guessed-name'); return 'guessed'; }
+      if (intent === 'ask_identity') return 'identity';
+      if (intent === 'ask_purpose') return 'purpose';
+      if (intent === 'ask_reference') return 'reference';
+      if (intent === 'ask_document') return 'document';
+      if (intent === 'refuse_disclosure') return 'cautious';
+      return 'fallback';
+    }
+    return current;
+  }
+
+  function markCallDisclosure(kind) {
+    if (!callSession || callSession.disclosed.includes(kind)) return;
+    callSession.disclosed.push(kind);
+    if (['guessed-name', 'full-tracking', 'mail-metadata'].includes(kind)) state.privacyExposure += 1;
+  }
+
+  function recogniseCallIntent(raw) {
+    const text = String(raw || '').trim().toLowerCase();
+    if (!text) return '';
+    const has = (...terms) => terms.some((term) => text.includes(term));
+    if (has('阿杰', 'ah kit', 'ajie')) return 'guess_name';
+    if (has('你是谁', '你係邊個', '你边个', '什么单位', '甚麼單位', '办公室', 'office', 'department', '边位', '邊位')) return 'ask_identity';
+    if (has('什么事', '甚麼事', '咩事', '来意', '找我', 'purpose', 'why')) return 'ask_purpose';
+    if (has('尾号', '尾號', '最后四', 'last four')) return 'share_partial';
+    if (has('完整', 'rr 482', '917 305')) return 'share_full';
+    if (has('发件', '主題', '主题', 'sender', 'subject', 'outlook.example')) return 'share_mail';
+    if (has('文件', '包裹', '運單', '运单', '通知')) return callSession.scenario === 'hall' ? 'describe_request' : 'ask_document';
+    if (has('研究', '邀请', '邀請', 'research', 'professor', '教授')) return callSession.scenario === 'department' ? 'describe_request' : 'ask_purpose';
+    if (has('费用', '費用', '付款', '缴费', '繳費', 'fee', 'pay')) return 'ask_fee';
+    if (has('证明', '證明', '只有', '共同', 'reference')) return 'ask_reference';
+    if (has('不提供', '不透露', '唔提供', '私隐', '隱私', 'privacy')) return 'refuse_disclosure';
+    if (has('核对', '核實', '查一下', '查证', '先问', '先問', '稍后', '稍後')) return 'hold_research';
+    if (has('结束', '結束', '挂了', '收线', 'bye')) return 'finish_judge';
+    return callSession.scenario === 'orientation' ? 'unknown' : (callSession.scenario === 'hall' ? 'describe_request' : 'describe_request');
+  }
+
+  function submitCallReply(raw, forcedIntent = '') {
+    if (!callSession || callSession.phase !== 'connected') return;
+    const text = String(raw || '').trim().slice(0, 240);
+    const intent = forcedIntent || recogniseCallIntent(text);
+    if (!intent) { showToast('输入你想说的话'); return; }
+    const spoken = text || callQuickLabel(intent);
+    addCallTurn('player', spoken, intent);
+    const nextNode = routeCallIntent(intent);
+    if (!callSession || typeof nextNode !== 'string') return;
+    if (nextNode === 'claim' || nextNode === 'identity' || nextNode === 'guessed') {
+      if (!callSession.claims.includes('caller-claimed-identity')) callSession.claims.push('caller-claimed-identity');
+      if (callSession.scenario === 'orientation') state.taskState.contact.steps.identityClaimed = true;
+    }
+    callSession.node = nextNode;
+    callSession.step += 1;
+    const node = getCallNode(callSession.scenario, nextNode);
+    addCallTurn('caller', resolveCallCopy(node.reply));
+    advanceTime(1);
+    saveState();
+    renderCallSession(node.audio || '');
+  }
+
+  function callQuickLabel(intent) {
+    const node = callSession && getCallNode(callSession.scenario, callSession.node);
+    const item = node && node.quick && node.quick.find(([value]) => value === intent);
+    return item ? item[1] : intent;
+  }
+
+  function renderCallSession(audioId = '') {
+    if (!callSession || callSession.phase !== 'connected') return;
+    callSession.minimized = false;
+    const node = getCallNode(callSession.scenario, callSession.node);
+    const latestCallerText = [...callSession.transcript].reverse().find((turn) => turn.role === 'caller')?.text || '';
+    const transcript = callSession.transcript.map((turn) => `<div class="call-turn ${turn.role}"><span>${turn.role === 'caller' ? esc(ui('未知号码')) : esc(localized('你', 'You'))}</span><p>${esc(turn.text)}</p></div>`).join('');
+    const quick = (node.quick || []).map(([intent, label]) => `<button type="button" data-action="call-quick" data-intent="${esc(intent)}" data-label="${esc(label)}">${esc(ui(label))}</button>`).join('');
     els.overlayLayer.innerHTML = `
-      <section class="call-overlay" data-cantonese-audio="${esc(audioId || '')}">
-        <span class="simulation-tag">${esc(ui('通话中'))} · ${formatTime(state.time)}</span>
-        <div class="call-avatar">?</div>
-        <h2>${esc(ui('未知号码'))}</h2>
-        <p class="call-state">00:${String((callSession && callSession.step + 8) || 8).padStart(2, '0')}</p>
-        <div class="call-dialogue">${esc(text)}</div>
-        <div class="call-options">${options.map(([action, label]) => `<button type="button" data-action="${action}">${esc(ui(label))}</button>`).join('')}</div>
-        <div class="call-controls"><button class="round-call-button" type="button" data-action="end-call" aria-label="${esc(ui('结束通话'))}">${DATA.icons.hangup}</button></div>
+      <section class="call-overlay call-conversation" data-cantonese-audio="${esc(audioId || '')}">
+        <header class="call-conversation-head">
+          <button class="call-minimize" type="button" data-action="call-minimize" aria-label="${esc(localized('最小化通话', 'Minimise call'))}">⌄</button>
+          <div><span>${esc(ui('通话中'))} · ${esc(callSession.number)}</span><strong>${esc(ui('未知号码'))}</strong></div>
+          <button class="call-replay" type="button" data-action="call-replay-voice" aria-label="${esc(localized('重播对方刚才的话', 'Replay the caller'))}">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 10v4h3.2l4.3 3.4V6.6L7.7 10H4.5Z"/><path d="M15 9a4.2 4.2 0 0 1 0 6M17.8 6.5a7.6 7.6 0 0 1 0 11"/></svg>
+          </button>
+        </header>
+        <div class="call-transcript" id="callTranscript" aria-live="polite">${transcript}</div>
+        <div class="call-suggestions" aria-label="${esc(localized('表达建议', 'Suggested phrases'))}">${quick}</div>
+        <form class="call-reply-form" id="callReplyForm">
+          <label class="sr-only" for="callReplyInput">${esc(localized('你想说什么', 'What do you want to say?'))}</label>
+          <input id="callReplyInput" maxlength="240" autocomplete="off" placeholder="${esc(localized('你想说什么…', 'Say something…'))}">
+          <button type="submit" aria-label="${esc(localized('说出回复', 'Say reply'))}">↑</button>
+        </form>
+        <div class="call-controls"><button class="round-call-button" type="button" data-action="call-finish-judge" aria-label="${esc(ui('结束通话'))}">${DATA.icons.hangup}</button></div>
       </section>`;
-    playCallerVoice(audioId);
+    renderActiveCallBar();
+    requestAnimationFrame(() => {
+      const log = $('callTranscript');
+      if (log) log.scrollTop = log.scrollHeight;
+    });
+    playCallerVoice(audioId, latestCallerText);
   }
 
   function callClaimResponse(mode) {
-    callSession.step = 1;
-    state.taskState.contact.steps.identityClaimed = true;
-    if (mode === 'guess') {
-      state.privacyExposure += 1;
-      addHistory('identity-disclosed', '玩家主动说出了“阿杰”');
+    submitCallReply(mode === 'guess' ? '阿杰？' : '你先说名字', mode === 'guess' ? 'guess_name' : 'ask_identity');
+  }
+
+  function minimizeCallAndResearch() {
+    if (!callSession || callSession.phase !== 'connected') return;
+    callSession.minimized = true;
+    els.overlayLayer.innerHTML = '';
+    renderActiveCallBar();
+    if (callSession.scenario === 'hall') openApp('mail', 'mail-parcel');
+    else if (callSession.scenario === 'department') {
+      state.browserPage = 'staff-directory';
+      openApp('browser');
+    } else openApp('contacts');
+    showToast('通话仍在进行，可以查资料后返回');
+  }
+
+  function minimizeCall() {
+    if (!callSession || callSession.phase !== 'connected') return;
+    callSession.minimized = true;
+    els.overlayLayer.innerHTML = '';
+    renderActiveCallBar();
+    if (state.currentApp) renderApp(state.currentApp);
+    else renderHome();
+  }
+
+  function resumeCall() {
+    if (!callSession) return;
+    if (callSession.phase === 'dialing') renderCallDialling(ui('拨号'), ui('正在拨打这个号码'));
+    else renderCallSession();
+  }
+
+  function renderActiveCallBar() {
+    if (!els.activeCallBar) return;
+    if (!callSession || !callSession.minimized) {
+      els.activeCallBar.hidden = true;
+      els.activeCallBar.innerHTML = '';
+      return;
     }
-    const intro = mode === 'guess'
-      ? '「係呀，我咪阿杰囉，終於認得我喇。」'
-      : (state.contactIsReal ? '「我係阿杰呀，上年迎新喺N座擺攤嗰個。」' : '「吓，你連我個名都唔記得？咁樣好傷感情喎。」');
-    const request = state.contactIsReal
-      ? `${intro}「我換咗號碼。場地供應商而家要確認訂金，我send啲資料畀你，你幫我睇下先？」`
-      : `${intro}「我換咗號碼。供應商而家催訂金，爭HK$1,200，你可唔可以轉畀我先？今晚還畀你。」`;
-    const voiceMode = mode === 'guess' ? 'guess' : 'ask';
-    const voiceId = `${voiceMode}-${state.contactIsReal ? 'real' : 'fake'}-request`;
-    renderCallDialogue(request, [
-      ['call-ask-document', '「先send報價單同收款資料畀我。」'],
-      ['call-check-kaman', '「我先同嘉敏確認一下。」'],
-      ['call-transfer', '「好，我而家處理。」']
-    ], voiceId);
+    els.activeCallBar.hidden = false;
+    els.activeCallBar.innerHTML = `
+      <button type="button" data-action="call-resume">
+        <span class="active-call-dot" aria-hidden="true"></span>
+        <span><strong>${esc(ui('未知号码'))}</strong><small>${esc(localized('轻点返回通话', 'Tap to return to call'))}</small></span>
+      </button>
+      <button class="active-call-end" type="button" data-action="call-finish-judge" aria-label="${esc(ui('结束通话'))}">${DATA.icons.hangup}</button>`;
+  }
+
+  function archiveCallSession(note = '') {
+    if (!callSession) return null;
+    const record = {
+      id: callSession.id,
+      scenario: callSession.scenario,
+      number: callSession.number,
+      startedAt: callSession.startedAt,
+      endedAt: state.time,
+      disclosed: [...callSession.disclosed],
+      claims: [...callSession.claims],
+      transcript: callSession.transcript.map((turn) => ({ ...turn })),
+      note
+    };
+    state.callRecords = [...state.callRecords.filter((item) => item.id !== record.id), record].slice(-12);
+    return record;
+  }
+
+  function finishCallForJudgement() {
+    if (!callSession) return;
+    const record = archiveCallSession('等待玩家判断');
+    clearTimeout(callbackTimer);
+    stopAllAudio();
+    playSound('hangup');
+    callSession = null;
+    renderActiveCallBar();
     saveState();
+    showCallJudgement(record.id);
+  }
+
+  function showCallJudgement(recordId) {
+    const record = state.callRecords.find((item) => item.id === recordId);
+    if (!record) return closeOverlay();
+    els.overlayLayer.innerHTML = `
+      <div class="dialog-overlay call-judgement-overlay">
+        <section class="dialog-sheet call-judgement-sheet">
+          <span class="detail-meta">${esc(localized('通话后的暂时判断', 'Assessment after the call'))}</span>
+          <h2>${esc(ui('未知号码'))}</h2>
+          <p>${esc(localized('先记录你目前的看法。这里不会告诉你正确答案，之后仍可根据新证据改变判断。', 'Record what you think for now. No answer is revealed here, and you can revise it when you find new evidence.'))}</p>
+          <div class="judgement-options">
+            <button type="button" data-action="call-judgement" data-id="${esc(recordId)}" data-value="trusted">${esc(localized('暂时可信', 'Probably trustworthy'))}</button>
+            <button type="button" data-action="call-judgement" data-id="${esc(recordId)}" data-value="suspicious">${esc(localized('可疑', 'Suspicious'))}</button>
+            <button type="button" data-action="call-judgement" data-id="${esc(recordId)}" data-value="insufficient">${esc(localized('资料不足', 'Not enough information'))}</button>
+            <button type="button" data-action="call-judgement" data-id="${esc(recordId)}" data-value="verify">${esc(localized('需要其他渠道确认', 'Verify through another channel'))}</button>
+          </div>
+          <button class="secondary-action" type="button" data-action="call-judgement-dismiss">${esc(localized('暂不判断', 'Decide later'))}</button>
+        </section>
+      </div>`;
+  }
+
+  function showCallBasis(recordId) {
+    const judgement = state.callJudgements[recordId];
+    if (!judgement) return showCallJudgement(recordId);
+    const choices = [
+      ['number-source', localized('号码从哪里取得', 'Where the number came from')],
+      ['identity-claim', localized('对方如何自称', 'How the caller identified themselves')],
+      ['specific-details', localized('对方能否提供具体资料', 'Whether the caller supplied specific details')],
+      ['payment-request', localized('是否要求付款或资料', 'Whether payment or data was requested')],
+      ['independent-check', localized('其他渠道的核对结果', 'Checks through another channel')]
+    ];
+    els.overlayLayer.innerHTML = `
+      <div class="dialog-overlay call-judgement-overlay">
+        <section class="dialog-sheet call-judgement-sheet">
+          <span class="detail-meta">${esc(localized('判断依据', 'Basis for your assessment'))}</span>
+          <h2>${esc(localized('你根据什么作出判断？', 'What informed your assessment?'))}</h2>
+          <p>${esc(localized('可选择多项。身份声明本身可以记录，但不等于已经核实。', 'Choose any that apply. An identity claim can be noted, but it is not verification.'))}</p>
+          <div class="judgement-basis">${choices.map(([value, label]) => `<button type="button" aria-pressed="${judgement.basis.includes(value)}" data-action="call-basis-toggle" data-id="${esc(recordId)}" data-value="${value}"><i>${judgement.basis.includes(value) ? '✓' : ''}</i><span>${esc(label)}</span></button>`).join('')}</div>
+          <button class="primary-action" type="button" data-action="call-judgement-save" data-id="${esc(recordId)}">${esc(localized('保存判断', 'Save assessment'))}</button>
+        </section>
+      </div>`;
   }
 
   function endCall(note) {
     if (note) addHistory('call-ended', note);
+    archiveCallSession(note);
     clearTimeout(callbackTimer);
     stopAllAudio();
     playSound('hangup');
     els.overlayLayer.innerHTML = '';
     callSession = null;
+    renderActiveCallBar();
     saveState();
     showToast('通话已结束');
     if (state.currentApp) renderApp(state.currentApp);
@@ -1919,7 +2246,9 @@
     clearTimeout(callbackTimer);
     stopAllAudio();
     playSound('hangup');
+    archiveCallSession('记下收发室通话中的具体领取资料');
     callSession = null;
+    renderActiveCallBar();
     closeOverlay();
     saveState();
     showToast('收发室确认文件正在等待领取');
@@ -1971,9 +2300,15 @@
     if (contactId === 'contact-ajie') {
       state.taskState.contact.steps.oldNumberCalled = true;
       advanceTime(4);
-      if (state.contactIsReal) {
+      if (state.contactVariant === 'real') {
         addEvidence('old-number', '阿杰旧号码已停用');
         showDialog('旧号码语音信箱', '这个号码暂时无法接通。仅凭旧号码无法确认刚才的来电，需要寻找共同联系人。', [
+          { label: '打开联系人', action: 'close-overlay', kind: 'primary-action' }
+        ]);
+      } else if (state.contactVariant === 'grey') {
+        addEvidence('old-number', '阿杰确认没有换号，但场地承办商可能另有联系人');
+        addHistory('grey-contact-unresolved', '阿杰表示没有换号，但尚未确认来电的场地联系人权限');
+        showDialog('阿杰（原号码）', '“我没有换号码。场地公司好像有个叫阿伦的人，不过我没有叫他向你收名单或款项。你再问嘉敏确认他的权限。”', [
           { label: '打开联系人', action: 'close-overlay', kind: 'primary-action' }
         ]);
       } else {
@@ -1995,10 +2330,16 @@
       state.taskState.contact.steps.resolved = true;
       state.taskState.contact.status = 'done';
       advanceTime(5);
-      if (state.contactIsReal) {
+      if (state.contactVariant === 'real') {
         addEvidence('co-organizer', '嘉敏确认阿杰的新号码尾号8704');
         addHistory('identity-resolved', '共同联系人确认来电者确实是阿杰');
         showDialog('嘉敏', '“阿杰昨天在筹备群说手机坏了，新号码尾号是8704。不过订金应该由学院账户处理，不用你私人转账。”', [
+          { label: '记下结果', action: 'close-overlay', kind: 'primary-action' }
+        ]);
+      } else if (state.contactVariant === 'grey') {
+        addEvidence('co-organizer', '嘉敏确认来电者是场地承办商联系人，但无权索取学生名单或私人付款');
+        addHistory('identity-resolved', '共同联系人确认人物真实，但来电要求超出授权范围');
+        showDialog('嘉敏', '“阿伦确实帮场地公司联络，但他只负责场地时间，不应该直接拿学生名单，也不能叫你私人付款。人数我会从正式表格给场地方。”', [
           { label: '记下结果', action: 'close-overlay', kind: 'primary-action' }
         ]);
       } else {
@@ -2138,9 +2479,11 @@
     if (verification >= 4 && done === total) style = '完成闭环查证';
     else if (verification >= 3) style = '建立独立证据';
     else if (verification >= 1) style = '有核对意识';
-    const identityTruth = state.contactIsReal
+    const identityTruth = state.contactVariant === 'real'
       ? '陌生号码确实是换号后的阿杰，但私人转账要求仍不应仅凭来电处理。'
-      : '陌生号码冒充阿杰，并利用你在通话中提供的信息继续扮演。';
+      : (state.contactVariant === 'grey'
+        ? '来电者确实参与场地联络，但不代表他获授权索取学生名单或私人付款。人物真实和要求合理是两件事。'
+        : '陌生号码冒充阿杰，并利用你在通话中提供的信息继续扮演。');
     const researchOutcome = state.taskState.research.steps.resolved
       ? '你从官方目录重新联系学院，确认研究邀请冒充教授。'
       : (state.history.some((item) => item.label === 'research-vouchers-paid') ? '你为邮件中的研究安排购买了电子礼券，但尚未通过学院核实。' : (state.taskState.research.steps.invitationRead ? '你看过研究邀请，但没有把它当成必须立即回复的任务。' : '你今天没有打开这封研究邀请。'));
@@ -2340,21 +2683,57 @@
       case 'event-pay-fake': processFakeEventPayment(); break;
       case 'event-register-official': registerOfficialEvent(); break;
       case 'event-skip-official': skipOfficialEvent(); break;
+      case 'call-quick': submitCallReply(target.dataset.label || '', target.dataset.intent || ''); break;
+      case 'call-replay-voice': {
+        if (!callSession) break;
+        const latestCallerText = [...callSession.transcript].reverse().find((turn) => turn.role === 'caller')?.text || '';
+        const node = getCallNode(callSession.scenario, callSession.node);
+        playCallerVoice(node.audio || '', latestCallerText, true);
+        break;
+      }
+      case 'call-minimize': minimizeCall(); break;
+      case 'call-resume': resumeCall(); break;
+      case 'call-finish-judge': finishCallForJudgement(); break;
+      case 'call-judgement':
+        state.callJudgements[id] = { verdict: target.dataset.value, basis: [], time: formatTime(state.time) };
+        saveState();
+        showCallBasis(id);
+        break;
+      case 'call-basis-toggle': {
+        const judgement = state.callJudgements[id];
+        if (!judgement) break;
+        const value = target.dataset.value;
+        judgement.basis = judgement.basis.includes(value) ? judgement.basis.filter((item) => item !== value) : [...judgement.basis, value];
+        saveState();
+        showCallBasis(id);
+        break;
+      }
+      case 'call-judgement-save':
+        addHistory('call-judgement', `保存了对号码的暂时判断：${state.callJudgements[id]?.verdict || '未判断'}`);
+        saveState();
+        closeOverlay();
+        showToast('判断已保存，之后仍可继续核对');
+        if (state.currentApp) renderApp(state.currentApp);
+        renderHome();
+        break;
+      case 'call-judgement-dismiss':
+        closeOverlay();
+        showToast('暂未保存判断，可以继续寻找证据');
+        if (state.currentApp) renderApp(state.currentApp);
+        renderHome();
+        break;
+      case 'call-review-judgement': showCallJudgement(id); break;
       case 'call-hall': callContact('contact-hall'); break;
-      case 'call-hall-provide-tracking':
-        callSession.step = 1;
-        renderCallDialogue('「查到喇：文件08:14送到收發室。今日17:00前帶學生證嚟拎就得，唔需要網上補交費用。」', [
-          ['confirm-hall', '记下信息'], ['call-official-later', '稍后处理']
-        ], '');
-        break;
-      case 'call-department-ask-research':
-        callSession.step = 1;
-        renderCallDialogue('「Prof. Chan 冇發出呢封邀請。學院亦唔會要求學生先代購禮券；研究助理招募只會用 PolyU 官方電郵同部門系統。」', [
-          ['confirm-department', '记下结果'], ['call-official-later', '稍后处理']
-        ], '');
-        break;
+      case 'call-hall-ask-identity': submitCallReply('请问这里是什么单位？', 'ask_identity'); break;
+      case 'call-hall-describe-request': submitCallReply('我收到通知有份文件，想查一下', 'describe_request'); break;
+      case 'call-hall-ask-fee': submitCallReply('请问领取是否需要缴费？', 'ask_fee'); break;
+      case 'call-hall-share-partial': submitCallReply('运单尾号是1305，送到学生宿舍', 'share_partial'); break;
+      case 'call-hall-provide-tracking': submitCallReply('完整运单号是 RR 482 917 305 HK', 'share_full'); break;
+      case 'call-department-ask-identity': submitCallReply('请问这里是什么办公室？', 'ask_identity'); break;
+      case 'call-department-describe-request': submitCallReply('我想核实一封研究邀请', 'describe_request'); break;
+      case 'call-department-ask-research': submitCallReply('主题是Research Assistant，发件地址是outlook.example', 'share_mail'); break;
       case 'confirm-department': confirmDepartment(); break;
-      case 'call-official-later': endCall('暂时结束官方号码通话，稍后再处理'); break;
+      case 'call-official-later': finishCallForJudgement(); break;
       case 'confirm-hall': confirmHall(); break;
       case 'collect-parcel': collectParcel(); break;
       case 'open-contacts': openApp('contacts'); break;
@@ -2372,17 +2751,14 @@
       case 'end-call': endCall('主动结束陌生来电'); break;
       case 'call-guess-ajie': callClaimResponse('guess'); break;
       case 'call-ask-name': callClaimResponse('ask'); break;
-      case 'call-later': endCall('没有透露姓名，决定稍后独立联系'); break;
+      case 'call-later': finishCallForJudgement(); break;
       case 'call-ask-document':
         addEvidence('requested-document', '要求对方提供报价单及正式收款资料');
-        renderCallDialogue(state.contactIsReal ? '「好呀，我將學院份報價單send畀你。訂金應該由學院戶口處理。」' : '「唔使咁麻煩啦，供應商就收工，你轉畀我先得㗎喇。」', [
-          ['call-check-kaman', '「我都係要同嘉敏確認。」'], ['call-later', '「資料確認咗先再處理。」']
-        ], state.contactIsReal ? 'document-real' : 'document-fake');
-        saveState(); break;
+        submitCallReply('先发正式文件给我', 'ask_document');
+        break;
       case 'call-check-kaman':
         addHistory('check-promised', '告诉来电者会先向共同联系人确认');
-        endCall('决定联系嘉敏核对');
-        openApp('contacts');
+        minimizeCallAndResearch();
         break;
       case 'call-transfer':
         showDialog('确认私人转账', '对方要求你向一个个人FPS账户支付HK$1,200。银行只会显示收款人资料，不会判断活动是否真实。', [
@@ -2391,7 +2767,7 @@
         ]);
         break;
       case 'confirm-transfer': completeTransfer(); break;
-      case 'resume-call': callClaimResponse('resume'); break;
+      case 'resume-call': resumeCall(); break;
       case 'open-browser-page': state.browserPage = target.dataset.page; saveState(); renderBrowser(); break;
       case 'browser-home': state.browserPage = 'home'; saveState(); renderBrowser(); break;
       case 'open-mail-app': state.browserPage = 'home'; saveState(); openApp('mail', 'mail-parcel'); break;
@@ -2567,6 +2943,16 @@
       const target = event.target.closest('[data-action]');
       if (target) { playSound('tap'); handleAction(target.dataset.action, target); }
     });
+    els.overlayLayer.addEventListener('submit', (event) => {
+      if (event.target.id !== 'callReplyForm') return;
+      event.preventDefault();
+      const input = $('callReplyInput');
+      submitCallReply(input ? input.value : '');
+    });
+    els.activeCallBar.addEventListener('click', (event) => {
+      const target = event.target.closest('[data-action]');
+      if (target) { playSound('tap'); handleAction(target.dataset.action, target); }
+    });
     document.addEventListener('keydown', (event) => {
       const mailMenu = els.overlayLayer.querySelector('.outlook-mail-menu-sheet');
       if (!mailMenu) return;
@@ -2603,7 +2989,7 @@
       todayCard: $('todayCard'), homeTodoList: $('homeTodoList'), todayProgress: $('todayProgress'), todayProgressBar: $('todayProgressBar'),
       openTasksShortcut: $('openTasksShortcut'), appBack: $('appBack'), appMore: $('appMore'),
       appEyebrow: $('appEyebrow'), appTitle: $('appTitle'), appContent: $('appContent'),
-      soundToggle: $('soundToggle'), toast: $('toast'), overlayLayer: $('overlayLayer'),
+      soundToggle: $('soundToggle'), toast: $('toast'), overlayLayer: $('overlayLayer'), activeCallBar: $('activeCallBar'),
       systemNavigation: $('systemNavigation'), systemBack: $('systemBack'), systemHome: $('systemHome'),
       systemBackLabel: $('systemBackLabel'), systemHomeLabel: $('systemHomeLabel')
     });

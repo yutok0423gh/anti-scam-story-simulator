@@ -32,10 +32,13 @@
   };
 
   function createInitialState() {
+    const contactRoll = Math.random();
+    const contactVariant = contactRoll < 0.32 ? 'real' : (contactRoll < 0.78 ? 'fake' : 'grey');
     return {
-      version: 9,
+      version: 10,
       seed: Math.random().toString(36).slice(2),
-      contactIsReal: Math.random() < 0.35,
+      contactVariant,
+      contactIsReal: contactVariant === 'real',
       unlocked: false,
       openingBriefSeen: false,
       language: 'zh-CN',
@@ -62,6 +65,8 @@
       moneyLost: 0,
       evidence: [],
       history: [],
+      callJudgements: {},
+      callRecords: [],
       taskState: {
         parcel: {
           status: 'pending',
