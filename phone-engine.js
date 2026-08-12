@@ -328,11 +328,13 @@
     const utterance = new SpeechSynthesisUtterance(cleanText);
     const voices = window.speechSynthesis.getVoices();
     const voice = voices.find((item) => /^yue(?:-|$)/i.test(item.lang))
-      || voices.find((item) => /^zh[-_]?hk$/i.test(item.lang))
-      || voices.find((item) => /^zh[-_]?tw$/i.test(item.lang))
-      || voices.find((item) => /^zh/i.test(item.lang));
-    utterance.lang = voice?.lang || 'yue-HK';
-    if (voice) utterance.voice = voice;
+      || voices.find((item) => /^zh[-_]?hk$/i.test(item.lang));
+    if (!voice) {
+      if (notifyOnFailure) showToast('设备没有粤语声音，请使用通话中的预录语音');
+      return;
+    }
+    utterance.lang = voice.lang;
+    utterance.voice = voice;
     utterance.rate = 0.94;
     utterance.pitch = 0.98;
     utterance.volume = 0.95;
@@ -1889,7 +1891,7 @@
     const node = getCallNode(callSession.scenario, 'intro');
     addCallTurn('caller', resolveCallCopy(node.reply));
     saveState();
-    renderCallSession(node.audio || '');
+    renderCallSession(resolveCallCopy(node.audio) || '');
   }
 
   function resolveCallCopy(value) {
@@ -1906,32 +1908,32 @@
     const variant = state.contactVariant || (state.contactIsReal ? 'real' : 'fake');
     const scenarios = {
       hall: {
-        intro: { reply: '「喂，你好。請問你想查咩？」', quick: [['describe_request', '我收到通知有份文件，想查一下'], ['ask_identity', '请问这里是什么单位？'], ['ask_reference', '你那边能看到什么资料？']] },
-        claim: { reply: '「呢度係宿舍收發室。請問你想查邊份文件？」', quick: [['describe_request', '我收到通知有份文件，想查一下'], ['ask_reference', '你先说一下现有记录'], ['refuse_disclosure', '我暂时不提供个人资料']] },
-        need_reference: { reply: '「可以。請講運單號最後四位，同埋文件送去邊間宿舍。」', quick: [['share_partial', '只提供尾号和宿舍'], ['ask_fee', '先问是否需要缴费'], ['hold_research', '打开邮件核对资料']] },
-        fee: { reply: '「一般領取文件唔使網上付款。不過要查到件，我要先核對運單資料。」', quick: [['share_partial', '只提供尾号和宿舍'], ['ask_reference', '你先说一下现有记录'], ['hold_research', '打开邮件核对资料']] },
-        partial: { reply: '「尾號1305，係嗎？我搵到一項紀錄，但要再核對完整編號先可以講送達時間。」', quick: [['share_full', '提供完整运单号'], ['ask_reference', '先说送达日期可以吗？'], ['hold_research', '打开邮件核对资料']] },
-        need_mail: { reply: '「冇完整編號我未能確認係同一份文件。你可以搵返通知再打嚟。」', quick: [['hold_research', '打开邮件核对资料'], ['refuse_disclosure', '我稍后从其他渠道确认']] },
-        result: { reply: '「查到喇：文件08:14送到收發室。今日17:00前帶學生證嚟拎就得，唔需要網上補交費用。」', quick: [['record_result', '记下这次通话内容'], ['ask_fee', '再确认是否需要缴费'], ['finish_judge', '结束并作出判断']] },
-        cautious: { reply: '「冇問題。你可以先核對通知；我哋未確認資料前亦唔會講文件內容。」', quick: [['hold_research', '打开邮件核对资料'], ['finish_judge', '结束并作出判断']] }
+        intro: { reply: '「喂，你好。請問你想查咩？」', audio: 'hall-intro', quick: [['describe_request', '我收到通知有份文件，想查一下'], ['ask_identity', '请问这里是什么单位？'], ['ask_reference', '你那边能看到什么资料？']] },
+        claim: { reply: '「呢度係宿舍收發室。請問你想查邊份文件？」', audio: 'hall-claim', quick: [['describe_request', '我收到通知有份文件，想查一下'], ['ask_reference', '你先说一下现有记录'], ['refuse_disclosure', '我暂时不提供个人资料']] },
+        need_reference: { reply: '「可以。請講運單號最後四位，同埋文件送去邊間宿舍。」', audio: 'hall-need-reference', quick: [['share_partial', '只提供尾号和宿舍'], ['ask_fee', '先问是否需要缴费'], ['hold_research', '打开邮件核对资料']] },
+        fee: { reply: '「一般領取文件唔使網上付款。不過要查到件，我要先核對運單資料。」', audio: 'hall-fee', quick: [['share_partial', '只提供尾号和宿舍'], ['ask_reference', '你先说一下现有记录'], ['hold_research', '打开邮件核对资料']] },
+        partial: { reply: '「尾號1305，係嗎？我搵到一項紀錄，但要再核對完整編號先可以講送達時間。」', audio: 'hall-partial', quick: [['share_full', '提供完整运单号'], ['ask_reference', '先说送达日期可以吗？'], ['hold_research', '打开邮件核对资料']] },
+        need_mail: { reply: '「冇完整編號我未能確認係同一份文件。你可以搵返通知再打嚟。」', audio: 'hall-need-mail', quick: [['hold_research', '打开邮件核对资料'], ['refuse_disclosure', '我稍后从其他渠道确认']] },
+        result: { reply: '「查到喇：文件08:14送到收發室。今日17:00前帶學生證嚟拎就得，唔需要網上補交費用。」', audio: 'hall-result', quick: [['record_result', '记下这次通话内容'], ['ask_fee', '再确认是否需要缴费'], ['finish_judge', '结束并作出判断']] },
+        cautious: { reply: '「冇問題。你可以先核對通知；我哋未確認資料前亦唔會講文件內容。」', audio: 'hall-cautious', quick: [['hold_research', '打开邮件核对资料'], ['finish_judge', '结束并作出判断']] }
       },
       department: {
-        intro: { reply: '「喂，你好。請問你想搵邊位？」', quick: [['describe_request', '我想核实一封研究邀请'], ['ask_identity', '请问这里是什么办公室？'], ['ask_reference', '你们最近有招募研究助理吗？']] },
-        claim: { reply: '「呢度係 Department General Office。請問你想查咩事？」', quick: [['describe_request', '我想核实一封研究邀请'], ['ask_reference', '你们最近有招募研究助理吗？'], ['refuse_disclosure', '我暂时不提供个人资料']] },
-        need_mail: { reply: '「可以。你唔使提供個人資料，講封郵件嘅主題同發件地址就得。」', quick: [['share_mail', '提供邮件主题和发件地址'], ['hold_research', '返回浏览器核对目录'], ['refuse_disclosure', '我只想了解正式招募渠道']] },
-        channels: { reply: '「正式招募會經 PolyU 電郵或部門系統，但我未睇過你嗰封信，暫時唔可以判斷係咪同一項目。」', quick: [['share_mail', '提供邮件主题和发件地址'], ['hold_research', '返回浏览器核对目录'], ['finish_judge', '结束并作出判断']] },
-        result: { reply: '「我按主題同地址查過：Prof. Chan 冇發出呢封邀請，學院亦冇叫學生代購禮券。你唔好用信內連結。」', quick: [['record_result', '记下这次通话内容'], ['ask_reference', '请再说明正式招募渠道'], ['finish_judge', '结束并作出判断']] },
-        cautious: { reply: '「可以。唔提供個人資料都得；你可以用官網電郵將主題轉畀辦公室核對。」', quick: [['hold_research', '返回浏览器核对目录'], ['finish_judge', '结束并作出判断']] }
+        intro: { reply: '「喂，你好。請問你想搵邊位？」', audio: 'department-intro', quick: [['describe_request', '我想核实一封研究邀请'], ['ask_identity', '请问这里是什么办公室？'], ['ask_reference', '你们最近有招募研究助理吗？']] },
+        claim: { reply: '「呢度係 Department General Office。請問你想查咩事？」', audio: 'department-claim', quick: [['describe_request', '我想核实一封研究邀请'], ['ask_reference', '你们最近有招募研究助理吗？'], ['refuse_disclosure', '我暂时不提供个人资料']] },
+        need_mail: { reply: '「可以。你唔使提供個人資料，講封郵件嘅主題同發件地址就得。」', audio: 'department-need-mail', quick: [['share_mail', '提供邮件主题和发件地址'], ['hold_research', '返回浏览器核对目录'], ['refuse_disclosure', '我只想了解正式招募渠道']] },
+        channels: { reply: '「正式招募會經 PolyU 電郵或部門系統，但我未睇過你嗰封信，暫時唔可以判斷係咪同一項目。」', audio: 'department-channels', quick: [['share_mail', '提供邮件主题和发件地址'], ['hold_research', '返回浏览器核对目录'], ['finish_judge', '结束并作出判断']] },
+        result: { reply: '「我按主題同地址查過：Prof. Chan 冇發出呢封邀請，學院亦冇叫學生代購禮券。你唔好用信內連結。」', audio: 'department-result', quick: [['record_result', '记下这次通话内容'], ['ask_reference', '请再说明正式招募渠道'], ['finish_judge', '结束并作出判断']] },
+        cautious: { reply: '「可以。唔提供個人資料都得；你可以用官網電郵將主題轉畀辦公室核對。」', audio: 'department-cautious', quick: [['hold_research', '返回浏览器核对目录'], ['finish_judge', '结束并作出判断']] }
       },
       orientation: {
-        intro: { reply: '「喂，你真係唔記得我呀？上年迎新活動嗰個呀。你再諗下啦。」', audio: 'callback-intro', quick: [['ask_identity', '你先说名字'], ['ask_purpose', '你找我有什么事？'], ['refuse_disclosure', '我不确认任何个人资料']] },
-        identity: { reply: () => variant === 'real' ? '「我係阿杰呀，上年迎新喺N座擺攤嗰個。」' : (variant === 'grey' ? '「我係阿倫，之前幫迎新場地做聯絡嗰個。」' : '「吓，你連我個名都唔記得？上年我哋成日見㗎。」'), quick: [['ask_purpose', '你找我有什么事？'], ['ask_reference', '说一件只有联系人知道的事'], ['hold_research', '先去联系人核对']] },
-        guessed: { reply: '「係呀，我咪阿杰囉，終於認得我喇。」', quick: [['ask_purpose', '你找我有什么事？'], ['ask_reference', '说一件只有阿杰知道的事'], ['hold_research', '先去联系人核对']] },
-        purpose: { reply: () => variant === 'real' ? '「我換咗號碼。供應商有份訂金資料想你幫手睇，但唔使你私人付款。」' : (variant === 'grey' ? '「場地方想確認參加人數，你可唔可以send學生名單同電話畀我？」' : '「供應商催訂金，爭HK$1,200。你轉畀我先，今晚還畀你。」'), quick: [['ask_document', '先发正式文件给我'], ['refuse_disclosure', '我不会在这通电话提供资料'], ['hold_research', '先去联系人核对']] },
-        reference: { reply: () => variant === 'real' ? '「上年你負責N座攤位，嘉敏遲到，我哋一齊搬過物資。」' : (variant === 'grey' ? '「我只係供應商聯絡人，係嘉敏畀你號碼我；你可以問返佢。」' : '「咁耐以前邊記得咁清楚？你先講你負責邊一part，我就記得。」'), quick: [['ask_purpose', '继续问来意'], ['refuse_disclosure', '不提供更多线索'], ['hold_research', '先去联系人核对']] },
-        document: { reply: () => variant === 'real' ? '「得，我send學院報價單畀你；款項應該由學院戶口處理。」' : (variant === 'grey' ? '「我只有場地公司張表，冇學院文件。你可以先問嘉敏。」' : '「供應商就收工，唔使搞咁多文件啦，你轉咗先。」'), quick: [['hold_research', '先去联系人核对'], ['refuse_disclosure', '资料确认前不处理'], ['offer_payment', '按对方要求处理']] },
-        cautious: { reply: () => variant === 'fake' ? '「你而家咁唔信我？過咗今日個場就冇㗎喇。」' : '「可以，你問返嘉敏先。確認咗再聯絡。」', quick: [['hold_research', '先去联系人核对'], ['ask_reference', '再问一项共同经历'], ['finish_judge', '结束并作出判断']] },
-        fallback: { reply: '「我唔係好明你想問邊一樣。你可以講清楚少少，或者遲啲再聯絡。」', quick: [['ask_identity', '你先说名字'], ['ask_purpose', '你找我有什么事？'], ['hold_research', '先去联系人核对']] }
+        intro: { reply: '「喂，你真係唔記得我呀？上年迎新活動嗰個呀。你再諗下啦。」', audio: 'orientation-intro', quick: [['ask_identity', '你先说名字'], ['ask_purpose', '你找我有什么事？'], ['refuse_disclosure', '我不确认任何个人资料']] },
+        identity: { reply: () => variant === 'real' ? '「我係阿杰呀，上年迎新喺N座擺攤嗰個。」' : (variant === 'grey' ? '「我係阿倫，之前幫迎新場地做聯絡嗰個。」' : '「吓，你連我個名都唔記得？上年我哋成日見㗎。」'), audio: () => `orientation-identity-${variant}`, quick: [['ask_purpose', '你找我有什么事？'], ['ask_reference', '说一件只有联系人知道的事'], ['hold_research', '先去联系人核对']] },
+        guessed: { reply: '「係呀，我咪阿杰囉，終於認得我喇。」', audio: 'orientation-guessed', quick: [['ask_purpose', '你找我有什么事？'], ['ask_reference', '说一件只有阿杰知道的事'], ['hold_research', '先去联系人核对']] },
+        purpose: { reply: () => variant === 'real' ? '「我換咗號碼。供應商有份訂金資料想你幫手睇，但唔使你私人付款。」' : (variant === 'grey' ? '「場地方想確認參加人數，你可唔可以send學生名單同電話畀我？」' : '「供應商催訂金，爭HK$1,200。你轉畀我先，今晚還畀你。」'), audio: () => `orientation-purpose-${variant}`, quick: [['ask_document', '先发正式文件给我'], ['refuse_disclosure', '我不会在这通电话提供资料'], ['hold_research', '先去联系人核对']] },
+        reference: { reply: () => variant === 'real' ? '「上年你負責N座攤位，嘉敏遲到，我哋一齊搬過物資。」' : (variant === 'grey' ? '「我只係供應商聯絡人，係嘉敏畀你號碼我；你可以問返佢。」' : '「咁耐以前邊記得咁清楚？你先講你負責邊一part，我就記得。」'), audio: () => `orientation-reference-${variant}`, quick: [['ask_purpose', '继续问来意'], ['refuse_disclosure', '不提供更多线索'], ['hold_research', '先去联系人核对']] },
+        document: { reply: () => variant === 'real' ? '「得，我send學院報價單畀你；款項應該由學院戶口處理。」' : (variant === 'grey' ? '「我只有場地公司張表，冇學院文件。你可以先問嘉敏。」' : '「供應商就收工，唔使搞咁多文件啦，你轉咗先。」'), audio: () => `orientation-document-${variant}`, quick: [['hold_research', '先去联系人核对'], ['refuse_disclosure', '资料确认前不处理'], ['offer_payment', '按对方要求处理']] },
+        cautious: { reply: () => variant === 'fake' ? '「你而家咁唔信我？過咗今日個場就冇㗎喇。」' : '「可以，你問返嘉敏先。確認咗再聯絡。」', audio: () => variant === 'fake' ? 'orientation-cautious-fake' : 'orientation-cautious-safe', quick: [['hold_research', '先去联系人核对'], ['ask_reference', '再问一项共同经历'], ['finish_judge', '结束并作出判断']] },
+        fallback: { reply: '「我唔係好明你想問邊一樣。你可以講清楚少少，或者遲啲再聯絡。」', audio: 'orientation-fallback', quick: [['ask_identity', '你先说名字'], ['ask_purpose', '你找我有什么事？'], ['hold_research', '先去联系人核对']] }
       }
     };
     return (scenarios[scenario] && scenarios[scenario][nodeId]) || scenarios[scenario]?.intro || { reply: '「喂？」', quick: [] };
@@ -2025,7 +2027,7 @@
     addCallTurn('caller', resolveCallCopy(node.reply));
     advanceTime(1);
     saveState();
-    renderCallSession(node.audio || '');
+    renderCallSession(resolveCallCopy(node.audio) || '');
   }
 
   function callQuickLabel(intent) {
@@ -2688,7 +2690,7 @@
         if (!callSession) break;
         const latestCallerText = [...callSession.transcript].reverse().find((turn) => turn.role === 'caller')?.text || '';
         const node = getCallNode(callSession.scenario, callSession.node);
-        playCallerVoice(node.audio || '', latestCallerText, true);
+        playCallerVoice(resolveCallCopy(node.audio) || '', latestCallerText, true);
         break;
       }
       case 'call-minimize': minimizeCall(); break;

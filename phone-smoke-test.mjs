@@ -395,7 +395,15 @@ await click('[data-action="call-number"][data-id="call-unknown"]');
 assert(await evaluate('document.querySelector(".call-overlay").textContent.includes("正在接通")'), 'Callback dialing screen did not start');
 await capture('simulator-callback-dialing');
 await wait(1600);
-assert(await evaluate('document.querySelector(".call-overlay").dataset.cantoneseAudio === "callback-intro"'), 'Cantonese callback audio was not selected');
+assert(await evaluate('document.querySelector(".call-overlay").dataset.cantoneseAudio === "orientation-intro"'), 'Cantonese callback audio was not selected');
+assert(await evaluate(`Promise.all([
+  'hall-intro', 'hall-claim', 'hall-need-reference', 'hall-fee', 'hall-partial', 'hall-need-mail', 'hall-result', 'hall-cautious',
+  'department-intro', 'department-claim', 'department-need-mail', 'department-channels', 'department-result', 'department-cautious',
+  'orientation-intro', 'orientation-identity-real', 'orientation-identity-grey', 'orientation-identity-fake', 'orientation-guessed',
+  'orientation-purpose-real', 'orientation-purpose-grey', 'orientation-purpose-fake', 'orientation-reference-real',
+  'orientation-reference-grey', 'orientation-reference-fake', 'orientation-document-real', 'orientation-document-grey',
+  'orientation-document-fake', 'orientation-cautious-fake', 'orientation-cautious-safe', 'orientation-fallback'
+].map((id) => fetch('assets/audio/calls/' + id + '.mp3').then((response) => response.ok && response.headers.get('content-type')?.includes('audio')))).then((results) => results.every(Boolean))`), 'One or more fixed Cantonese call audio files are unavailable');
 assert(await evaluate('document.querySelector(".call-turn.caller:last-child p").textContent.includes("真係唔記得我")'), 'Unknown caller Cantonese dialogue did not start');
 assert(await evaluate('document.querySelector("[data-action=call-replay-voice]") !== null'), 'Caller voice replay control is missing');
 await capture('simulator-callback-cantonese');
