@@ -58,6 +58,33 @@ async function click(selector) {
   await wait(80);
 }
 
+async function elementCenter(selector) {
+  return evaluate(`(() => {
+    const element = document.querySelector(${JSON.stringify(selector)});
+    if (!element) return null;
+    const rect = element.getBoundingClientRect();
+    return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+  })()`);
+}
+
+async function touchStart(point) {
+  await command('Input.dispatchTouchEvent', {
+    type: 'touchStart',
+    touchPoints: [{ x: point.x, y: point.y, radiusX: 2, radiusY: 2, force: 1 }]
+  });
+}
+
+async function touchMove(point) {
+  await command('Input.dispatchTouchEvent', {
+    type: 'touchMove',
+    touchPoints: [{ x: point.x, y: point.y, radiusX: 2, radiusY: 2, force: 1 }]
+  });
+}
+
+async function touchEnd() {
+  await command('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+}
+
 async function capture(name) {
   if (!screenshotDir) return;
   mkdirSync(screenshotDir, { recursive: true });
@@ -72,17 +99,61 @@ function assert(condition, message) {
 await command('Runtime.enable');
 await command('Page.enable');
 await command('Emulation.setDeviceMetricsOverride', { width: viewportWidth, height: viewportHeight, deviceScaleFactor: 1, mobile: viewportWidth <= 500 });
-await command('Page.navigate', { url: `${pageBase}/phone-prototype.html?preview=lock` });
+await command('Page.navigate', { url: `${pageBase}/?preview=lock` });
 await wait(350);
 assert(await evaluate('document.querySelector("#unlockButton").textContent.includes("向上轻扫")'), 'iOS-style lock-screen affordance did not render');
 await capture('simulator-ios-lock');
-await click('#unlockButton');
+
+let unlockPoint = await elementCenter('#unlockButton');
+assert(unlockPoint, 'Unlock gesture target is missing');
+await touchStart(unlockPoint);
+for (let step = 1; step <= 5; step += 1) {
+  await touchMove({ x: unlockPoint.x + 1, y: unlockPoint.y - step * 7 });
+  await wait(70);
+}
+assert(await evaluate('parseFloat(document.querySelector("#phoneViewport").style.getPropertyValue("--unlock-shift")) < -20'), 'Lock screen did not follow the finger during a short swipe');
+await capture('simulator-swipe-follow');
+await touchEnd();
+await wait(340);
+assert(await evaluate('document.querySelector("#lockScreen").classList.contains("is-active")'), 'A short swipe incorrectly unlocked the phone');
+assert(await evaluate('!document.querySelector("#phoneViewport").classList.contains("is-unlock-returning")'), 'Short swipe did not finish its elastic return');
+await capture('simulator-swipe-return');
+
+unlockPoint = await elementCenter('#homeIndicator');
+assert(unlockPoint, 'Home indicator gesture target is missing');
+await touchStart(unlockPoint);
+await touchMove({ x: unlockPoint.x + 80, y: unlockPoint.y - 5 });
+await wait(40);
+await touchEnd();
+await wait(320);
+assert(await evaluate('document.querySelector("#lockScreen").classList.contains("is-active")'), 'A horizontal swipe incorrectly unlocked the phone');
+
+unlockPoint = await elementCenter('#homeIndicator');
+await touchStart(unlockPoint);
+await touchMove({ x: unlockPoint.x + 1, y: unlockPoint.y - 36 });
+await wait(160);
+await touchMove({ x: unlockPoint.x + 2, y: unlockPoint.y - 37 });
+await wait(18);
+await touchEnd();
+await wait(320);
+assert(await evaluate('document.querySelector("#lockScreen").classList.contains("is-active")'), 'A stale flick velocity incorrectly unlocked the phone');
+
+unlockPoint = await elementCenter('#homeIndicator');
+await touchStart(unlockPoint);
+await touchMove({ x: unlockPoint.x + 10, y: unlockPoint.y - 3 });
+await wait(25);
+for (let step = 1; step <= 6; step += 1) {
+  await touchMove({ x: unlockPoint.x + 10 + step, y: unlockPoint.y - step * 24 });
+  await wait(18);
+}
+await touchEnd();
+await wait(360);
 assert(await evaluate('document.querySelector(".opening-sheet").textContent.includes("院系与学生组织")'), 'Opening brief did not describe realistic campus senders');
 assert(await evaluate('document.querySelector(".opening-sheet").textContent.includes("研究参与邀请")'), 'Opening brief did not mention research invitations naturally');
 assert(await evaluate('document.querySelector(".opening-sheet").textContent.includes("看清来源和内容")'), 'Opening brief did not explain how to treat optional inbox items');
 await capture('simulator-opening-brief');
 await click('[data-action="start-day"]');
-await command('Page.navigate', { url: `${pageBase}/phone-prototype.html?preview=home` });
+await command('Page.navigate', { url: `${pageBase}/?preview=home` });
 await wait(450);
 
 assert(await evaluate('document.querySelectorAll("#homeTodoList .home-todo-item").length === 2'), 'Desktop to-do widget did not keep optional inbox items out of the task list');
@@ -309,7 +380,7 @@ assert(await evaluate('JSON.parse(localStorage.getItem("polyu_simulator_phone_v1
 console.log(JSON.stringify({
   result: 'PASS',
   apps: ['phone', 'messages', 'mail', 'polyu', 'browser', 'contacts', 'bank', 'tasks', 'settings'],
-  flow: 'opening brief, desktop to-do, sound control, language and region settings, PolyULife views, parcel verification, unknown caller, professor impersonation, event fee cross-check, day review'
+  flow: 'real swipe unlock and elastic return, opening brief, desktop to-do, sound control, language and region settings, PolyULife views, parcel verification, unknown caller, professor impersonation, event fee cross-check, day review'
 }));
 
 socket.close();

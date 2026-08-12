@@ -1414,6 +1414,11 @@ input:focus-visible,
 }
 
 .phone-viewport {
+  --unlock-home-opacity: .18;
+  --unlock-home-scale: .955;
+  --unlock-lock-opacity: 1;
+  --unlock-progress: 0;
+  --unlock-shift: 0px;
   overflow: hidden;
   background: var(--graphite);
 }
@@ -1426,6 +1431,59 @@ input:focus-visible,
 .phone-screen.is-active {
   display: block;
   animation: screen-in .28s cubic-bezier(.2, .8, .2, 1) both;
+}
+
+.lock-screen {
+  z-index: 2;
+  translate: 0 var(--unlock-shift);
+  opacity: var(--unlock-lock-opacity);
+  will-change: translate, opacity;
+}
+
+.home-screen {
+  z-index: 1;
+}
+
+.home-screen.is-unlock-preview {
+  display: block;
+  opacity: var(--unlock-home-opacity);
+  scale: var(--unlock-home-scale);
+  animation: none;
+  pointer-events: none;
+  transform-origin: center;
+  will-change: opacity, scale;
+}
+
+.phone-viewport.is-unlock-dragging .lock-screen,
+.phone-viewport.is-unlock-dragging .home-screen {
+  transition: none;
+}
+
+.phone-viewport.is-unlock-returning .lock-screen {
+  transition:
+    translate .28s cubic-bezier(.32, .72, 0, 1),
+    opacity .24s ease-out;
+}
+
+.phone-viewport.is-unlock-returning .home-screen {
+  transition:
+    opacity .28s cubic-bezier(.32, .72, 0, 1),
+    scale .28s cubic-bezier(.32, .72, 0, 1);
+}
+
+.phone-viewport.is-unlocking .lock-screen {
+  opacity: 0;
+  transition:
+    translate .24s cubic-bezier(.32, .72, 0, 1),
+    opacity .2s ease-out;
+}
+
+.phone-viewport.is-unlocking .home-screen {
+  opacity: 1;
+  scale: 1;
+  transition:
+    opacity .24s ease-out,
+    scale .24s cubic-bezier(.32, .72, 0, 1);
 }
 
 @keyframes screen-in {
@@ -4321,9 +4379,11 @@ input:focus-visible,
 }
 
 .ios-ui .unlock-button {
-  bottom: 24px;
-  width: auto;
-  padding: 7px 10px 5px;
+  bottom: calc(8px + env(safe-area-inset-bottom));
+  width: calc(100% - 28px);
+  min-width: 220px;
+  min-height: 64px;
+  padding: 10px 24px 7px;
   flex-direction: column-reverse;
   gap: 0;
   border-radius: 0;
@@ -4332,12 +4392,31 @@ input:focus-visible,
   backdrop-filter: none;
   font-size: 11px;
   font-weight: 600;
+  transform: none;
+  translate: -50% 0;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: grab;
 }
 
 .ios-ui .unlock-button svg {
   width: 18px;
   height: 18px;
   animation: ios-swipe 1.8s ease-in-out infinite;
+}
+
+.ios-ui .phone-viewport.is-unlock-dragging .unlock-button {
+  cursor: grabbing;
+}
+
+.ios-ui .phone-viewport.is-unlock-dragging .unlock-button svg,
+.ios-ui .phone-viewport.is-unlocking .unlock-button svg {
+  animation: none;
+}
+
+.ios-ui .unlock-button:active:not(:disabled) {
+  transform: none;
 }
 
 @keyframes ios-swipe {
@@ -4571,6 +4650,16 @@ input:focus-visible,
   height: 5px;
   background: rgba(248, 248, 248, .92);
   mix-blend-mode: normal;
+}
+
+.ios-ui .phone-viewport.is-locked + .home-indicator {
+  pointer-events: none;
+}
+
+@supports selector(:has(*)) {
+  .ios-ui:has(.lock-screen.is-active) .home-indicator {
+    pointer-events: none;
+  }
 }
 
 .ios-ui:has(.app-screen.is-active) .home-indicator {
@@ -5242,6 +5331,13 @@ input:focus-visible,
 @media (prefers-reduced-motion: reduce) {
   .ios-ui .unlock-button svg {
     animation: none;
+  }
+
+  .phone-viewport.is-unlock-returning .lock-screen,
+  .phone-viewport.is-unlock-returning .home-screen,
+  .phone-viewport.is-unlocking .lock-screen,
+  .phone-viewport.is-unlocking .home-screen {
+    transition-duration: 1ms;
   }
 }
 
