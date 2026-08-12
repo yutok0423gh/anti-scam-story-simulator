@@ -113,6 +113,30 @@
     '模拟回复只在这台设备中生成，不会联系真实号码或邮箱。': 'Simulated replies are generated only on this device. No real number or email is contacted.'
   };
 
+  Object.assign(EN_UI, {
+    '打开项目工作台': 'Open project workspace',
+    '核实招聘渠道': 'Verify the recruitment channel',
+    '打开取消页面': 'Open cancellation page',
+    '自行查官方医疗应用': 'Check the official health app independently',
+    '查看收款验证': 'View receiving verification',
+    '返回平台内交易': 'Return to the in-app transaction',
+    '提交模拟资料': 'Submit simulated details',
+    '完成首个试做任务': 'Complete the first trial task',
+    '继续高额任务': 'Continue to the high-value task',
+    '停止并核实': 'Stop and verify',
+    '查看官方防骗建议': 'Check official anti-scam advice',
+    '申请追回款项': 'Request fund recovery',
+    '支付可退还保证金': 'Pay refundable guarantee',
+    '出现损失后的联络': 'Contact after a loss',
+    '早期返佣不等于工作真实': 'An early commission does not prove the job is genuine',
+    '你完成小额试做并收到返佣，但没有因此继续投入更大金额。': 'You completed a small trial and received a commission, but did not treat it as proof for a larger payment.',
+    '你在收到小额返佣后继续支付了更大任务押金。': 'After receiving a small commission, you continued with a much larger task deposit.',
+    '你从独立渠道核实了招聘或追款安排。': 'You independently verified the recruitment or recovery claim.',
+    '损失后出现了自称协助追款的人；掌握旧案资料仍不等于身份可信。': 'After the loss, someone claiming to help recover the money appeared. Knowing case details still did not verify their identity.',
+    '你没有把陌生招聘转介当成必须完成的任务。': 'You did not treat an unsolicited recruitment referral as a required task.',
+    '今天没有触发失款后的二次联络。': 'No post-loss recovery contact was triggered today.'
+  });
+
   function ui(value) {
     const text = String(value == null ? '' : value);
     if (!state || state.language !== 'en') return text;
@@ -164,10 +188,10 @@
   function loadState() {
     try {
       const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
-      if (saved && [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].includes(saved.version)) {
+      if (saved && [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].includes(saved.version)) {
         const defaults = DATA.createInitialState();
         const savedVersion = saved.version;
-        saved.version = 10;
+        saved.version = 11;
         saved.contactVariant = ['real', 'fake', 'grey'].includes(saved.contactVariant)
           ? saved.contactVariant
           : (saved.contactIsReal ? 'real' : 'fake');
@@ -190,6 +214,7 @@
         saved.mailTab = ['focused', 'other'].includes(saved.mailTab) ? saved.mailTab : 'focused';
         saved.mailUnreadOnly = saved.mailUnreadOnly === true;
         saved.mailTranslations = saved.mailTranslations || {};
+        saved.recoveryScamTriggered = saved.recoveryScamTriggered === true;
         saved.callJudgements = saved.callJudgements && typeof saved.callJudgements === 'object' ? saved.callJudgements : {};
         saved.callRecords = Array.isArray(saved.callRecords) ? saved.callRecords.slice(-12) : [];
         saved.taskState = saved.taskState || {};
@@ -219,6 +244,15 @@
           return {
             ...defaultMail,
             unread: typeof savedMail?.unread === 'boolean' ? savedMail.unread : defaultMail.unread
+          };
+        });
+        saved.messages = saved.messages && typeof saved.messages === 'object' ? saved.messages : {};
+        Object.entries(defaults.messages).forEach(([key, defaultThread]) => {
+          if (!saved.messages[key]) saved.messages[key] = defaultThread;
+          else saved.messages[key] = {
+            ...defaultThread,
+            ...saved.messages[key],
+            items: Array.isArray(saved.messages[key].items) ? saved.messages[key].items : defaultThread.items
           };
         });
         if (savedVersion < 6) {
@@ -512,6 +546,24 @@
       if (intent.question || intent.verify) return '我也只看到 PolyULife 的通知，课室是 N003。你可以再看一下 Calendar。';
       return '收到，等下见。';
     }
+    if (channel === 'message' && id === 'health') {
+      if (intent.verify || intent.refuse) return '客服只能通过短信中的专用页面取消；今天不处理便会开始每月扣费。';
+      if (intent.question) return '这是随健康应用试用附送的保障服务，系统显示你的资料已登记。';
+      if (intent.sensitive || intent.payment) return '请在取消页面输入银行卡资料，系统会以HK$1验证扣款后关闭自动续费。';
+      return '为免开始收费，请尽快使用取消页面。';
+    }
+    if (channel === 'message' && id === 'market') {
+      if (intent.verify || intent.refuse) return '我已经付款了，平台客服说你只差收款验证。不要取消订单，不然钱会卡住。';
+      if (intent.question) return '验证页面会显示我的付款记录；你输入银行资料后就能收款。';
+      return '麻烦尽快完成验证，我等着取货。';
+    }
+    if (channel === 'message' && id === 'recovery') {
+      if (intent.verify || intent.refuse) return '案件资料已由系统转交，不要另行报警，以免影响资金冻结。请只使用专员发给你的追回页面。';
+      if (intent.question) return '我们已掌握你的交易时间及金额，追回程序需先建立受理钱包。';
+      if (intent.sensitive) return '请在案件页面输入收款银行和账户资料，用于核对资金归属。';
+      if (intent.payment) return '最后需缴交HK$300可退还保证金，完成后资金会连同保证金一并退回。';
+      return '案件追回窗口只有今天有效，请按页面步骤完成。';
+    }
     if (channel === 'message') {
       if (intent.refuse || intent.verify) return '系统显示两小时后会退回。请不要致电其他号码，直接使用短信链接处理。';
       if (intent.sensitive) return '请把资料填写到链接页面，不要直接在短信发送。完成后再支付重新处理费。';
@@ -533,6 +585,13 @@
       if (intent.sensitive) return 'Please enter your student and banking details in the onboarding form so the reimbursement profile can be created.';
       if (intent.payment) return 'Purchase the e-vouchers first and send the receipts here. Reimbursement will be arranged after the project account is activated.';
       return 'Thank you for your interest. Please complete the onboarding form today to reserve the position.';
+    }
+    if (id === 'mail-career') {
+      if (intent.refuse) return 'Understood. Your workspace invitation will expire at the end of today.';
+      if (intent.verify) return 'The role is handled by our project team rather than the original employer. The fastest verification is to complete the training workspace.';
+      if (intent.sensitive) return 'The workspace needs your mobile number and payment profile before it can release trial-task commission.';
+      if (intent.payment) return 'The first task is small and commission is released immediately. Higher-value tasks become available after your account is rated.';
+      return 'Thank you. Open the project workspace to begin the 40-minute training and trial task.';
     }
     if (intent.refuse) return 'Your provisional seat will expire at 10:00. No further action will be taken unless payment is received.';
     if (intent.verify) return 'The event desk is busy. The personal FPS account is the fastest way to secure the provisional seat before 10:00.';
@@ -595,7 +654,6 @@
     state.notifications.forEach((item) => {
       if (item.app === appId) item.unread = false;
     });
-    if (appId === 'messages') Object.values(state.messages).forEach((thread) => { thread.unread = false; });
     if (appId === 'mail') return;
     if (appId === 'phone') state.callLog.forEach((call) => { call.unread = false; });
   }
@@ -1038,7 +1096,10 @@
   }
 
   function renderMessages(target) {
-    if (target === 'thread-parcel') return renderMessageThread('parcel');
+    if (target) {
+      const targetKey = Object.keys(state.messages).find((key) => state.messages[key].id === target);
+      if (targetKey) return renderMessageThread(targetKey);
+    }
     activeThreadKey = null;
     els.appContent.innerHTML = `
       <div class="app-pad">
@@ -1062,6 +1123,7 @@
     if (!thread) return renderMessages();
     activeThreadKey = key;
     thread.unread = false;
+    if (key === 'recovery') state.taskState.recovery.steps.messageRead = true;
     saveState();
     els.appTitle.textContent = key === 'parcel' ? ui(thread.sender) : thread.sender;
     const pending = pendingReplies.has(`message:${key}`);
@@ -1077,6 +1139,7 @@
             <button class="secondary-action" type="button" data-action="message-copy-tracking">${esc(ui('保存短信运单号'))}</button>
             <button class="secondary-action" type="button" data-action="message-search-domain">${esc(ui('自己搜索这个域名'))}</button>
           </div>` : ''}
+        ${key !== 'parcel' ? messageThreadActions(key) : ''}
       </div>
       <form class="message-composer" id="messageReplyForm" data-thread="${esc(key)}">
         <label class="sr-only" for="messageReplyInput">${esc(ui('输入信息'))}</label>
@@ -1256,6 +1319,7 @@
     mail.unread = false;
     if (mail.id === 'mail-parcel') state.taskState.parcel.steps.noticeRead = true;
     if (mail.id === 'mail-research') state.taskState.research.steps.invitationRead = true;
+    if (mail.id === 'mail-career') state.taskState.career.steps.invitationRead = true;
     if (mail.id === 'mail-event-fee') {
       state.taskState.event.steps.paymentMailRead = true;
       if (state.taskState.event.steps.officialEventOpened) state.taskState.event.steps.feeCompared = true;
@@ -1312,6 +1376,7 @@
   function mailActions(mail) {
     if (mail.tracking) return `<button class="primary-action" type="button" data-action="mail-save-tracking">${esc(ui('保存完整运单号'))}</button><button class="secondary-action" type="button" data-action="call-hall">${esc(ui('致电收发室'))}</button>`;
     if (mail.kind === 'research') return `<button class="primary-action" type="button" data-action="research-open-link">${esc(ui('打开 onboarding form'))}</button><button class="secondary-action" type="button" data-action="research-check-directory">${esc(ui('从官方目录查教授'))}</button>`;
+    if (mail.kind === 'career') return `<button class="primary-action" type="button" data-action="career-open-workspace">${esc(ui('打开项目工作台'))}</button><button class="secondary-action" type="button" data-action="career-check-official">${esc(ui('核实招聘渠道'))}</button>`;
     if (mail.kind === 'event-payment') return `<button class="primary-action" type="button" data-action="event-open-payment">${esc(ui('查看付款页面'))}</button><button class="secondary-action" type="button" data-action="event-open-polyu">${esc(ui('在 PolyULife 查活动'))}</button>`;
     return `<button class="secondary-action" type="button" data-action="open-contacts">${esc(ui('查看相关联系人'))}</button>`;
   }
@@ -1568,6 +1633,18 @@
         ${browserCard('www.polyu.edu.hk/staff', 'Professor C. W. Chan · Simulated Staff Directory', '教学模拟中的校内电邮和部门电话。', 'staff-directory')}
         ${browserCard('research-onboarding.example', 'AI Learning Research Onboarding', 'Complete your research assistant onboarding today.', 'research-onboarding', true)}`;
     }
+    if (/northbridge|linkedin|job|career|招聘|兼职|助理/i.test(q)) {
+      return `<span class="section-label">${esc(localized(`“${q}”的结果`, `Results for “${q}”`))}</span>${browserCard('northbridge-projects.example', 'Northbridge project workspace', 'Remote research tasks, training and instant commission.', 'career-workspace', true)}${browserCard('原招聘平台与公司官网', '核实招聘转介', '确认原职位是否真的把你转介到这间公司，以及是否要求先付款。', 'career-official')}`;
+    }
+    if (/medical-service|health|ha go|醫療|医疗|自动扣费|自動扣費/i.test(q)) {
+      return `<span class="section-label">${esc(localized(`“${q}”的结果`, `Results for “${q}”`))}</span>${browserCard('medical-service-cancel.example', 'Cancel health coverage', 'Enter card details to stop an automatic monthly charge.', 'health-cancel', true)}${browserCard('教学模拟 · 官方医疗应用', '检查账户订阅', '从自行打开的应用确认是否真的有服务或收费。', 'health-official')}`;
+    }
+    if (/marketplace|carousell|二手|收款验证|收款驗證/i.test(q)) {
+      return `<span class="section-label">${esc(localized(`“${q}”的结果`, `Results for “${q}”`))}</span>${browserCard('marketplace-protection.example', 'Payment protection verification', 'Link your bank account to receive the buyer payment.', 'market-protection', true)}${browserCard('教学模拟 · 平台内订单', '检查买家付款状态', '返回原平台查看订单和付款，而不是依赖外部截图或邮件。', 'market-official')}`;
+    }
+    if (/adcc|追回|追款|case-recovery|防骗/i.test(q)) {
+      return `<span class="section-label">${esc(localized(`“${q}”的结果`, `Results for “${q}”`))}</span>${browserCard('www.adcc.gov.hk', '官方防骗建议', '发生损失后直接从官方入口查证，不通过主动联络者提供的页面。', 'adcc-advice')}${browserCard('case-recovery-centre.example', 'Emergency fund recovery', 'Create a wallet to recover a reported loss.', 'recovery-portal', true)}`;
+    }
     if (/event|innovation|活动|创新/i.test(q)) {
       return `
         <span class="section-label">${esc(localized(`“${q}”的结果`, `Results for “${q}”`))}</span>
@@ -1601,7 +1678,28 @@
       </button>`;
   }
 
+  function renderExtendedBrowserPage(page) {
+    if (page === 'career-workspace') { renderCareerWorkspace(); return true; }
+    const staticPages = {
+      'career-official': `<div class="app-pad"><article class="browser-card"><span class="browser-domain">教学模拟 · 原招聘平台与公司公开资料</span><span class="official-chip">INDEPENDENT CHECK</span><h2>Recruitment referral check</h2><p>The original internship is still open and did not refer applicants to Northbridge Talent. The named company does not list a Research and Project Assistant role or any task-purchase onboarding process.</p><div class="action-row"><button class="primary-action" type="button" data-action="career-check-official">${esc(ui('保存查询结果'))}</button><button class="secondary-action" type="button" data-action="browser-home">${esc(ui('返回搜索'))}</button></div></article></div>`,
+      'health-cancel': `<div class="fake-page"><span class="browser-domain">medical-service-cancel.example</span><div class="fake-logo">+</div><h2>Cancel monthly health coverage</h2><p>Confirm the card used for registration. A temporary HK$1 verification will be reversed after cancellation.</p><div class="fake-fee"><span>Next monthly charge</span><strong>HK$388</strong></div><div class="safe-input-note">教学模拟不会要求真实银行卡或验证码；继续只会记录资料暴露和模拟交易。</div><div class="action-row"><button class="primary-action" type="button" data-action="health-submit-cancel">${esc(ui('提交模拟资料'))}</button><button class="secondary-action" type="button" data-action="health-check-official">${esc(ui('自行查官方医疗应用'))}</button></div></div>`,
+      'health-official': `<div class="app-pad"><article class="browser-card"><span class="browser-domain">教学模拟 · 官方入口说明</span><span class="official-chip">INDEPENDENT CHECK</span><h2>Health app account</h2><p>模拟账户没有任何保障试用、自动续费或待取消项目。官方机构不会要求经陌生短信页面输入银行卡来取消服务。</p><div class="action-row"><button class="primary-action" type="button" data-action="health-save-check">${esc(ui('保存查询结果'))}</button><button class="secondary-action" type="button" data-action="browser-home">${esc(ui('返回搜索'))}</button></div></article></div>`,
+      'market-protection': `<div class="fake-page"><span class="browser-domain">marketplace-protection.example</span><div class="fake-logo">M</div><h2>Receive buyer payment</h2><p>The buyer's HK$680 payment is on hold. Link a bank card and enter the verification amount shown in your banking app to release it.</p><div class="fake-fee"><span>Payment to receive</span><strong>HK$680</strong></div><div class="safe-input-note">教学模拟不会打开真实银行应用，也不会读取验证码。</div><div class="action-row"><button class="primary-action" type="button" data-action="market-submit-verification">${esc(ui('提交模拟资料'))}</button><button class="secondary-action" type="button" data-action="market-check-platform">${esc(ui('返回平台内交易'))}</button></div></div>`,
+      'market-official': `<div class="app-pad"><article class="browser-card"><span class="browser-domain">教学模拟 · 平台内订单</span><span class="official-chip">IN-APP ORDER</span><h2>Calculator listing</h2><p>No payment has been received. The buyer moved the conversation outside the platform, and the external confirmation page is not part of this order.</p><div class="action-row"><button class="primary-action" type="button" data-action="market-save-check">${esc(ui('保存查询结果'))}</button><button class="secondary-action" type="button" data-action="browser-home">${esc(ui('返回搜索'))}</button></div></article></div>`,
+      'adcc-advice': `<div class="app-pad"><article class="browser-card"><span class="browser-domain">www.adcc.gov.hk · 教学摘要</span><span class="official-chip">OFFICIAL ADVICE</span><h2>先停、再查、不要再付款</h2><p>防骗机构不会要求转账、提供网上银行密码或支付“保证金”来追回损失。应从自行查找的官方渠道联络警方和银行，并保留交易及对话记录。</p><div class="action-row"><button class="primary-action" type="button" data-action="recovery-save-official">${esc(ui('保存查询结果'))}</button><button class="secondary-action" type="button" data-action="open-bank-app">${esc(ui('查看银行记录'))}</button></div></article></div>`
+    };
+    if (page === 'recovery-portal') {
+      const steps = state.taskState.recovery.steps;
+      els.appContent.innerHTML = `<div class="fake-page"><span class="browser-domain">case-recovery-centre.example</span><div class="fake-logo">盾</div><h2>Emergency fund recovery</h2><p>Case reference HK-${String(state.seed).slice(0, 6).toUpperCase()} · Claimed loss ${esc(formatHKD(state.moneyLost))}. Create a receiving wallet so frozen funds can be returned.</p><div class="safe-input-note">教学模拟不会连接真实银行、警方系统或提交账户资料。</div><div class="action-row">${steps.bankingDetailsShared ? `<button class="primary-action" type="button" data-action="recovery-pay-guarantee">${esc(ui('支付可退还保证金'))}</button>` : `<button class="primary-action" type="button" data-action="recovery-share-details">${esc(ui('提交模拟资料'))}</button>`}<button class="secondary-action" type="button" data-action="recovery-check-official">${esc(ui('查看官方防骗建议'))}</button></div></div>`;
+      return true;
+    }
+    if (!staticPages[page]) return false;
+    els.appContent.innerHTML = staticPages[page];
+    return true;
+  }
+
   function renderBrowserPage(page) {
+    if (renderExtendedBrowserPage(page)) return;
     if (page === 'contacts-search') {
       state.browserPage = 'home';
       saveState();
@@ -1816,6 +1914,13 @@
     callbackTimer = setTimeout(() => {
       if (callSession && callSession.phase === 'dialing' && callSession.scenario === 'orientation') connectCallSession();
     }, 1450);
+  }
+
+  function messageThreadActions(key) {
+    if (key === 'health') return `<div class="message-actions"><button class="primary-action" type="button" data-action="health-open-cancel">${esc(ui('打开取消页面'))}</button><button class="secondary-action" type="button" data-action="health-check-official">${esc(ui('自行查官方医疗应用'))}</button></div>`;
+    if (key === 'market') return `<div class="message-actions"><button class="primary-action" type="button" data-action="market-open-protection">${esc(ui('查看收款验证'))}</button><button class="secondary-action" type="button" data-action="market-check-platform">${esc(ui('返回平台内交易'))}</button></div>`;
+    if (key === 'recovery') return `<div class="message-actions"><button class="primary-action" type="button" data-action="recovery-open-portal">${esc(ui('申请追回款项'))}</button><button class="secondary-action" type="button" data-action="recovery-check-official">${esc(ui('查看官方防骗建议'))}</button></div>`;
+    return '';
   }
 
   function startCallSession(scenario, number, contactId = null) {
@@ -2366,10 +2471,160 @@
     addHistory('private-transfer', `向新号码提供的个人账户转账HK$${amount}`);
     state.transactions.unshift({ title: 'FPS TRANSFER', time: `今天 ${formatTime(state.time)}`, amount: -amount });
     advanceTime(3);
+    if (!state.contactIsReal) triggerRecoveryScam();
     closeOverlay();
     endCall();
     saveState();
     showToast('转账已提交');
+  }
+
+  function triggerRecoveryScam() {
+    if (state.recoveryScamTriggered || state.moneyLost <= 0) return;
+    state.recoveryScamTriggered = true;
+    state.taskState.recovery.status = 'active';
+    state.messages.recovery = {
+      id: 'thread-recovery',
+      sender: '案件跟进专员',
+      number: '+852 6XXX 7742',
+      unread: true,
+      items: [
+        { from: 'them', time: formatTime(state.time), text: `你好，我们收到你刚才一笔${formatHKD(state.moneyLost)}可疑交易的资料，资金目前仍有机会追回。` },
+        { from: 'them', time: formatTime(state.time), text: '为免资金被转走，请不要再联络原收款人，也不要重复报警。立即进入专员案件页面建立退款钱包：https://case-recovery-centre.example' }
+      ]
+    };
+    state.notifications.unshift({ id: `n-recovery-${Date.now()}`, app: 'messages', title: '案件跟进专员', body: '已掌握你的交易资料，可协助追回', time: formatTime(state.time), unread: true, target: 'thread-recovery' });
+    addHistory('recovery-scam-arrived', '发生损失后收到自称案件专员的追款联络');
+  }
+
+  function renderCareerWorkspace() {
+    const steps = state.taskState.career.steps;
+    steps.trainingOpened = true;
+    saveState();
+    const stage = steps.largeDepositRequested ? 4 : (steps.trialCommissionReceived ? 3 : (steps.profileSubmitted ? 2 : 1));
+    const content = stage === 1
+      ? `<h2>Project workspace training</h2><p>Welcome. Review the company background, quality rules and task settlement process. Training progress: 40 minutes completed.</p><div class="safe-input-note">教学模拟只记录提供了哪类资料，不会提交真实电话号码、银行账户或证件。</div><div class="action-row"><button class="primary-action" type="button" data-action="career-submit-profile">${esc(ui('提交模拟资料'))}</button><button class="secondary-action" type="button" data-action="career-check-official">${esc(ui('核实招聘渠道'))}</button></div>`
+      : (stage === 2
+        ? `<h2>Trial task · Product data check</h2><p>Purchase one simulated product sample for HK$120. The cost and HK$26 commission will be released immediately after review.</p><div class="fake-fee"><span>Trial task</span><strong>HK$120</strong></div><div class="action-row"><button class="primary-action" type="button" data-action="career-pay-trial">${esc(ui('完成首个试做任务'))}</button><button class="secondary-action" type="button" data-action="career-check-official">${esc(ui('停止并核实'))}</button></div>`
+        : `<h2>${stage === 3 ? 'Trial settled · Account upgraded' : 'Priority task waiting'}</h2><p>${stage === 3 ? 'HK$146 has reached your simulated bank account. A priority batch is now available; deposit HK$2,400 to earn HK$720 commission.' : 'The priority batch remains locked until the HK$2,400 task deposit is completed.'}</p><div class="fake-fee"><span>Priority task deposit</span><strong>HK$2,400</strong></div><div class="action-row"><button class="primary-action" type="button" data-action="career-pay-large">${esc(ui('继续高额任务'))}</button><button class="secondary-action" type="button" data-action="career-check-official">${esc(ui('停止并核实'))}</button></div>`);
+    els.appContent.innerHTML = `<div class="fake-page career-workspace"><span class="browser-domain">northbridge-projects.example/workspace</span><div class="career-stage-strip">${['Training','Trial','Commission','Priority'].map((label, index) => `<span class="${index + 1 <= stage ? 'active' : ''}"><i>${index + 1}</i>${label}</span>`).join('')}</div>${content}</div>`;
+    renderHome();
+  }
+
+  function submitCareerProfile() {
+    const steps = state.taskState.career.steps;
+    if (!steps.profileSubmitted) {
+      steps.profileSubmitted = true;
+      state.privacyExposure += 1;
+      addHistory('career-profile-submitted', '向外部项目工作台提供了模拟电话号码及收款资料');
+      advanceTime(4);
+      saveState();
+    }
+    renderCareerWorkspace();
+  }
+
+  function payCareerTrial() {
+    const steps = state.taskState.career.steps;
+    if (!steps.trialPaid) {
+      steps.trialPaid = true;
+      state.balance -= 120;
+      state.transactions.unshift({ title: 'PROJECT TRIAL PURCHASE', time: `今天 ${formatTime(state.time)}`, amount: -120 });
+      advanceTime(2);
+      state.balance += 146;
+      state.transactions.unshift({ title: 'PROJECT TRIAL SETTLEMENT', time: `今天 ${formatTime(state.time)}`, amount: 146 });
+      steps.trialCommissionReceived = true;
+      steps.largeDepositRequested = true;
+      addHistory('career-trial-returned', '完成HK$120试做后收到HK$146真实返款');
+      state.notifications.unshift({ id: `n-career-commission-${Date.now()}`, app: 'bank', title: '银行', body: '入账 HK$146.00', time: formatTime(state.time), unread: true });
+      saveState();
+      playSound('notification');
+    }
+    renderCareerWorkspace();
+  }
+
+  function payCareerLargeTask() {
+    const steps = state.taskState.career.steps;
+    if (!state.history.some((item) => item.label === 'career-large-paid')) {
+      state.balance -= 2400;
+      state.moneyLost += 2400;
+      state.transactions.unshift({ title: 'PROJECT PRIORITY DEPOSIT', time: `今天 ${formatTime(state.time)}`, amount: -2400 });
+      addHistory('career-large-paid', '收到小额返佣后继续支付HK$2,400高额任务押金');
+      advanceTime(3);
+      triggerRecoveryScam();
+      saveState();
+      playSound('notification');
+    }
+    els.appContent.innerHTML = `<div class="fake-page"><span class="browser-domain">northbridge-projects.example/workspace</span><div class="fake-logo">!</div><h2>Account review required</h2><p>The batch contains a data mismatch. Complete another matching task before commission and deposit can be withdrawn.</p><div class="action-row"><button class="primary-action" type="button" data-action="open-bank-app">${esc(ui('查看银行记录'))}</button><button class="secondary-action" type="button" data-action="career-check-official">${esc(ui('停止并核实'))}</button></div></div>`;
+    renderHome();
+  }
+
+  function verifyCareerChannel() {
+    const steps = state.taskState.career.steps;
+    steps.verified = true;
+    state.taskState.career.status = 'done';
+    addEvidence('career-channel', '从原招聘平台及公司公开联系方式确认没有该研究助理转介或任务充值安排');
+    addHistory('career-channel-verified', '独立核实招聘与任务充值安排');
+    saveState();
+    showDialog('招聘渠道核实', '原职位页面没有把申请转交给 Northbridge Talent；真实雇主也没有“购买样品、充值任务、完成后返佣”的入职流程。', [{ label: '知道了', action: 'close-overlay', kind: 'primary-action' }]);
+  }
+
+  function processHealthCancellation() {
+    if (!state.history.some((item) => item.label === 'health-cancel-paid')) {
+      state.privacyExposure += 2;
+      state.balance -= 388;
+      state.moneyLost += 388;
+      state.transactions.unshift({ title: 'HEALTH COVERAGE VERIFICATION', time: `今天 ${formatTime(state.time)}`, amount: -388 });
+      addHistory('health-cancel-paid', '在假冒取消页面提交银行卡资料并产生HK$388模拟扣款');
+      advanceTime(2);
+      triggerRecoveryScam();
+      saveState();
+      playSound('notification');
+    }
+    els.appContent.innerHTML = `<div class="fake-page"><span class="browser-domain">medical-service-cancel.example</span><div class="fake-logo">…</div><h2>Cancellation under review</h2><p>The verification amount has been received. Keep this page open while an agent reviews your cancellation.</p><div class="action-row"><button class="primary-action" type="button" data-action="open-bank-app">${esc(ui('查看银行记录'))}</button><button class="secondary-action" type="button" data-action="health-check-official">${esc(ui('自行查官方医疗应用'))}</button></div></div>`;
+    renderHome();
+  }
+
+  function processMarketplaceVerification() {
+    if (!state.history.some((item) => item.label === 'market-verification-paid')) {
+      state.privacyExposure += 2;
+      state.balance -= 680;
+      state.moneyLost += 680;
+      state.transactions.unshift({ title: 'MARKETPLACE VERIFICATION', time: `今天 ${formatTime(state.time)}`, amount: -680 });
+      addHistory('market-verification-paid', '为领取不存在的二手平台款项支付HK$680验证转账');
+      advanceTime(2);
+      triggerRecoveryScam();
+      saveState();
+      playSound('notification');
+    }
+    els.appContent.innerHTML = `<div class="fake-page"><span class="browser-domain">marketplace-protection.example</span><div class="fake-logo">!</div><h2>Verification mismatch</h2><p>The amount entered does not match. Contact the buyer and complete another verification to unlock the held payment.</p><div class="action-row"><button class="primary-action" type="button" data-action="open-bank-app">${esc(ui('查看银行记录'))}</button><button class="secondary-action" type="button" data-action="market-check-platform">${esc(ui('返回平台内交易'))}</button></div></div>`;
+    renderHome();
+  }
+
+  function shareRecoveryDetails() {
+    const steps = state.taskState.recovery.steps;
+    if (!steps.bankingDetailsShared) {
+      steps.bankingDetailsShared = true;
+      state.privacyExposure += 2;
+      addHistory('recovery-details-shared', '向假冒追款专员提供了模拟银行账户资料');
+      advanceTime(2);
+      saveState();
+    }
+    renderBrowserPage('recovery-portal');
+  }
+
+  function payRecoveryGuarantee() {
+    const steps = state.taskState.recovery.steps;
+    if (!steps.guaranteePaid) {
+      steps.guaranteePaid = true;
+      state.balance -= 300;
+      state.moneyLost += 300;
+      state.transactions.unshift({ title: 'RECOVERY GUARANTEE', time: `今天 ${formatTime(state.time)}`, amount: -300 });
+      addHistory('recovery-guarantee-paid', '向假冒追款专员支付HK$300可退还保证金');
+      advanceTime(2);
+      saveState();
+      playSound('notification');
+    }
+    els.appContent.innerHTML = `<div class="fake-page"><span class="browser-domain">case-recovery-centre.example</span><div class="fake-logo">…</div><h2>Recovery queue pending</h2><p>Your guarantee is recorded. A further compliance payment may be required before funds can be released.</p><div class="action-row"><button class="primary-action" type="button" data-action="open-bank-app">${esc(ui('查看银行记录'))}</button><button class="secondary-action" type="button" data-action="recovery-check-official">${esc(ui('查看官方防骗建议'))}</button></div></div>`;
+    renderHome();
   }
 
   function processResearchOnboarding() {
@@ -2392,6 +2647,7 @@
       state.notifications.unshift({ id: 'n-bank-research-' + Date.now(), app: 'bank', title: '银行', body: '电子礼券交易 HK$800.00', time: formatTime(state.time), unread: true });
       addHistory('research-vouchers-paid', '为冒充教授的研究项目购买HK$800电子礼券');
       advanceTime(3);
+      triggerRecoveryScam();
       saveState();
       playSound('notification');
     }
@@ -2407,6 +2663,7 @@
       state.notifications.unshift({ id: 'n-bank-event-' + Date.now(), app: 'bank', title: '银行', body: 'FPS 转账 HK$180.00', time: formatTime(state.time), unread: true });
       addHistory('fake-event-paid', '向活动邮件提供的个人FPS账户支付HK$180');
       advanceTime(2);
+      triggerRecoveryScam();
       saveState();
       playSound('notification');
     }
@@ -2454,6 +2711,7 @@
       addHistory('fake-post-paid', '在短信页面使用模拟资料并支付HK$32');
       state.notifications.unshift({ id: 'n-bank-' + Date.now(), app: 'bank', title: '银行', body: '网上交易 HK$32.00', time: formatTime(state.time), unread: true });
       advanceTime(3);
+      triggerRecoveryScam();
       saveState();
       playSound('notification');
     }
@@ -2492,6 +2750,12 @@
     const eventOutcome = state.taskState.event.decision === 'attend'
       ? '你查看官方资料后，自主决定参加，并在 PolyULife 内完成报名。'
       : (state.taskState.event.decision === 'skip' ? '你核对了活动资料，并决定这次不参加；没有报名也不算任务失败。' : (state.history.some((item) => item.label === 'fake-event-paid') ? '你向邮件提供的个人 FPS 付款，但官方活动并未因此完成报名。' : (state.taskState.event.steps.officialEventOpened ? '你看过官方活动资料，暂时没有决定是否参加。' : '你今天没有处理这则活动邀请。')));
+    const careerOutcome = state.history.some((item) => item.label === 'career-large-paid')
+      ? '你在收到小额返佣后继续支付了更大任务押金。'
+      : (state.taskState.career.steps.trialCommissionReceived ? '你完成小额试做并收到返佣，但没有因此继续投入更大金额。' : (state.taskState.career.steps.verified ? '你从独立渠道核实了招聘或追款安排。' : '你没有把陌生招聘转介当成必须完成的任务。'));
+    const recoveryOutcome = state.recoveryScamTriggered
+      ? '损失后出现了自称协助追款的人；掌握旧案资料仍不等于身份可信。'
+      : '今天没有触发失款后的二次联络。';
     els.overlayLayer.innerHTML = `
       <section class="review-overlay">
         <span class="simulation-tag">DAY REVIEW · ${formatTime(state.time)}</span>
@@ -2499,6 +2763,8 @@
         <p>${esc(ui('这不是正确答案清单，而是你今天留下的行动记录。'))}</p>
         <article class="review-card"><strong>${esc(ui('必须处理的事项'))} ${done} / ${total}</strong><p>${esc(ui(state.taskState.parcel.status === 'done' ? '交换申请文件已领取。' : '交换申请文件尚未领取。'))} ${esc(ui(state.taskState.contact.status === 'done' ? '迎新联系人已处理。' : '迎新联系人身份仍未确认。'))}</p></article>
         <article class="review-card"><strong>${esc(ui('收件箱里的选择'))}</strong><p>${esc(ui(researchOutcome))} ${esc(ui(eventOutcome))}</p></article>
+        <article class="review-card"><strong>${esc(ui('早期返佣不等于工作真实'))}</strong><p>${esc(ui(careerOutcome))}</p></article>
+        ${state.recoveryScamTriggered ? `<article class="review-card"><strong>${esc(ui('出现损失后的联络'))}</strong><p>${esc(ui(recoveryOutcome))}</p></article>` : ''}
         <article class="review-card"><strong>${esc(ui('独立来源'))} ${verification}</strong><p>${verification ? state.evidence.map((item) => esc(ui(item.label))).join(state.language === 'en' ? '; ' : '；') : esc(ui('今天没有从独立来源保存核实信息。'))}</p></article>
         <article class="review-card"><strong>${esc(ui('资料暴露'))} ${state.privacyExposure} · ${esc(ui('金钱损失'))} ${esc(formatHKD(state.moneyLost))}</strong><p>${esc(ui(state.cardFrozen ? '银行卡已冻结，完成了一项止损操作。' : state.moneyLost ? '发生付款后尚未冻结银行卡。' : '没有记录到资金损失。'))}</p></article>
         <article class="review-card"><strong>${esc(ui('陌生来电的真相'))}</strong><p>${esc(ui(identityTruth))}</p></article>
@@ -2655,7 +2921,11 @@
       case 'mail-close-dialog':
         closeOverlay();
         break;
-      case 'open-thread': renderMessageThread(id === 'thread-parcel' ? 'parcel' : 'class'); break;
+      case 'open-thread': {
+        const key = Object.keys(state.messages).find((threadKey) => state.messages[threadKey].id === id);
+        if (key) renderMessageThread(key);
+        break;
+      }
       case 'open-mail': {
         const mail = state.mails.find((item) => item.id === id);
         if (mail) renderMailDetail(mail);
@@ -2677,6 +2947,24 @@
       case 'research-submit-simulated': processResearchOnboarding(); break;
       case 'research-buy-vouchers': processResearchVoucherPayment(); break;
       case 'research-contact-official': callContact('contact-department'); break;
+      case 'career-open-workspace': state.browserPage = 'career-workspace'; saveState(); openApp('browser'); break;
+      case 'career-submit-profile': submitCareerProfile(); break;
+      case 'career-pay-trial': payCareerTrial(); break;
+      case 'career-pay-large': payCareerLargeTask(); break;
+      case 'career-check-official': verifyCareerChannel(); break;
+      case 'health-open-cancel': state.browserPage = 'health-cancel'; saveState(); openApp('browser'); break;
+      case 'health-check-official': state.browserPage = 'health-official'; saveState(); openApp('browser'); break;
+      case 'health-submit-cancel': processHealthCancellation(); break;
+      case 'health-save-check': addEvidence('health-official', '从自行打开的医疗应用确认没有试用或自动续费项目'); saveState(); showToast('查询结果已保存'); break;
+      case 'market-open-protection': state.browserPage = 'market-protection'; saveState(); openApp('browser'); break;
+      case 'market-check-platform': state.browserPage = 'market-official'; saveState(); openApp('browser'); break;
+      case 'market-submit-verification': processMarketplaceVerification(); break;
+      case 'market-save-check': addEvidence('market-official', '返回二手平台内订单确认买家并未付款'); saveState(); showToast('查询结果已保存'); break;
+      case 'recovery-open-portal': state.taskState.recovery.steps.portalOpened = true; state.browserPage = 'recovery-portal'; saveState(); openApp('browser'); break;
+      case 'recovery-share-details': shareRecoveryDetails(); break;
+      case 'recovery-pay-guarantee': payRecoveryGuarantee(); break;
+      case 'recovery-check-official': state.browserPage = 'adcc-advice'; saveState(); openApp('browser'); break;
+      case 'recovery-save-official': state.taskState.recovery.steps.officialAdviceChecked = true; state.taskState.recovery.status = 'done'; addEvidence('recovery-official', '从官方防骗资讯确认追款机构不会要求转账、银行密码或保证金'); saveState(); showToast('查询结果已保存'); break;
       case 'event-open-payment':
         state.browserPage = 'event-payment'; state.browserQuery = ''; saveState(); openApp('browser'); break;
       case 'event-open-polyu':

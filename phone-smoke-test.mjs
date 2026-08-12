@@ -156,7 +156,7 @@ await click('[data-action="start-day"]');
 await command('Page.navigate', { url: `${pageBase}/?preview=home` });
 await wait(450);
 
-assert(await evaluate('JSON.parse(localStorage.getItem("polyu_simulator_phone_v1")).version === 10'), 'Call-system state was not migrated to version 10');
+assert(await evaluate('JSON.parse(localStorage.getItem("polyu_simulator_phone_v1")).version === 11'), 'Scenario state was not migrated to version 11');
 assert(await evaluate('["real", "fake", "grey"].includes(JSON.parse(localStorage.getItem("polyu_simulator_phone_v1")).contactVariant)'), 'The three-way caller variant was not initialised');
 assert(await evaluate('document.querySelectorAll("#homeTodoList .home-todo-item").length === 2'), 'Desktop to-do widget did not keep optional inbox items out of the task list');
 assert(await evaluate('!document.querySelector("#systemNavigation").classList.contains("is-hidden")'), 'System navigation buttons were not shown after unlocking');
