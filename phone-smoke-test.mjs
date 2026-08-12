@@ -200,6 +200,28 @@ await capture('simulator-free-number-search');
 assert(await evaluate('JSON.parse(localStorage.getItem("polyu_simulator_phone_v1")).investigationQueries.length >= 2'), 'Free investigation queries were not persisted');
 await click('#systemHome');
 
+await click('#appDock [data-open-app="messages"]');
+await click('[data-action="open-thread"][data-id="thread-parcel"]');
+assert(await evaluate('document.querySelector("#messageReplyForm textarea") !== null'), 'Free-form message composer did not render');
+await evaluate(`(() => { const input = document.querySelector('#messageReplyInput'); input.value = '我会先联系香港邮政官方核实，不会付款。'; input.dispatchEvent(new Event('input', { bubbles: true })); document.querySelector('#messageReplyForm').requestSubmit(); })()`);
+assert(await evaluate('Array.from(document.querySelectorAll(".bubble.mine")).some(el => el.textContent.includes("不会付款"))'), 'Free-form message was not added to the conversation');
+assert(await evaluate('document.querySelector(".typing-bubble") !== null'), 'Message reply did not show a typing state');
+await wait(800);
+assert(await evaluate('Array.from(document.querySelectorAll(".bubble:not(.mine)")).some(el => el.textContent.includes("不要致电其他号码"))'), 'Suspicious sender did not react to a verification/refusal reply');
+await capture('simulator-free-message-reply');
+await click('#systemHome');
+
+await click('#appGrid [data-open-app="mail"]');
+await click('[data-action="open-mail"][data-id="mail-parcel"]');
+await click('.outlook-reply-primary');
+assert(await evaluate('document.querySelector("#mailReplyForm textarea") !== null'), 'Outlook inline reply composer did not render');
+await evaluate(`(() => { const input = document.querySelector('#mailReplyInput'); input.value = 'Could you confirm whether I should pay the fee in the text message?'; input.dispatchEvent(new Event('input', { bubbles: true })); document.querySelector('#mailReplyForm').requestSubmit(); })()`);
+assert(await evaluate('document.querySelector(".outlook-reply-item.mine").textContent.includes("pay the fee")'), 'Free-form mail reply was not preserved');
+await wait(1000);
+assert(await evaluate('Array.from(document.querySelectorAll(".outlook-reply-item:not(.mine)")).some(el => el.textContent.includes("do not collect redelivery fees"))'), 'Official mail sender did not answer the player’s question contextually');
+await capture('simulator-free-mail-reply');
+await click('#systemHome');
+
 await click('#appGrid [data-open-app="settings"]');
 assert(await evaluate('document.querySelector("#appTitle").textContent === "设置"'), 'Settings app did not open');
 await click('[data-action="set-language"][data-value="en"]');
@@ -424,7 +446,7 @@ assert(await evaluate('JSON.parse(localStorage.getItem("polyu_simulator_phone_v1
 console.log(JSON.stringify({
   result: 'PASS',
   apps: ['phone', 'messages', 'mail', 'polyu', 'browser', 'contacts', 'bank', 'tasks', 'settings'],
-  flow: 'real swipe unlock and elastic return, opening brief, desktop to-do, sound control, language and region settings, PolyULife views, parcel verification, unknown caller, professor impersonation, event fee cross-check, day review'
+  flow: 'real swipe unlock and elastic return, opening brief, desktop to-do, free-form SMS and mail replies, sound control, language and region settings, PolyULife views, parcel verification, unknown caller, professor impersonation, event fee cross-check, day review'
 }));
 
 socket.close();

@@ -105,6 +105,9 @@
     '邮件已翻译': 'Message translated', '正在显示原文': 'Showing original', '从发件人菜单可查看原文': 'Use the sender menu to view the original',
     '反应已添加': 'Reaction added', '打印功能在模拟器中不可用': 'Printing is unavailable in the simulator', '暂时没有其他加载项': 'No other add-ins are available',
     '此模拟不发送真实邮件。': 'This simulation does not send real email.', '暂时没有邮件': 'No messages here', '切换到另一个分类查看其余邮件。': 'Switch to the other category to see the remaining messages.'
+    , '输入信息': 'iMessage', '发送': 'Send', '正在输入…': 'Typing…', '信息不能为空': 'Message cannot be empty',
+    '回复内容': 'Reply', '发送回复': 'Send reply', '放弃草稿': 'Discard draft', '已发送': 'Sent',
+    '模拟回复只在这台设备中生成，不会联系真实号码或邮箱。': 'Simulated replies are generated only on this device. No real number or email is contacted.'
   };
 
   function ui(value) {
@@ -133,6 +136,9 @@
   let speechTimer = null;
   let callerAudio = null;
   let mailMenuReturnFocus = null;
+  let activeThreadKey = null;
+  let activeMailId = null;
+  const pendingReplies = new Set();
   let unlockTransitionTimer = null;
   let unlockGesture = createUnlockGesture();
 
@@ -155,10 +161,10 @@
   function loadState() {
     try {
       const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
-      if (saved && [1, 2, 3, 4, 5, 6, 7].includes(saved.version)) {
+      if (saved && [1, 2, 3, 4, 5, 6, 7, 8].includes(saved.version)) {
         const defaults = DATA.createInitialState();
         const savedVersion = saved.version;
-        saved.version = 7;
+        saved.version = 8;
         saved.soundEnabled = saved.soundEnabled !== false;
         saved.openingBriefSeen = saved.openingBriefSeen === true;
         saved.language = saved.language === 'en' ? 'en' : 'zh-CN';
@@ -169,6 +175,10 @@
         saved.dialNumber = String(saved.dialNumber || '').slice(0, 24);
         saved.contactsQuery = String(saved.contactsQuery || '').slice(0, 60);
         saved.investigationQueries = Array.isArray(saved.investigationQueries) ? saved.investigationQueries.slice(-12) : [];
+        saved.messageDrafts = saved.messageDrafts && typeof saved.messageDrafts === 'object' ? saved.messageDrafts : {};
+        saved.mailDrafts = saved.mailDrafts && typeof saved.mailDrafts === 'object' ? saved.mailDrafts : {};
+        saved.mailReplies = saved.mailReplies && typeof saved.mailReplies === 'object' ? saved.mailReplies : {};
+        saved.openMailComposerId = typeof saved.openMailComposerId === 'string' ? saved.openMailComposerId : null;
         saved.mailTab = ['focused', 'other'].includes(saved.mailTab) ? saved.mailTab : 'focused';
         saved.mailUnreadOnly = saved.mailUnreadOnly === true;
         saved.mailTranslations = saved.mailTranslations || {};
@@ -428,6 +438,101 @@
 
   function addHistory(label, detail) {
     state.history.push({ label, detail, time: formatTime(state.time) });
+  }
+
+  function replyIntent(text) {
+    const value = String(text || '').toLowerCase();
+    return {
+      refuse: /(不|不要|不会|不能|拒绝|取消|not\b|won't|will not|can't|cannot|decline|refuse)/i.test(value),
+      sensitive: /(密码|验证码|一次性密码|学号|身份证|护照|银行卡|卡号|cvv|password|passcode|otp|student id|passport|card number)/i.test(value),
+      payment: /(转账|付款|支付|fps|电子礼券|礼券|购买|pay\b|payment|transfer|voucher|buy)/i.test(value),
+      verify: /(核实|确认|查一下|官网|官方|学院|部门|收发室|邮政|polyu|verify|check|official|department|reception|post office)/i.test(value),
+      question: /[?？]|(谁|什么|为何|为什么|怎样|怎么|哪|吗|么|who|what|why|how|where|when)/i.test(value)
+    };
+  }
+
+  function recordFreeReply(channel, id, text, intent) {
+    if (intent.sensitive) state.privacyExposure += 1;
+    addHistory('free-reply', `${channel === 'mail' ? '邮件' : '短信'}回复 ${id}：${text.slice(0, 80)}`);
+  }
+
+  function simulatedReply(channel, id, intent) {
+    if (channel === 'message' && id === 'class') {
+      if (intent.question || intent.verify) return '我也只看到 PolyULife 的通知，课室是 N003。你可以再看一下 Calendar。';
+      return '收到，等下见。';
+    }
+    if (channel === 'message') {
+      if (intent.refuse || intent.verify) return '系统显示两小时后会退回。请不要致电其他号码，直接使用短信链接处理。';
+      if (intent.sensitive) return '请把资料填写到链接页面，不要直接在短信发送。完成后再支付重新处理费。';
+      if (intent.question) return '系统只显示地址资料不完整。详情和处理步骤都在上面的链接。';
+      if (intent.payment) return '重新处理费为 HK$32。付款后地址才会更新，请尽快完成。';
+      return '请在两小时内使用链接更新，否则邮件会自动退回。';
+    }
+    if (id === 'mail-parcel') {
+      if (intent.question || intent.verify || intent.payment) return 'Thanks for checking. Please bring your student ID to Hall Reception before 5:00 PM. We do not collect redelivery fees by text message.';
+      return 'Thank you. The document will remain at Hall Reception until 5:00 PM today.';
+    }
+    if (id === 'mail-event') {
+      if (intent.question || intent.verify) return 'Please use the original contact details in the attachment or contact Student Affairs if you need to confirm an identity.';
+      return 'Noted. Please confirm this year’s arrangements through the original contact details.';
+    }
+    if (id === 'mail-research') {
+      if (intent.refuse) return 'This opportunity closes today. If you change your mind, complete the onboarding form before 5:00 PM.';
+      if (intent.verify) return 'The professor is currently in meetings. There is no need to contact the department; reply here and complete the onboarding form today.';
+      if (intent.sensitive) return 'Please enter your student and banking details in the onboarding form so the reimbursement profile can be created.';
+      if (intent.payment) return 'Purchase the e-vouchers first and send the receipts here. Reimbursement will be arranged after the project account is activated.';
+      return 'Thank you for your interest. Please complete the onboarding form today to reserve the position.';
+    }
+    if (intent.refuse) return 'Your provisional seat will expire at 10:00. No further action will be taken unless payment is received.';
+    if (intent.verify) return 'The event desk is busy. The personal FPS account is the fastest way to secure the provisional seat before 10:00.';
+    if (intent.sensitive) return 'Please use the payment page and reply with the transaction screenshot and your student number.';
+    if (intent.payment) return 'After paying HK$180 by FPS, reply with the screenshot so we can issue the QR ticket.';
+    return 'Your seat is still pending. Complete the HK$180 FPS payment before 10:00 to keep it.';
+  }
+
+  function sendMessageReply(key, text) {
+    const thread = state.messages[key];
+    const clean = String(text || '').trim().slice(0, 500);
+    if (!thread || !clean) return showToast('信息不能为空');
+    const intent = replyIntent(clean);
+    thread.items.push({ from: 'mine', time: formatTime(state.time), text: clean });
+    state.messageDrafts[key] = '';
+    recordFreeReply('message', key, clean, intent);
+    advanceTime(1);
+    const pendingKey = `message:${key}`;
+    pendingReplies.add(pendingKey);
+    saveState();
+    renderMessageThread(key);
+    window.setTimeout(() => {
+      pendingReplies.delete(pendingKey);
+      thread.items.push({ from: 'them', time: formatTime(state.time), text: simulatedReply('message', key, intent) });
+      thread.unread = activeThreadKey !== key;
+      saveState();
+      if (state.currentApp === 'messages' && activeThreadKey === key) renderMessageThread(key);
+      renderHome();
+    }, 650);
+  }
+
+  function sendMailReply(mail, text) {
+    const clean = String(text || '').trim().slice(0, 1200);
+    if (!mail || !clean) return showToast('信息不能为空');
+    const intent = replyIntent(clean);
+    const replies = state.mailReplies[mail.id] || (state.mailReplies[mail.id] = []);
+    replies.push({ from: 'mine', time: formatTime(state.time), text: clean });
+    state.mailDrafts[mail.id] = '';
+    state.openMailComposerId = null;
+    recordFreeReply('mail', mail.id, clean, intent);
+    advanceTime(2);
+    const pendingKey = `mail:${mail.id}`;
+    pendingReplies.add(pendingKey);
+    saveState();
+    renderMailDetail(mail);
+    window.setTimeout(() => {
+      pendingReplies.delete(pendingKey);
+      replies.push({ from: 'them', time: formatTime(state.time), text: simulatedReply('mail', mail.id, intent) });
+      saveState();
+      if (state.currentApp === 'mail' && activeMailId === mail.id) renderMailDetail(mail);
+    }, 850);
   }
 
   function markNotification(id) {
@@ -732,6 +837,13 @@
       return;
     }
     if (state.currentApp === 'mail' && els.appScreen.dataset.mailView === 'detail') {
+      if (state.openMailComposerId) {
+        const mail = state.mails.find((item) => item.id === state.openMailComposerId);
+        state.openMailComposerId = null;
+        saveState();
+        if (mail) renderMailDetail(mail);
+        return;
+      }
       renderMail();
       return;
     }
@@ -860,6 +972,7 @@
 
   function renderMessages(target) {
     if (target === 'thread-parcel') return renderMessageThread('parcel');
+    activeThreadKey = null;
     els.appContent.innerHTML = `
       <div class="app-pad">
         <span class="section-label">${esc(ui('信息'))}</span>
@@ -880,20 +993,35 @@
   function renderMessageThread(key) {
     const thread = state.messages[key];
     if (!thread) return renderMessages();
+    activeThreadKey = key;
     thread.unread = false;
     saveState();
     els.appTitle.textContent = key === 'parcel' ? ui(thread.sender) : thread.sender;
+    const pending = pendingReplies.has(`message:${key}`);
     els.appContent.innerHTML = `
-      <div class="conversation">
+      <div class="conversation-shell">
+      <div class="conversation" id="messageConversation">
         <div class="conversation-date">${esc(ui('今天'))} · ${esc(thread.number)}</div>
         ${thread.items.map((item) => `<div class="bubble ${item.from === 'mine' ? 'mine' : ''}">${esc(item.text)}<small>${esc(formatStoredTime(item.time))}</small></div>`).join('')}
+        ${pending ? `<div class="bubble typing-bubble" aria-label="${esc(ui('正在输入…'))}"><i></i><i></i><i></i></div>` : ''}
         ${key === 'parcel' ? `
           <div class="message-actions">
             <button class="primary-action" type="button" data-action="message-open-link">${esc(ui('打开短信里的页面'))}</button>
             <button class="secondary-action" type="button" data-action="message-copy-tracking">${esc(ui('保存短信运单号'))}</button>
             <button class="secondary-action" type="button" data-action="message-search-domain">${esc(ui('自己搜索这个域名'))}</button>
           </div>` : ''}
+      </div>
+      <form class="message-composer" id="messageReplyForm" data-thread="${esc(key)}">
+        <label class="sr-only" for="messageReplyInput">${esc(ui('输入信息'))}</label>
+        <textarea id="messageReplyInput" rows="1" maxlength="500" placeholder="${esc(ui('输入信息'))}">${esc(state.messageDrafts[key] || '')}</textarea>
+        <button type="submit" aria-label="${esc(ui('发送'))}" ${pending ? 'disabled' : ''}>↑</button>
+      </form>
+      <p class="composer-privacy-note">${esc(ui('模拟回复只在这台设备中生成，不会联系真实号码或邮箱。'))}</p>
       </div>`;
+    requestAnimationFrame(() => {
+      const conversation = $('messageConversation');
+      if (conversation) conversation.scrollTop = conversation.scrollHeight;
+    });
   }
 
   const MAIL_ICONS = {
@@ -948,6 +1076,8 @@
       const mail = state.mails.find((item) => item.id === target);
       if (mail) return renderMailDetail(mail);
     }
+    activeMailId = null;
+    state.openMailComposerId = null;
     els.appTitle.textContent = appName('mail');
     els.appScreen.dataset.mailView = 'inbox';
     const activeTab = state.mailTab || 'focused';
@@ -1055,6 +1185,7 @@
   }
 
   function renderMailDetail(mail) {
+    activeMailId = mail.id;
     mail.unread = false;
     if (mail.id === 'mail-parcel') state.taskState.parcel.steps.noticeRead = true;
     if (mail.id === 'mail-research') state.taskState.research.steps.invitationRead = true;
@@ -1064,6 +1195,9 @@
     }
     saveState();
     const copy = mailCopy(mail);
+    const replies = state.mailReplies[mail.id] || [];
+    const composerOpen = state.openMailComposerId === mail.id;
+    const replyPending = pendingReplies.has(`mail:${mail.id}`);
     els.appTitle.textContent = ui('邮件详情');
     els.appScreen.dataset.mailView = 'detail';
     els.appContent.innerHTML = `
@@ -1084,6 +1218,15 @@
           <div class="outlook-message-body" lang="${esc(copy.language)}"><p>${esc(copy.body)}</p></div>
           ${mail.tracking ? `<div class="outlook-tracking"><span>${esc(ui('运单号'))}</span><strong>${esc(mail.tracking)}</strong></div>` : ''}
           <div class="outlook-message-actions action-row"><span class="outlook-simulation-label">${esc(localized('核验后再行动', 'Verify before acting'))}</span>${mailActions(mail)}</div>
+          ${replies.length || replyPending ? `<section class="outlook-reply-thread" aria-label="${esc(ui('回复'))}">
+            ${replies.map((reply) => `<article class="outlook-reply-item ${reply.from === 'mine' ? 'mine' : ''}"><header><strong>${esc(reply.from === 'mine' ? localized('你', 'You') : mail.from)}</strong><time>${esc(formatStoredTime(reply.time))}</time></header><p>${esc(reply.text)}</p></article>`).join('')}
+            ${replyPending ? `<div class="outlook-reply-wait"><i></i><i></i><i></i><span>${esc(ui('正在输入…'))}</span></div>` : ''}
+          </section>` : ''}
+          ${composerOpen ? `<form class="outlook-inline-composer" id="mailReplyForm" data-mail="${esc(mail.id)}">
+            <header><span>${MAIL_ICONS.reply}</span><strong>${esc(ui('回复内容'))}</strong><button type="button" data-action="mail-discard" data-id="${esc(mail.id)}" aria-label="${esc(ui('放弃草稿'))}">×</button></header>
+            <textarea id="mailReplyInput" rows="5" maxlength="1200" placeholder="${esc(localized('写下你的回复…', 'Write your reply…'))}">${esc(state.mailDrafts[mail.id] || '')}</textarea>
+            <footer><span>${esc(ui('模拟回复只在这台设备中生成，不会联系真实号码或邮箱。'))}</span><button type="submit">${esc(ui('发送回复'))}</button></footer>
+          </form>` : ''}
         </article>
         <nav class="outlook-reply-bar">
           <button class="outlook-reply-primary" type="button" data-action="mail-reply" data-id="${mail.id}">${MAIL_ICONS.reply}<span>${esc(ui('回复'))}</span></button>
@@ -1091,6 +1234,12 @@
           <button type="button" data-action="mail-flag" data-id="${mail.id}" aria-label="${esc(ui('邮件已标记'))}">${MAIL_ICONS.flag}</button>
         </nav>
       </section>`;
+    if (composerOpen || replies.length || replyPending) {
+      requestAnimationFrame(() => {
+        const message = els.appContent.querySelector('.outlook-message');
+        if (message) message.scrollTop = message.scrollHeight;
+      });
+    }
   }
 
   function mailActions(mail) {
@@ -2084,9 +2233,28 @@
         showToast('暂时没有其他加载项');
         break;
       case 'mail-reply':
+        if (els.overlayLayer.querySelector('.outlook-mail-menu-overlay')) closeMailMessageMenu(false);
+        {
+          const mail = state.mails.find((item) => item.id === id);
+          if (!mail) break;
+          state.openMailComposerId = mail.id;
+          saveState();
+          renderMailDetail(mail);
+          requestAnimationFrame(() => $('mailReplyInput')?.focus());
+        }
+        break;
+      case 'mail-discard':
+        state.openMailComposerId = null;
+        state.mailDrafts[id] = '';
+        saveState();
+        {
+          const mail = state.mails.find((item) => item.id === id);
+          if (mail) renderMailDetail(mail);
+        }
+        break;
       case 'mail-forward':
         if (els.overlayLayer.querySelector('.outlook-mail-menu-overlay')) closeMailMessageMenu(false);
-        showDialog(ui(action === 'mail-reply' ? '回复' : '转发'), ui('此模拟不发送真实邮件。'), [
+        showDialog(ui('转发'), ui('此模拟不发送真实邮件。'), [
           { label: localized('关闭', 'Close'), action: 'mail-close-dialog', kind: 'primary-action' }
         ]);
         break;
@@ -2277,8 +2445,18 @@
       if (target) { playSound('tap'); handleAction(target.dataset.action, target); }
     });
     els.appContent.addEventListener('submit', (event) => {
-      if (!['browserSearchForm', 'dialForm', 'contactsSearchForm'].includes(event.target.id)) return;
+      if (!['browserSearchForm', 'dialForm', 'contactsSearchForm', 'messageReplyForm', 'mailReplyForm'].includes(event.target.id)) return;
       event.preventDefault();
+      if (event.target.id === 'messageReplyForm') {
+        const key = event.target.dataset.thread;
+        sendMessageReply(key, $('messageReplyInput')?.value || '');
+        return;
+      }
+      if (event.target.id === 'mailReplyForm') {
+        const mail = state.mails.find((item) => item.id === event.target.dataset.mail);
+        sendMailReply(mail, $('mailReplyInput')?.value || '');
+        return;
+      }
       if (event.target.id === 'browserSearchForm') {
         const input = $('browserQuery');
         const query = input ? input.value.trim().slice(0, 80) : '';
@@ -2307,6 +2485,14 @@
     });
     els.appContent.addEventListener('input', (event) => {
       if (event.target.id === 'dialNumber') state.dialNumber = normaliseDialNumber(event.target.value);
+      if (event.target.id === 'messageReplyInput' && activeThreadKey) {
+        state.messageDrafts[activeThreadKey] = event.target.value.slice(0, 500);
+        saveState();
+      }
+      if (event.target.id === 'mailReplyInput' && activeMailId) {
+        state.mailDrafts[activeMailId] = event.target.value.slice(0, 1200);
+        saveState();
+      }
       if (event.target.id === 'contactsQuery') {
         state.contactsQuery = event.target.value.slice(0, 60);
         renderContacts();

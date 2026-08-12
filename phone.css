@@ -820,6 +820,145 @@
   padding: 0 12px;
 }
 
+.ios-ui .outlook-reply-thread {
+  margin-top: 22px;
+  padding-top: 14px;
+  display: grid;
+  gap: 10px;
+  border-top: 1px solid var(--mail-divider);
+}
+
+.ios-ui .outlook-reply-item {
+  padding: 12px 13px;
+  border: 1px solid var(--mail-divider);
+  border-radius: 10px;
+  color: var(--mail-text);
+  background: var(--mail-panel-bg);
+}
+
+.ios-ui .outlook-reply-item.mine {
+  border-left: 3px solid #0f6cbd;
+  background: color-mix(in srgb, var(--mail-panel-bg) 94%, #0f6cbd);
+}
+
+.ios-ui .outlook-reply-item header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.ios-ui .outlook-reply-item header strong {
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.ios-ui .outlook-reply-item header time {
+  color: var(--mail-muted);
+  font-size: 10px;
+}
+
+.ios-ui .outlook-reply-item p {
+  margin: 8px 0 0;
+  white-space: pre-wrap;
+  font-size: 13px;
+  line-height: 1.48;
+}
+
+.ios-ui .outlook-reply-wait {
+  min-height: 34px;
+  padding: 0 12px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--mail-muted);
+  font-size: 11px;
+}
+
+.ios-ui .outlook-reply-wait span {
+  margin-left: 4px;
+}
+
+.ios-ui .outlook-inline-composer {
+  margin-top: 18px;
+  border: 1px solid var(--mail-divider);
+  border-radius: 12px;
+  color: var(--mail-text);
+  background: var(--mail-panel-bg);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, .08);
+  overflow: hidden;
+}
+
+.ios-ui .outlook-inline-composer > header {
+  min-height: 42px;
+  padding: 0 10px 0 13px;
+  display: grid;
+  grid-template-columns: 22px 1fr 32px;
+  align-items: center;
+  gap: 7px;
+  border-bottom: 1px solid var(--mail-divider);
+}
+
+.ios-ui .outlook-inline-composer > header svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: #0f6cbd;
+  stroke-width: 1.8;
+}
+
+.ios-ui .outlook-inline-composer > header strong {
+  font-size: 13px;
+}
+
+.ios-ui .outlook-inline-composer > header button {
+  width: 32px;
+  height: 32px;
+  border: 0;
+  color: var(--mail-muted);
+  background: transparent;
+  font-size: 22px;
+}
+
+.ios-ui .outlook-inline-composer textarea {
+  width: 100%;
+  min-height: 112px;
+  padding: 13px;
+  resize: vertical;
+  border: 0;
+  color: var(--mail-text);
+  background: var(--mail-panel-bg);
+  font: 13px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif;
+  outline: none;
+}
+
+.ios-ui .outlook-inline-composer > footer {
+  min-height: 48px;
+  padding: 7px 9px 7px 13px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  border-top: 1px solid var(--mail-divider);
+}
+
+.ios-ui .outlook-inline-composer > footer span {
+  color: var(--mail-muted);
+  font-size: 8px;
+  line-height: 1.3;
+}
+
+.ios-ui .outlook-inline-composer > footer button {
+  min-height: 34px;
+  padding: 0 15px;
+  border: 0;
+  border-radius: 4px;
+  color: #fff;
+  background: #0f6cbd;
+  font-size: 12px;
+  font-weight: 650;
+}
+
 .ios-ui .sr-only {
   position: absolute;
   width: 1px;
@@ -2460,6 +2599,25 @@ input:focus-visible,
   background: #e9ecec;
 }
 
+.conversation-shell {
+  height: 100%;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto auto;
+  background: #e9ecec;
+}
+
+.conversation-shell .conversation {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+}
+
+.conversation-shell .conversation::-webkit-scrollbar {
+  display: none;
+}
+
 .conversation-date {
   margin: 2px 0 16px;
   color: #8a9298;
@@ -2497,6 +2655,95 @@ input:focus-visible,
 
 .bubble.mine small {
   color: rgba(255, 255, 255, .7);
+}
+
+.typing-bubble {
+  min-width: 54px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.typing-bubble i,
+.outlook-reply-wait i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #8e8e93;
+  animation: reply-dot 1.1s ease-in-out infinite;
+}
+
+.typing-bubble i:nth-child(2),
+.outlook-reply-wait i:nth-child(2) {
+  animation-delay: .14s;
+}
+
+.typing-bubble i:nth-child(3),
+.outlook-reply-wait i:nth-child(3) {
+  animation-delay: .28s;
+}
+
+@keyframes reply-dot {
+  0%, 60%, 100% { transform: translateY(0); opacity: .48; }
+  30% { transform: translateY(-3px); opacity: 1; }
+}
+
+.message-composer {
+  min-height: 54px;
+  padding: 7px 10px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 36px;
+  align-items: end;
+  gap: 7px;
+  border-top: .5px solid rgba(60, 60, 67, .2);
+  background: rgba(248, 248, 250, .94);
+  backdrop-filter: blur(20px) saturate(1.4);
+}
+
+.message-composer textarea {
+  min-height: 36px;
+  max-height: 94px;
+  padding: 8px 12px;
+  resize: none;
+  border: 1px solid #c7c7cc;
+  border-radius: 18px;
+  color: #1c1c1e;
+  background: #fff;
+  font: 14px/1.35 -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", sans-serif;
+  outline: none;
+}
+
+.message-composer textarea:focus {
+  border-color: #0a84ff;
+  box-shadow: 0 0 0 2px rgba(10, 132, 255, .14);
+}
+
+.message-composer button {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  color: #fff;
+  background: #0a84ff;
+  font-size: 21px;
+  font-weight: 700;
+}
+
+.message-composer button:disabled {
+  background: #b8c2cc;
+}
+
+.composer-privacy-note {
+  margin: 0;
+  padding: 0 12px 6px;
+  color: #8e8e93;
+  background: rgba(248, 248, 250, .94);
+  font-size: 8px;
+  line-height: 1.25;
+  text-align: center;
 }
 
 .message-actions {
