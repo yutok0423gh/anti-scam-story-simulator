@@ -161,10 +161,10 @@
   function loadState() {
     try {
       const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
-      if (saved && [1, 2, 3, 4, 5, 6, 7, 8].includes(saved.version)) {
+      if (saved && [1, 2, 3, 4, 5, 6, 7, 8, 9].includes(saved.version)) {
         const defaults = DATA.createInitialState();
         const savedVersion = saved.version;
-        saved.version = 8;
+        saved.version = 9;
         saved.soundEnabled = saved.soundEnabled !== false;
         saved.openingBriefSeen = saved.openingBriefSeen === true;
         saved.language = saved.language === 'en' ? 'en' : 'zh-CN';
@@ -175,6 +175,7 @@
         saved.dialNumber = String(saved.dialNumber || '').slice(0, 24);
         saved.contactsQuery = String(saved.contactsQuery || '').slice(0, 60);
         saved.investigationQueries = Array.isArray(saved.investigationQueries) ? saved.investigationQueries.slice(-12) : [];
+        saved.callLog = Array.isArray(saved.callLog) ? saved.callLog.map((call) => ({ ...call, name: '未知号码' })) : defaults.callLog;
         saved.messageDrafts = saved.messageDrafts && typeof saved.messageDrafts === 'object' ? saved.messageDrafts : {};
         saved.mailDrafts = saved.mailDrafts && typeof saved.mailDrafts === 'object' ? saved.mailDrafts : {};
         saved.mailReplies = saved.mailReplies && typeof saved.mailReplies === 'object' ? saved.mailReplies : {};
@@ -917,8 +918,8 @@
           <div class="list-card phone-recents">
             ${state.callLog.map((call) => `
               <button class="list-row" type="button" data-action="call-number" data-id="${call.id}" data-number="${esc(call.number)}">
-                <span class="mini-icon" style="--row-bg:${call.unread ? '#8b2435' : '#dde3e5'};--row-color:${call.unread ? '#fff' : '#4b5963'}">${call.id === 'call-unknown' ? '?' : esc(call.name.slice(0, 2))}</span>
-                <span class="list-copy"><strong>${esc(call.id === 'call-unknown' ? ui(call.name) : call.name)}</strong><span>${esc(ui(call.direction))} · ${esc(call.number)}</span></span>
+                <span class="mini-icon" style="--row-bg:${call.unread ? '#8b2435' : '#dde3e5'};--row-color:${call.unread ? '#fff' : '#4b5963'}">?</span>
+                <span class="list-copy"><strong>${esc(ui('未知号码'))}</strong><span>${esc(ui(call.direction))} · ${esc(call.number)}</span></span>
                 <span class="list-time">${esc(formatStoredTime(call.time))}</span>
               </button>`).join('')}
           </div>`}
@@ -960,7 +961,7 @@
       callContact(contact.id);
       return;
     }
-    state.callLog.unshift({ id: `manual-${Date.now()}`, name: entered, number: entered, time: formatTime(state.time), direction: '呼出', unread: false });
+    state.callLog.unshift({ id: `manual-${Date.now()}`, name: '未知号码', number: entered, time: formatTime(state.time), direction: '呼出', unread: false });
     state.callLog = state.callLog.slice(0, 12);
     addHistory('manual-call', `拨打 ${entered}，暂时无法接通`);
     advanceTime(1);
