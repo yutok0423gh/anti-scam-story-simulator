@@ -93,7 +93,16 @@
           <div class="overlay-layer" id="overlayLayer" aria-live="assertive"></div>
         </div>
 
-        <button class="home-indicator" id="homeIndicator" type="button" aria-label="返回主屏幕"></button>
+        <nav class="system-navigation is-hidden" id="systemNavigation" aria-label="系统导航">
+          <button class="system-nav-button system-back" id="systemBack" type="button" aria-label="返回上一页" disabled>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14.5 5-7 7 7 7"/></svg>
+            <span id="systemBackLabel">返回</span>
+          </button>
+          <button class="system-nav-button system-home" id="systemHome" type="button" aria-label="返回主屏幕" disabled>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10.5 12 4l8 6.5V20H4z"/><path d="M9.5 20v-6h5v6"/></svg>
+            <span id="systemHomeLabel">主页</span>
+          </button>
+        </nav>
       </div>
     </section>
 
