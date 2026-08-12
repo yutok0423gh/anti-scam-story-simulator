@@ -21,12 +21,14 @@
     '核实迎新联系人': 'Verify orientation contact', '确认“阿杰”的新号码': 'Confirm Ah Kit’s new number',
     '尚未开放': 'Not available yet', '这个应用会在之后的任务中出现。': 'This app will be available later.',
     '最近通话': 'Recents', '提示': 'Note', '主动回拨前先观察': 'Before calling back',
+    '拨号键盘': 'Keypad', '输入号码': 'Enter a number', '拨号': 'Call', '删除一位': 'Delete digit', '无法接通': 'Call failed',
+    '这个号码暂时无法接通。你可以检查输入、搜索号码，或通过其他渠道联系。': 'This number cannot be reached right now. Check what you entered, search the number, or use another channel.',
     '这是一个已经错过的来电。你可以从通话记录回拨了解来意，也可以先检查号码和已有联系人。': 'This is a missed call. You can call back to learn why they contacted you, or check the number and saved contacts first.',
     '信息': 'Messages', '今天': 'Today', '打开短信里的页面': 'Open link in message', '保存短信运单号': 'Save tracking number', '自己搜索这个域名': 'Search this domain independently',
     '收件箱': 'Inbox', '邮件详情': 'Message', '未读': 'Unread', '已打开': 'Opened', '发件人': 'From', '地址': 'Address', '运单号': 'Tracking number',
     '保存完整运单号': 'Save full tracking number', '致电收发室': 'Call hall reception', '打开 onboarding form': 'Open onboarding form',
     '从官方目录查教授': 'Check the official staff directory', '查看付款页面': 'View payment page', '在 PolyULife 查活动': 'Check the event in PolyULife', '查看相关联系人': 'View related contacts',
-    '已保存联系人': 'Saved contacts', '拨打': 'Call', '银行卡已冻结': 'Card frozen', '冻结银行卡': 'Freeze card', '联系银行': 'Contact bank', '交易记录': 'Transactions',
+    '已保存联系人': 'Saved contacts', '搜索联系人': 'Search contacts', '没有匹配的联系人': 'No matching contacts', '拨打': 'Call', '银行卡已冻结': 'Card frozen', '冻结银行卡': 'Freeze card', '联系银行': 'Contact bank', '交易记录': 'Transactions',
     '截止时间 · 今天17:00': 'Due · Today at 5:00 PM', '宿舍收发室通知有一份挂号文件等待领取。': 'Hall reception says a registered document is ready for collection.',
     '查看收发室通知': 'Read the reception notice', '取得完整运单号': 'Get the full tracking number', '向独立渠道确认': 'Confirm through an independent channel', '前往收发室领取': 'Collect it from hall reception',
     '确认迎新活动联系人': 'Confirm orientation event contact', '中午前确认去年联系人阿杰是否能参加筹备。': 'Confirm by noon whether last year’s contact, Ah Kit, can join the preparations.',
@@ -42,6 +44,8 @@
     '已保存短信中的编号': 'Message tracking number saved', '完整运单号已保存': 'Full tracking number saved', '官方查询结果已保存': 'Official result saved', '查询结果已保存': 'Search result saved',
     '银行卡已冻结': 'Card frozen', '活动报名完成，QR ticket 已发出': 'Registration complete. Your QR ticket is ready.', '已保留决定：暂不参加': 'Decision saved: not attending for now.',
     '搜索网址、号码或机构': 'Search websites, numbers, or organisations', '搜索': 'Search', '常用入口': 'Favourites',
+    '没有完全匹配的结果': 'No exact matches', '尝试更具体的名称、完整号码、邮箱或域名。': 'Try a more specific name, full number, email address or domain.',
+    '号码查询': 'Number search', '邮箱与域名查询': 'Email and domain search', '包裹与邮政查询': 'Parcel and postal search',
     'PolyU 官方网站': 'PolyU official website', 'PolyU 教职员目录': 'PolyU staff directory', '香港邮政': 'Hongkong Post',
     '包裹地址更新中心': 'Parcel address update centre', '香港邮政 · 邮件追踪': 'Hongkong Post · Mail tracking', '保存查询结果': 'Save result', '返回搜索': 'Back to search',
     '回邮件查找完整编号': 'Return to Mail for the full number', '提交模拟个人资料': 'Submit simulated personal details', '先查官方教职员目录': 'Check the official staff directory first',
@@ -151,16 +155,20 @@
   function loadState() {
     try {
       const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
-      if (saved && [1, 2, 3, 4, 5, 6].includes(saved.version)) {
+      if (saved && [1, 2, 3, 4, 5, 6, 7].includes(saved.version)) {
         const defaults = DATA.createInitialState();
         const savedVersion = saved.version;
-        saved.version = 6;
+        saved.version = 7;
         saved.soundEnabled = saved.soundEnabled !== false;
         saved.openingBriefSeen = saved.openingBriefSeen === true;
         saved.language = saved.language === 'en' ? 'en' : 'zh-CN';
         saved.region = ['HK', 'CN', 'US', 'GB'].includes(saved.region) ? saved.region : 'HK';
         saved.polyuPage = saved.polyuPage || 'home';
         saved.polyuCalendarView = saved.polyuCalendarView || 'month';
+        saved.phoneView = ['recents', 'keypad'].includes(saved.phoneView) ? saved.phoneView : 'recents';
+        saved.dialNumber = String(saved.dialNumber || '').slice(0, 24);
+        saved.contactsQuery = String(saved.contactsQuery || '').slice(0, 60);
+        saved.investigationQueries = Array.isArray(saved.investigationQueries) ? saved.investigationQueries.slice(-12) : [];
         saved.mailTab = ['focused', 'other'].includes(saved.mailTab) ? saved.mailTab : 'focused';
         saved.mailUnreadOnly = saved.mailUnreadOnly === true;
         saved.mailTranslations = saved.mailTranslations || {};
@@ -786,23 +794,68 @@
   }
 
   function renderPhone() {
+    const keypad = state.phoneView === 'keypad';
     els.appContent.innerHTML = `
       <div class="app-pad">
-        <span class="section-label">${esc(ui('最近通话'))}</span>
-        <div class="list-card">
-          ${state.callLog.map((call) => `
-            <button class="list-row" type="button" data-action="call-number" data-id="${call.id}">
-              <span class="mini-icon" style="--row-bg:${call.unread ? '#8b2435' : '#dde3e5'};--row-color:${call.unread ? '#fff' : '#4b5963'}">${call.id === 'call-unknown' ? '?' : esc(call.name.slice(0, 2))}</span>
-              <span class="list-copy"><strong>${esc(call.id === 'call-unknown' ? ui(call.name) : call.name)}</strong><span>${esc(ui(call.direction))} · ${esc(call.number)}</span></span>
-              <span class="list-time">${esc(formatStoredTime(call.time))}</span>
-            </button>`).join('')}
+        <div class="phone-segmented" role="tablist">
+          <button type="button" role="tab" aria-selected="${!keypad}" data-action="phone-view" data-value="recents">${esc(ui('最近通话'))}</button>
+          <button type="button" role="tab" aria-selected="${keypad}" data-action="phone-view" data-value="keypad">${esc(ui('拨号键盘'))}</button>
         </div>
-        <span class="section-label">${esc(ui('提示'))}</span>
-        <div class="detail-card">
-          <span class="detail-meta">${esc(ui('主动回拨前先观察'))}</span>
-          <p>${esc(ui('这是一个已经错过的来电。你可以从通话记录回拨了解来意，也可以先检查号码和已有联系人。'))}</p>
-        </div>
+        ${keypad ? renderPhoneKeypad() : `
+          <div class="list-card phone-recents">
+            ${state.callLog.map((call) => `
+              <button class="list-row" type="button" data-action="call-number" data-id="${call.id}" data-number="${esc(call.number)}">
+                <span class="mini-icon" style="--row-bg:${call.unread ? '#8b2435' : '#dde3e5'};--row-color:${call.unread ? '#fff' : '#4b5963'}">${call.id === 'call-unknown' ? '?' : esc(call.name.slice(0, 2))}</span>
+                <span class="list-copy"><strong>${esc(call.id === 'call-unknown' ? ui(call.name) : call.name)}</strong><span>${esc(ui(call.direction))} · ${esc(call.number)}</span></span>
+                <span class="list-time">${esc(formatStoredTime(call.time))}</span>
+              </button>`).join('')}
+          </div>`}
       </div>`;
+  }
+
+  function renderPhoneKeypad() {
+    const keys = [['1', ''], ['2', 'ABC'], ['3', 'DEF'], ['4', 'GHI'], ['5', 'JKL'], ['6', 'MNO'], ['7', 'PQRS'], ['8', 'TUV'], ['9', 'WXYZ'], ['*', ''], ['0', '+'], ['#', '']];
+    return `
+      <form class="phone-keypad" id="dialForm">
+        <label class="sr-only" for="dialNumber">${esc(ui('输入号码'))}</label>
+        <div class="dial-display"><input id="dialNumber" name="number" type="tel" inputmode="tel" autocomplete="off" maxlength="24" value="${esc(state.dialNumber)}" placeholder="${esc(ui('输入号码'))}"><button type="button" data-action="dial-delete" aria-label="${esc(ui('删除一位'))}">⌫</button></div>
+        <div class="dial-pad">${keys.map(([digit, letters]) => `<button type="button" data-action="dial-key" data-value="${digit}"><strong>${digit}</strong><small>${letters}</small></button>`).join('')}</div>
+        <button class="dial-call" type="submit" aria-label="${esc(ui('拨号'))}">${DATA.icons.phone}</button>
+      </form>`;
+  }
+
+  function normaliseDialNumber(value) {
+    return String(value || '').replace(/[^0-9+#*]/g, '').slice(0, 24);
+  }
+
+  function placeManualCall(rawNumber) {
+    const entered = normaliseDialNumber(rawNumber);
+    if (!entered) return;
+    state.dialNumber = entered;
+    const digits = entered.replace(/\D/g, '');
+    const unknown = state.callLog.find((call) => call.id === 'call-unknown');
+    if (unknown && digits.endsWith('8704')) {
+      saveState();
+      startCallback();
+      return;
+    }
+    const contact = state.contacts.find((item) => {
+      const lastFour = item.number.replace(/\D/g, '').slice(-4);
+      return lastFour && digits.endsWith(lastFour);
+    });
+    if (contact) {
+      saveState();
+      callContact(contact.id);
+      return;
+    }
+    state.callLog.unshift({ id: `manual-${Date.now()}`, name: entered, number: entered, time: formatTime(state.time), direction: '呼出', unread: false });
+    state.callLog = state.callLog.slice(0, 12);
+    addHistory('manual-call', `拨打 ${entered}，暂时无法接通`);
+    advanceTime(1);
+    saveState();
+    showDialog('无法接通', '这个号码暂时无法接通。你可以检查输入、搜索号码，或通过其他渠道联系。', [
+      { label: '关闭', action: 'close-overlay', kind: 'primary-action' }
+    ]);
   }
 
   function renderMessages(target) {
@@ -1281,6 +1334,18 @@
         ${browserCard('www.hongkongpost.hk', '香港邮政', '邮件追踪及邮政服务。', 'post-official')}
         ${browserCard('www.cyberdefender.hk', '防骗视伏器 Scameter', '检查可疑网址、电话及账户。', 'scameter')}`;
     }
+    if (/8704|6\s*x{2,}\s*8704|\+?852.*8704/i.test(q)) {
+      return `
+        <span class="section-label">${esc(ui('号码查询'))} · ${esc(q)}</span>
+        ${browserCard('www.cyberdefender.hk', '防骗视伏器 Scameter', '该号码暂无公开记录。查无记录不代表身份真实。', 'scameter')}
+        ${browserCard('本机联系人', '搜索已保存联系人', '没有联系人使用这个完整号码；可比较号码尾号，或联系共同认识的人。', 'contacts-search')}`;
+    }
+    if (/@|outlook\.example|campus-mail\.example|polyu\.edu\.hk/i.test(q)) {
+      return `
+        <span class="section-label">${esc(ui('邮箱与域名查询'))} · ${esc(q)}</span>
+        ${browserCard('www.polyu.edu.hk/staff', 'PolyU 教职员目录', '通过学校域名重新查找教职员邮箱和部门电话。', 'staff-directory')}
+        ${browserCard('www.cyberdefender.hk', '域名与账户查询', '比较发件域名、跳转网址与官方机构域名是否一致。', 'scameter')}`;
+    }
     if (/prof|chan|research|教授|研究/i.test(q)) {
       return `
         <span class="section-label">${esc(localized(`“${q}”的结果`, `Results for “${q}”`))}</span>
@@ -1293,11 +1358,24 @@
         ${browserCard('www.polyu.edu.hk/campus-events', 'Student Innovation Night', 'PolyU campus event · August 14 · Registration in PolyULife.', 'event-official')}
         ${browserCard('student-event-payment.example', 'Innovation Night payment', 'Pay HK$180 now to keep your seat.', 'event-payment', true)}`;
     }
+    if (/parcel-update\.example/i.test(q)) {
+      return `
+        <span class="section-label">${esc(ui('邮箱与域名查询'))} · ${esc(q)}</span>
+        ${browserCard('parcel-update.example', '包裹地址更新中心', '短信中的页面要求更新资料并支付重新处理费。', 'fake-post', true)}
+        ${browserCard('www.cyberdefender.hk', '查询网址', '查看公开风险记录；即使没有记录，也应比较官方邮政域名。', 'scameter')}
+        ${browserCard('www.hongkongpost.hk', '香港邮政', '从独立入口重新开始查询。', 'post-official')}`;
+    }
+    if (/parcel|post|tracking|包裹|邮政|快递|HKP8234|RR\s*482/i.test(q)) {
+      return `
+        <span class="section-label">${esc(ui('包裹与邮政查询'))} · ${esc(q)}</span>
+        ${browserCard('www.hongkongpost.hk', '香港邮政 · 邮件追踪', '从官方入口查询邮件状态及服务通知。', 'post-official')}
+        ${browserCard('parcel-update.example', '包裹地址更新中心', '在线更新地址，避免邮件退回。', 'fake-post', true)}`;
+    }
     return `
-      <span class="section-label">${esc(localized(`“${q}”的结果`, `Results for “${q}”`))}</span>
-      ${browserCard('parcel-update.example', '包裹地址更新中心', '在线更新地址，避免邮件退回。', 'fake-post', true)}
-      ${browserCard('www.hongkongpost.hk', '香港邮政 · 邮件追踪', '从官方入口查询邮件状态及服务通知。', 'post-official')}
-      ${browserCard('www.cyberdefender.hk', '防骗视伏器 Scameter', '查询可疑网址、电话及收款账户。', 'scameter')}`;
+      <div class="search-empty"><strong>${esc(ui('没有完全匹配的结果'))}</strong><p>${esc(ui('尝试更具体的名称、完整号码、邮箱或域名。'))}</p></div>
+      <span class="section-label">${esc(ui('常用入口'))}</span>
+      ${browserCard('www.polyu.edu.hk', 'PolyU 官方网站', '校园服务、学生资讯与官方联系方式。', 'polyu-official')}
+      ${browserCard('www.cyberdefender.hk', '防骗视伏器 Scameter', '检查可疑网址、电话及账户。', 'scameter')}`;
   }
 
   function browserCard(domain, title, body, page, sponsored) {
@@ -1308,6 +1386,12 @@
   }
 
   function renderBrowserPage(page) {
+    if (page === 'contacts-search') {
+      state.browserPage = 'home';
+      saveState();
+      openApp('contacts');
+      return;
+    }
     if (page === 'fake-post') {
       els.appContent.innerHTML = `
         <div class="fake-page">
@@ -1406,16 +1490,22 @@
   }
 
   function renderContacts() {
+    const query = String(state.contactsQuery || '').trim().toLowerCase();
+    const contacts = state.contacts.filter((contact) => !query || `${contact.name} ${contact.note} ${contact.number}`.toLowerCase().includes(query));
     els.appContent.innerHTML = `
       <div class="app-pad">
+        <form class="contacts-search" id="contactsSearchForm">
+          <label class="sr-only" for="contactsQuery">${esc(ui('搜索联系人'))}</label>
+          <span>${DATA.icons.search}</span><input id="contactsQuery" type="search" autocomplete="off" value="${esc(state.contactsQuery)}" placeholder="${esc(ui('搜索联系人'))}">
+        </form>
         <span class="section-label">${esc(ui('已保存联系人'))}</span>
         <div class="list-card">
-          ${state.contacts.map((contact) => `
+          ${contacts.length ? contacts.map((contact) => `
             <button class="list-row" type="button" data-action="call-contact" data-id="${contact.id}">
               <span class="mini-icon" style="--row-bg:#d58a22">${esc(contact.initials)}</span>
               <span class="list-copy"><strong>${esc(contact.name)}</strong><span>${esc(contact.note)} · ${esc(contact.number)}</span></span>
               <span class="list-time">${esc(ui('拨打'))}</span>
-            </button>`).join('')}
+            </button>`).join('') : `<div class="inline-empty">${esc(ui('没有匹配的联系人'))}</div>`}
         </div>
       </div>`;
   }
@@ -2038,7 +2128,16 @@
       case 'collect-parcel': collectParcel(); break;
       case 'open-contacts': openApp('contacts'); break;
       case 'call-contact': callContact(id); break;
-      case 'call-number': id === 'call-unknown' ? startCallback() : callContact('contact-hall'); break;
+      case 'call-number': placeManualCall(target.dataset.number || ''); break;
+      case 'phone-view':
+        state.phoneView = target.dataset.value === 'keypad' ? 'keypad' : 'recents';
+        saveState(); renderPhone(); break;
+      case 'dial-key':
+        state.dialNumber = normaliseDialNumber(`${state.dialNumber || ''}${target.dataset.value || ''}`);
+        saveState(); renderPhone(); break;
+      case 'dial-delete':
+        state.dialNumber = String(state.dialNumber || '').slice(0, -1);
+        saveState(); renderPhone(); break;
       case 'end-call': endCall('主动结束陌生来电'); break;
       case 'call-guess-ajie': callClaimResponse('guess'); break;
       case 'call-ask-name': callClaimResponse('ask'); break;
@@ -2178,13 +2277,42 @@
       if (target) { playSound('tap'); handleAction(target.dataset.action, target); }
     });
     els.appContent.addEventListener('submit', (event) => {
-      if (event.target.id !== 'browserSearchForm') return;
+      if (!['browserSearchForm', 'dialForm', 'contactsSearchForm'].includes(event.target.id)) return;
       event.preventDefault();
-      const input = $('browserQuery');
-      state.browserQuery = input ? input.value.trim().slice(0, 80) : '';
-      state.browserPage = 'home';
-      saveState();
-      renderBrowser();
+      if (event.target.id === 'browserSearchForm') {
+        const input = $('browserQuery');
+        const query = input ? input.value.trim().slice(0, 80) : '';
+        state.browserQuery = query;
+        state.browserPage = 'home';
+        if (query) {
+          state.investigationQueries = [...state.investigationQueries.filter((item) => item.query !== query), { query, time: formatTime(state.time) }].slice(-12);
+          addHistory('independent-search', `自行搜索：${query}`);
+          advanceTime(1);
+        }
+        saveState();
+        renderBrowser();
+        return;
+      }
+      if (event.target.id === 'dialForm') {
+        const input = $('dialNumber');
+        placeManualCall(input ? input.value : state.dialNumber);
+        return;
+      }
+      if (event.target.id === 'contactsSearchForm') {
+        const input = $('contactsQuery');
+        state.contactsQuery = input ? input.value.trim().slice(0, 60) : '';
+        saveState();
+        renderContacts();
+      }
+    });
+    els.appContent.addEventListener('input', (event) => {
+      if (event.target.id === 'dialNumber') state.dialNumber = normaliseDialNumber(event.target.value);
+      if (event.target.id === 'contactsQuery') {
+        state.contactsQuery = event.target.value.slice(0, 60);
+        renderContacts();
+        const input = $('contactsQuery');
+        if (input) { input.focus(); input.setSelectionRange(input.value.length, input.value.length); }
+      }
     });
     els.overlayLayer.addEventListener('click', (event) => {
       const target = event.target.closest('[data-action]');

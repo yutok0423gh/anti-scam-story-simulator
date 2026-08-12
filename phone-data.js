@@ -33,7 +33,7 @@
 
   function createInitialState() {
     return {
-      version: 6,
+      version: 7,
       seed: Math.random().toString(36).slice(2),
       contactIsReal: Math.random() < 0.35,
       unlocked: false,
@@ -43,6 +43,10 @@
       soundEnabled: true,
       polyuPage: 'home',
       polyuCalendarView: 'month',
+      phoneView: 'recents',
+      dialNumber: '',
+      contactsQuery: '',
+      investigationQueries: [],
       currentApp: null,
       mailTab: 'focused',
       mailUnreadOnly: false,

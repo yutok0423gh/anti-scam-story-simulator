@@ -2070,6 +2070,187 @@ input:focus-visible,
   padding: 18px 16px 30px;
 }
 
+.phone-segmented {
+  margin-bottom: 14px;
+  padding: 3px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3px;
+  border-radius: 11px;
+  background: #e2e4e7;
+}
+
+.phone-segmented button {
+  min-height: 34px;
+  border: 0;
+  border-radius: 8px;
+  color: #6b737b;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.phone-segmented button[aria-selected="true"] {
+  color: #17202a;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(23, 32, 42, .14);
+}
+
+.phone-keypad {
+  display: grid;
+  justify-items: center;
+}
+
+.dial-display {
+  width: 100%;
+  min-height: 62px;
+  display: grid;
+  grid-template-columns: 1fr 42px;
+  align-items: center;
+}
+
+.dial-display input {
+  min-width: 0;
+  border: 0;
+  color: #15202a;
+  background: transparent;
+  font-size: 25px;
+  font-weight: 500;
+  text-align: center;
+  letter-spacing: .025em;
+  outline: none;
+}
+
+.dial-display button {
+  width: 38px;
+  height: 38px;
+  border: 0;
+  border-radius: 50%;
+  color: #6c737a;
+  background: transparent;
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.dial-pad {
+  width: min(270px, 100%);
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 9px 18px;
+}
+
+.dial-pad button {
+  aspect-ratio: 1;
+  max-width: 64px;
+  justify-self: center;
+  width: 100%;
+  display: grid;
+  place-content: center;
+  border: 0;
+  border-radius: 50%;
+  color: #17202a;
+  background: #e4e5e8;
+  cursor: pointer;
+}
+
+.dial-pad strong {
+  font-size: 24px;
+  font-weight: 450;
+  line-height: 1;
+}
+
+.dial-pad small {
+  min-height: 9px;
+  margin-top: 3px;
+  font-size: 7px;
+  font-weight: 700;
+  letter-spacing: .16em;
+}
+
+.dial-call {
+  width: 58px;
+  height: 58px;
+  margin-top: 13px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  color: #fff;
+  background: #30b55b;
+  box-shadow: 0 8px 18px rgba(48, 181, 91, .24);
+  cursor: pointer;
+}
+
+.dial-call svg {
+  width: 25px;
+  height: 25px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+}
+
+.contacts-search {
+  height: 40px;
+  margin-bottom: 16px;
+  padding: 0 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 11px;
+  background: #e5e6e9;
+}
+
+.contacts-search span,
+.contacts-search svg {
+  width: 18px;
+  height: 18px;
+  color: #777e85;
+}
+
+.contacts-search svg,
+.browser-search button svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.contacts-search input {
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  color: #17202a;
+  background: transparent;
+  outline: none;
+}
+
+.inline-empty,
+.search-empty {
+  padding: 28px 18px;
+  color: #777f87;
+  text-align: center;
+}
+
+.search-empty {
+  margin: 7px 0 14px;
+  border-radius: 14px;
+  background: rgba(118, 118, 128, .08);
+}
+
+.search-empty strong {
+  display: block;
+  color: #313940;
+  font-size: 15px;
+}
+
+.search-empty p {
+  margin: 6px 0 0;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 .section-label {
   display: block;
   margin: 20px 2px 8px;
