@@ -35,10 +35,10 @@
     '回拨未接来电了解来意': 'Return the missed call', '检查原有联系方式': 'Check the existing contact details', '向共同联系人核对': 'Verify with a mutual contact', '确认今年联络方式': 'Confirm this year’s contact method',
     '已保存的信息': 'Saved information', '还没有保存信息': 'No information saved yet', '从邮件、联系人和自行打开的官方网站开始。': 'Start with Mail, Contacts, and official sites you open yourself.',
     '结束今天并查看记录': 'End the day and review', '重新开始': 'Start over', '已完成': 'Completed', '进行中': 'In progress', '前往收发室领取': 'Go to hall reception',
-    '回拨': 'Calling back', '未知号码': 'Unknown number', '正在接通…': 'Connecting…', '你正在主动回拨刚才的未接来电': 'You are returning the missed call.', '通话中': 'Call in progress',
+    '回拨': 'Calling back', '未知号码': 'Unknown number', '正在接通…': 'Connecting…', '你正在主动回拨刚才的未接来电': 'You are returning the missed call.', '正在拨打这个号码': 'You are calling this number.', '通话中': 'Call in progress',
     '取消回拨': 'Cancel callback', '结束通话': 'End call', '通话已结束': 'Call ended',
     '今天的收件箱会比较忙': 'Your inbox may get busy today', '开始今天': 'Start the day',
-    '记下信息': 'Save information', '稍后处理': 'Do this later', '记下结果': 'Save result', '打开联系人': 'Open Contacts', '关闭': 'Close', '知道了': 'Got it',
+    '记下信息': 'Save information', '稍后处理': 'Do this later', '提供运单号': 'Provide tracking number', '询问研究邀请': 'Ask about the research invitation', '记下结果': 'Save result', '打开联系人': 'Open Contacts', '关闭': 'Close', '知道了': 'Got it',
     '确认私人转账': 'Confirm personal transfer', '确认转账': 'Confirm transfer', '返回通话': 'Return to call', '继续使用': 'Continue', '返回手机桌面': 'Return to Home Screen',
     '转账已提交': 'Transfer submitted', '收发室确认文件正在等待领取': 'Hall reception confirmed the document is ready.', '先确认领取地点和安排': 'Confirm the collection location and arrangements first.', '文件已领取': 'Document collected',
     '已保存短信中的编号': 'Message tracking number saved', '完整运单号已保存': 'Full tracking number saved', '官方查询结果已保存': 'Official result saved', '查询结果已保存': 'Search result saved',
@@ -81,7 +81,7 @@
     '校园服务': 'Campus services', '场地、住宿、缴费与个人事务更新': 'Updates about rooms, halls, payments, and personal administration',
     '这些来信有些与你有关，有些可以忽略。看清来源和内容后，再决定是否行动。': 'Some messages will matter to you; others can be ignored. Check the source and content before deciding what to do.',
     '进入手机': 'Enter the phone', '必须处理的事项': 'Required items', '独立来源': 'Independent sources', '资料暴露': 'Data shared', '金钱损失': 'Financial loss',
-    '未接来电': 'Missed call', '呼出': 'Outgoing', '正在回拨': 'Calling back', '已回拨': 'Called back', '昨天': 'Yesterday', '保存': 'Saved',
+    '未接来电': 'Missed call', '呼出': 'Outgoing', '正在回拨': 'Calling back', '已回拨': 'Called back', '正在拨号': 'Calling', '已接通': 'Connected', '昨天': 'Yesterday', '保存': 'Saved',
     '可用余额': 'Available balance', '选定': 'Selected', '界面语言': 'Interface language', '地区格式': 'Regional formats',
     '从 PolyULife 确认创新之夜日期、地点及官方费用 HK$60': 'Confirmed the date, venue, and official HK$60 fee in PolyULife',
     '对比邮件 HK$180 私人FPS与官方 HK$60 应用内付款': 'Compared the email’s HK$180 personal FPS request with the official HK$60 in-app payment',
@@ -1778,6 +1778,52 @@
     ], 'callback-intro');
   }
 
+  function startOfficialCall(contactId) {
+    const contact = state.contacts.find((item) => item.id === contactId);
+    if (!contact) return;
+    clearTimeout(callbackTimer);
+    stopAllAudio();
+    callSession = { phase: 'dialing', step: 0, contactId };
+    const logItem = state.callLog.find((item) => item.number === contact.number);
+    if (logItem) Object.assign(logItem, { direction: '正在拨号', unread: false });
+    addHistory('official-call-started', `拨打 ${contact.number}`);
+    saveState();
+    els.overlayLayer.innerHTML = `
+      <section class="call-overlay">
+        <span class="simulation-tag">${esc(ui('拨号'))} · ${esc(contact.number)}</span>
+        <div class="call-avatar">?</div>
+        <h2>${esc(ui('未知号码'))}</h2>
+        <p class="call-state">${esc(ui('正在接通…'))}</p>
+        <div class="callback-pulse" aria-hidden="true"><i></i><i></i><i></i></div>
+        <p class="callback-note">${esc(ui('正在拨打这个号码'))}</p>
+        <div class="call-controls"><button class="round-call-button" type="button" data-action="end-call" aria-label="${esc(ui('结束通话'))}">${DATA.icons.hangup}</button></div>
+      </section>`;
+    playCallbackTone();
+    callbackTimer = setTimeout(() => {
+      if (callSession && callSession.phase === 'dialing' && callSession.contactId === contactId) connectOfficialCall(contactId);
+    }, 1450);
+  }
+
+  function connectOfficialCall(contactId) {
+    stopRingtone();
+    callSession = { phase: 'connected', step: 0, contactId };
+    const contact = state.contacts.find((item) => item.id === contactId);
+    const logItem = contact && state.callLog.find((item) => item.number === contact.number);
+    if (logItem) logItem.direction = '已接通';
+    advanceTime(1);
+    if (contactId === 'contact-hall') {
+      renderCallDialogue('「宿舍收發室，你好。請講低完整運單號，我幫你查一下。」', [
+        ['call-hall-provide-tracking', '提供运单号'],
+        ['call-official-later', '稍后处理']
+      ], '');
+      return;
+    }
+    renderCallDialogue('「Department General Office，你好。請問有甚麼可以幫你？」', [
+      ['call-department-ask-research', '询问研究邀请'],
+      ['call-official-later', '稍后处理']
+    ], '');
+  }
+
   function renderCallDialogue(text, options, audioId) {
     els.overlayLayer.innerHTML = `
       <section class="call-overlay" data-cantonese-audio="${esc(audioId || '')}">
@@ -1870,11 +1916,28 @@
     addEvidence('hall-call', '从已保存号码联系宿舍收发室');
     addHistory('hall-confirmed', '收发室确认文件已到，无需补缴费用');
     advanceTime(8);
+    clearTimeout(callbackTimer);
+    stopAllAudio();
+    playSound('hangup');
+    callSession = null;
     closeOverlay();
     saveState();
     showToast('收发室确认文件正在等待领取');
     if (state.currentApp) renderApp(state.currentApp);
     renderHome();
+  }
+
+  function confirmDepartment() {
+    const task = state.taskState.research;
+    task.steps.officialContacted = true;
+    task.steps.resolved = true;
+    task.status = 'done';
+    addEvidence('department-confirmation', '部门办公室确认没有该研究助理项目或代购礼券安排');
+    addHistory('research-resolved', '通过官网号码确认邀请邮件冒充教授');
+    advanceTime(6);
+    endCall('记下部门办公室的核验结果');
+    renderHome();
+    playSound('success');
   }
 
   function collectParcel() {
@@ -1898,26 +1961,11 @@
     const contact = state.contacts.find((item) => item.id === contactId);
     if (!contact) return;
     if (contactId === 'contact-hall') {
-      showDialog('Hall Reception', '职员核对了完整运单号：文件已于08:14送达收发室，今天17:00前凭学生证领取，不需要在线补缴费用。', [
-        { label: '记下信息', action: 'confirm-hall', kind: 'primary-action' },
-        { label: '稍后处理', action: 'close-overlay' }
-      ]);
+      startOfficialCall(contactId);
       return;
     }
     if (contactId === 'contact-department') {
-      const task = state.taskState.research;
-      task.steps.officialContacted = true;
-      task.steps.resolved = true;
-      task.status = 'done';
-      addEvidence('department-confirmation', '部门办公室确认没有该研究助理项目或代购礼券安排');
-      addHistory('research-resolved', '通过官网号码确认邀请邮件冒充教授');
-      advanceTime(6);
-      saveState();
-      renderHome();
-      playSound('success');
-      showDialog('Department General Office', '“Prof. Chan 没有发送这封邮件，学院也不会要求学生先代购参与者礼券。研究助理招募只会使用 PolyU 官方邮箱和部门系统。”', [
-        { label: '记下结果', action: 'close-overlay', kind: 'primary-action' }
-      ]);
+      startOfficialCall(contactId);
       return;
     }
     if (contactId === 'contact-ajie') {
@@ -2293,6 +2341,20 @@
       case 'event-register-official': registerOfficialEvent(); break;
       case 'event-skip-official': skipOfficialEvent(); break;
       case 'call-hall': callContact('contact-hall'); break;
+      case 'call-hall-provide-tracking':
+        callSession.step = 1;
+        renderCallDialogue('「查到喇：文件08:14送到收發室。今日17:00前帶學生證嚟拎就得，唔需要網上補交費用。」', [
+          ['confirm-hall', '记下信息'], ['call-official-later', '稍后处理']
+        ], '');
+        break;
+      case 'call-department-ask-research':
+        callSession.step = 1;
+        renderCallDialogue('「Prof. Chan 冇發出呢封邀請。學院亦唔會要求學生先代購禮券；研究助理招募只會用 PolyU 官方電郵同部門系統。」', [
+          ['confirm-department', '记下结果'], ['call-official-later', '稍后处理']
+        ], '');
+        break;
+      case 'confirm-department': confirmDepartment(); break;
+      case 'call-official-later': endCall('暂时结束官方号码通话，稍后再处理'); break;
       case 'confirm-hall': confirmHall(); break;
       case 'collect-parcel': collectParcel(); break;
       case 'open-contacts': openApp('contacts'); break;
