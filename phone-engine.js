@@ -129,6 +129,23 @@
   let speechTimer = null;
   let callerAudio = null;
   let mailMenuReturnFocus = null;
+  let unlockTransitionTimer = null;
+  let unlockGesture = createUnlockGesture();
+
+  function createUnlockGesture() {
+    return {
+      active: false,
+      finishing: false,
+      pointerId: null,
+      startX: 0,
+      startY: 0,
+      lastY: 0,
+      lastTime: 0,
+      velocity: 0,
+      distance: 0,
+      direction: null
+    };
+  }
   const activeTones = new Set();
 
   function loadState() {
@@ -422,6 +439,7 @@
   function showScreen(id) {
     [els.lockScreen, els.homeScreen, els.appScreen].forEach((screen) => screen.classList.remove('is-active'));
     $(id).classList.add('is-active');
+    if (els.phoneViewport) els.phoneViewport.classList.toggle('is-locked', id === 'lockScreen');
   }
 
   function showToast(message) {
@@ -497,9 +515,177 @@
     }
   }
 
-  function unlock(targetApp, target) {
+  function prefersReducedMotion() {
+    return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  }
+
+  function unlockThreshold() {
+    const height = els.lockScreen ? els.lockScreen.getBoundingClientRect().height : 800;
+    return Math.min(112, Math.max(84, height * .12));
+  }
+
+  function setUnlockVisuals(shift, progress) {
+    if (!els.phoneViewport) return;
+    const safeProgress = Math.max(0, Math.min(1, progress || 0));
+    els.phoneViewport.style.setProperty('--unlock-shift', `${shift || 0}px`);
+    els.phoneViewport.style.setProperty('--unlock-progress', String(safeProgress));
+    els.phoneViewport.style.setProperty('--unlock-lock-opacity', String(1 - safeProgress * .16));
+    els.phoneViewport.style.setProperty('--unlock-home-opacity', String(.18 + safeProgress * .82));
+    els.phoneViewport.style.setProperty('--unlock-home-scale', String(.955 + safeProgress * .045));
+    if (els.unlockButton) els.unlockButton.dataset.swipeState = safeProgress >= 1 ? 'ready' : (safeProgress > 0 ? 'moving' : 'idle');
+  }
+
+  function clearUnlockVisuals() {
+    clearTimeout(unlockTransitionTimer);
+    unlockTransitionTimer = null;
+    if (!els.phoneViewport) return;
+    els.phoneViewport.classList.remove('is-unlock-preview', 'is-unlock-dragging', 'is-unlock-returning', 'is-unlocking');
+    els.phoneViewport.style.removeProperty('--unlock-shift');
+    els.phoneViewport.style.removeProperty('--unlock-progress');
+    els.phoneViewport.style.removeProperty('--unlock-lock-opacity');
+    els.phoneViewport.style.removeProperty('--unlock-home-opacity');
+    els.phoneViewport.style.removeProperty('--unlock-home-scale');
+    if (els.homeScreen) els.homeScreen.classList.remove('is-unlock-preview');
+    if (els.unlockButton) delete els.unlockButton.dataset.swipeState;
+  }
+
+  function resetUnlockGesture() {
+    clearTimeout(unlockTransitionTimer);
+    unlockTransitionTimer = null;
+    const pointerId = unlockGesture.pointerId;
+    if (pointerId != null && els.unlockButton && els.unlockButton.hasPointerCapture && els.unlockButton.hasPointerCapture(pointerId)) {
+      try { els.unlockButton.releasePointerCapture(pointerId); } catch {}
+    }
+    unlockGesture = createUnlockGesture();
+    clearUnlockVisuals();
+  }
+
+  function returnUnlockGesture() {
+    const pointerId = unlockGesture.pointerId;
+    unlockGesture.active = false;
+    unlockGesture.pointerId = null;
+    if (pointerId != null && els.unlockButton.hasPointerCapture && els.unlockButton.hasPointerCapture(pointerId)) {
+      try { els.unlockButton.releasePointerCapture(pointerId); } catch {}
+    }
+    els.phoneViewport.classList.remove('is-unlock-dragging', 'is-unlocking');
+    els.phoneViewport.classList.add('is-unlock-returning');
+    setUnlockVisuals(0, 0);
+    const finish = () => {
+      if (unlockGesture.finishing) return;
+      clearUnlockVisuals();
+      unlockGesture = createUnlockGesture();
+    };
+    if (prefersReducedMotion()) finish();
+    else unlockTransitionTimer = setTimeout(finish, 300);
+  }
+
+  function finishUnlockGesture() {
+    unlockGesture.active = false;
+    unlockGesture.finishing = true;
+    unlockGesture.pointerId = null;
     ensureAudio();
     playSound('unlock');
+    els.phoneViewport.classList.remove('is-unlock-dragging', 'is-unlock-returning');
+    els.phoneViewport.classList.add('is-unlocking', 'is-unlock-preview');
+    const exitDistance = Math.max(170, els.lockScreen.getBoundingClientRect().height * .2);
+    setUnlockVisuals(-exitDistance, 1);
+    const finish = () => {
+      if (!unlockGesture.finishing) return;
+      unlockGesture.finishing = false;
+      clearUnlockVisuals();
+      unlockGesture = createUnlockGesture();
+      unlock(null, null, false);
+    };
+    if (prefersReducedMotion()) {
+      finish();
+      return;
+    }
+    const onTransitionEnd = (event) => {
+      if (event.target !== els.lockScreen || event.propertyName !== 'translate') return;
+      els.lockScreen.removeEventListener('transitionend', onTransitionEnd);
+      finish();
+    };
+    els.lockScreen.addEventListener('transitionend', onTransitionEnd);
+    unlockTransitionTimer = setTimeout(() => {
+      els.lockScreen.removeEventListener('transitionend', onTransitionEnd);
+      finish();
+    }, 320);
+  }
+
+  function beginUnlockPointer(event) {
+    if (state.unlocked || unlockGesture.active || unlockGesture.finishing) return;
+    if (event.isPrimary === false || (event.pointerType === 'mouse' && event.button !== 0)) return;
+    clearUnlockVisuals();
+    unlockGesture = createUnlockGesture();
+    unlockGesture.active = true;
+    unlockGesture.pointerId = event.pointerId;
+    unlockGesture.startX = event.clientX;
+    unlockGesture.startY = event.clientY;
+    unlockGesture.lastY = event.clientY;
+    unlockGesture.lastTime = event.timeStamp || performance.now();
+    setUnlockVisuals(0, 0);
+    try { els.unlockButton.setPointerCapture(event.pointerId); } catch {}
+    event.preventDefault();
+  }
+
+  function moveUnlockPointer(event) {
+    if (!unlockGesture.active || event.pointerId !== unlockGesture.pointerId) return;
+    const deltaX = event.clientX - unlockGesture.startX;
+    const deltaY = event.clientY - unlockGesture.startY;
+    const upward = Math.max(0, -deltaY);
+    const movement = Math.hypot(deltaX, deltaY);
+    const horizontal = Math.abs(deltaX);
+    const downward = Math.max(0, deltaY);
+    if (!unlockGesture.direction && movement >= 10) {
+      if (upward >= 12 && upward > horizontal * 1.1) {
+        unlockGesture.direction = 'up';
+        els.homeScreen.classList.add('is-unlock-preview');
+        els.phoneViewport.classList.add('is-unlock-preview', 'is-unlock-dragging');
+      } else if ((horizontal >= 24 && horizontal > upward * 1.35) || downward >= 20) {
+        unlockGesture.direction = 'blocked';
+      }
+    }
+    const now = event.timeStamp || performance.now();
+    const elapsed = Math.max(1, now - unlockGesture.lastTime);
+    const instantVelocity = (unlockGesture.lastY - event.clientY) / elapsed;
+    const carriedVelocity = elapsed <= 100 ? unlockGesture.velocity * .65 : 0;
+    unlockGesture.velocity = carriedVelocity + instantVelocity * .35;
+    unlockGesture.lastY = event.clientY;
+    unlockGesture.lastTime = now;
+    if (unlockGesture.direction !== 'up') {
+      event.preventDefault();
+      return;
+    }
+    const threshold = unlockThreshold();
+    const resistedDistance = Math.min(160, Math.min(upward, threshold) + Math.max(0, upward - threshold) * .25);
+    unlockGesture.distance = upward;
+    setUnlockVisuals(-resistedDistance, upward / threshold);
+    event.preventDefault();
+  }
+
+  function endUnlockPointer(event, cancelled) {
+    if (!unlockGesture.active || event.pointerId !== unlockGesture.pointerId) return;
+    const pointerId = unlockGesture.pointerId;
+    const now = event.timeStamp || performance.now();
+    const freshVelocity = now - unlockGesture.lastTime <= 100 ? unlockGesture.velocity : 0;
+    const succeeded = !cancelled && unlockGesture.direction === 'up' && (
+      unlockGesture.distance >= unlockThreshold() ||
+      (unlockGesture.distance >= 28 && freshVelocity >= .55)
+    );
+    unlockGesture.active = false;
+    unlockGesture.pointerId = null;
+    if (els.unlockButton.hasPointerCapture && els.unlockButton.hasPointerCapture(pointerId)) {
+      try { els.unlockButton.releasePointerCapture(pointerId); } catch {}
+    }
+    event.preventDefault();
+    if (succeeded) finishUnlockGesture();
+    else returnUnlockGesture();
+  }
+
+  function unlock(targetApp, target, withSound = true) {
+    resetUnlockGesture();
+    ensureAudio();
+    if (withSound) playSound('unlock');
     state.unlocked = true;
     saveState();
     renderHome();
@@ -1650,6 +1836,7 @@
     Object.assign(state, preferences);
     callSession = null;
     clearTimeout(callbackTimer);
+    resetUnlockGesture();
     closeOverlay();
     renderLock();
     renderHome();
@@ -1897,7 +2084,22 @@
   }
 
   function bindEvents() {
-    els.unlockButton.addEventListener('click', () => unlock());
+    els.unlockButton.addEventListener('pointerdown', beginUnlockPointer);
+    window.addEventListener('pointermove', moveUnlockPointer, { passive: false });
+    window.addEventListener('pointerup', (event) => endUnlockPointer(event, false), { passive: false });
+    window.addEventListener('pointercancel', (event) => endUnlockPointer(event, true), { passive: false });
+    window.addEventListener('blur', () => {
+      if (unlockGesture.active && !unlockGesture.finishing) returnUnlockGesture();
+    });
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden && unlockGesture.active && !unlockGesture.finishing) returnUnlockGesture();
+    });
+    els.unlockButton.addEventListener('lostpointercapture', () => {
+      if (unlockGesture.active && !unlockGesture.finishing) returnUnlockGesture();
+    });
+    els.unlockButton.addEventListener('click', (event) => {
+      if (event.detail === 0) unlock();
+    });
     els.soundToggle.addEventListener('click', (event) => {
       event.stopPropagation();
       toggleSound();
@@ -1976,7 +2178,7 @@
       state.unlocked = preview !== 'lock';
     }
     Object.assign(els, {
-      statusTime: $('statusTime'), lockTime: $('lockTime'), lockScreen: $('lockScreen'),
+      statusTime: $('statusTime'), lockTime: $('lockTime'), phoneViewport: $('phoneViewport'), lockScreen: $('lockScreen'),
       homeScreen: $('homeScreen'), appScreen: $('appScreen'), lockNotifications: $('lockNotifications'),
       unlockButton: $('unlockButton'), appGrid: $('appGrid'), appDock: $('appDock'),
       todayCard: $('todayCard'), homeTodoList: $('homeTodoList'), todayProgress: $('todayProgress'), todayProgressBar: $('todayProgressBar'),
