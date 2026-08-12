@@ -168,6 +168,38 @@ await click('#soundToggle');
 assert(await evaluate('document.querySelector("#soundToggle").getAttribute("aria-pressed") === "true"'), 'Sound control did not unmute');
 await wait(2800);
 await capture('simulator-home-todo');
+
+await click('#appDock [data-open-app="phone"]');
+await click('[data-action="phone-view"][data-value="keypad"]');
+assert(await evaluate('document.querySelector("#dialForm") !== null && document.querySelectorAll(".dial-pad button").length === 12'), 'Free-form phone keypad did not render');
+await capture('simulator-free-keypad');
+await evaluate(`(() => { const input = document.querySelector('#dialNumber'); input.value = '5550123'; input.dispatchEvent(new Event('input', { bubbles: true })); document.querySelector('#dialForm').requestSubmit(); })()`);
+await wait(80);
+assert(await evaluate('document.querySelector(".dialog-sheet").textContent.includes("无法接通")'), 'An arbitrary dialled number did not produce a realistic failed-call result');
+await click('[data-action="close-overlay"]');
+await click('[data-action="phone-view"][data-value="recents"]');
+assert(await evaluate('document.querySelector(".phone-recents").textContent.includes("5550123")'), 'Manual call was not added to Recents');
+await click('#systemHome');
+
+await click('#appDock [data-open-app="contacts"]');
+await evaluate(`(() => { const input = document.querySelector('#contactsQuery'); input.value = 'Department'; input.dispatchEvent(new Event('input', { bubbles: true })); })()`);
+assert(await evaluate('document.querySelectorAll("[data-action=call-contact]").length === 1 && document.querySelector("#appContent").textContent.includes("General Office")'), 'Contact search did not filter by organisation');
+await capture('simulator-contact-search');
+await evaluate(`(() => { const input = document.querySelector('#contactsQuery'); input.value = 'nobody-xyz'; input.dispatchEvent(new Event('input', { bubbles: true })); })()`);
+assert(await evaluate('document.querySelector(".inline-empty") !== null'), 'Contact search did not show an empty result');
+await evaluate(`(() => { const input = document.querySelector('#contactsQuery'); input.value = ''; input.dispatchEvent(new Event('input', { bubbles: true })); })()`);
+await click('#systemHome');
+
+await click('#appGrid [data-open-app="browser"]');
+await evaluate(`(() => { const input = document.querySelector('#browserQuery'); input.value = 'coffee society'; document.querySelector('#browserSearchForm').requestSubmit(); })()`);
+assert(await evaluate('document.querySelector(".search-empty") !== null && !document.querySelector("#browserResults").textContent.includes("包裹地址更新中心")'), 'Unrelated free search was incorrectly forced into the parcel storyline');
+await capture('simulator-free-search-empty');
+await evaluate(`(() => { const input = document.querySelector('#browserQuery'); input.value = '+852 6123 8704'; document.querySelector('#browserSearchForm').requestSubmit(); })()`);
+assert(await evaluate('document.querySelector("#browserResults").textContent.includes("查无记录不代表身份真实")'), 'Number search did not return the contextual verification result');
+await capture('simulator-free-number-search');
+assert(await evaluate('JSON.parse(localStorage.getItem("polyu_simulator_phone_v1")).investigationQueries.length >= 2'), 'Free investigation queries were not persisted');
+await click('#systemHome');
+
 await click('#appGrid [data-open-app="settings"]');
 assert(await evaluate('document.querySelector("#appTitle").textContent === "设置"'), 'Settings app did not open');
 await click('[data-action="set-language"][data-value="en"]');
