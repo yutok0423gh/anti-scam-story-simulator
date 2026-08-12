@@ -38,7 +38,7 @@
     '回拨': 'Calling back', '未知号码': 'Unknown number', '正在接通…': 'Connecting…', '你正在主动回拨刚才的未接来电': 'You are returning the missed call.', '正在拨打这个号码': 'You are calling this number.', '通话中': 'Call in progress',
     '取消回拨': 'Cancel callback', '结束通话': 'End call', '通话已结束': 'Call ended',
     '今天的收件箱会比较忙': 'Your inbox may get busy today', '开始今天': 'Start the day',
-    '记下信息': 'Save information', '稍后处理': 'Do this later', '提供运单号': 'Provide tracking number', '询问研究邀请': 'Ask about the research invitation', '记下结果': 'Save result', '打开联系人': 'Open Contacts', '关闭': 'Close', '知道了': 'Got it',
+    '记下信息': 'Save information', '稍后处理': 'Do this later', '我收到通知有份文件，想查一下': 'I received a notice about a document and want to check it', '请问这里是什么单位？': 'Which office is this?', '只提供尾号和宿舍': 'Share only the last four digits and hall', '先问是否需要缴费': 'Ask whether any payment is required first', '提供完整运单号': 'Provide the full tracking number', '我想核实一封研究邀请': 'I want to verify a research invitation', '请问这里是什么办公室？': 'Which office is this?', '提供邮件主题和发件地址': 'Share the subject and sender address', '询问研究邀请': 'Ask about the research invitation', '记下结果': 'Save result', '打开联系人': 'Open Contacts', '关闭': 'Close', '知道了': 'Got it',
     '确认私人转账': 'Confirm personal transfer', '确认转账': 'Confirm transfer', '返回通话': 'Return to call', '继续使用': 'Continue', '返回手机桌面': 'Return to Home Screen',
     '转账已提交': 'Transfer submitted', '收发室确认文件正在等待领取': 'Hall reception confirmed the document is ready.', '先确认领取地点和安排': 'Confirm the collection location and arrangements first.', '文件已领取': 'Document collected',
     '已保存短信中的编号': 'Message tracking number saved', '完整运单号已保存': 'Full tracking number saved', '官方查询结果已保存': 'Official result saved', '查询结果已保存': 'Search result saved',
@@ -1812,14 +1812,16 @@
     if (logItem) logItem.direction = '已接通';
     advanceTime(1);
     if (contactId === 'contact-hall') {
-      renderCallDialogue('「宿舍收發室，你好。請講低完整運單號，我幫你查一下。」', [
-        ['call-hall-provide-tracking', '提供运单号'],
+      renderCallDialogue('「喂，你好。請問你想查咩？」', [
+        ['call-hall-describe-request', '我收到通知有份文件，想查一下'],
+        ['call-hall-ask-identity', '请问这里是什么单位？'],
         ['call-official-later', '稍后处理']
       ], '');
       return;
     }
-    renderCallDialogue('「Department General Office，你好。請問有甚麼可以幫你？」', [
-      ['call-department-ask-research', '询问研究邀请'],
+    renderCallDialogue('「喂，你好。請問你想搵邊位？」', [
+      ['call-department-describe-request', '我想核实一封研究邀请'],
+      ['call-department-ask-identity', '请问这里是什么办公室？'],
       ['call-official-later', '稍后处理']
     ], '');
   }
@@ -2341,14 +2343,50 @@
       case 'event-register-official': registerOfficialEvent(); break;
       case 'event-skip-official': skipOfficialEvent(); break;
       case 'call-hall': callContact('contact-hall'); break;
-      case 'call-hall-provide-tracking':
+      case 'call-hall-ask-identity':
         callSession.step = 1;
+        renderCallDialogue('「呢度係宿舍收發室。請問你想查邊份文件？」', [
+          ['call-hall-describe-request', '我收到通知有份文件，想查一下'], ['call-official-later', '稍后处理']
+        ], '');
+        break;
+      case 'call-hall-describe-request':
+        callSession.step = 1;
+        renderCallDialogue('「可以。請講運單號最後四位，同埋文件送去邊間宿舍。」', [
+          ['call-hall-share-partial', '只提供尾号和宿舍'], ['call-hall-ask-fee', '先问是否需要缴费'], ['call-official-later', '稍后处理']
+        ], '');
+        break;
+      case 'call-hall-ask-fee':
+        callSession.step = 2;
+        renderCallDialogue('「一般領取文件唔使網上付款。不過要查到件，我要先核對運單資料。」', [
+          ['call-hall-share-partial', '只提供尾号和宿舍'], ['call-official-later', '稍后处理']
+        ], '');
+        break;
+      case 'call-hall-share-partial':
+        callSession.step = 2;
+        renderCallDialogue('「尾號1305，係嗎？我搵到一項紀錄，但要再核對完整編號先可以講送達時間。」', [
+          ['call-hall-provide-tracking', '提供完整运单号'], ['call-official-later', '稍后处理']
+        ], '');
+        break;
+      case 'call-hall-provide-tracking':
+        callSession.step = 3;
         renderCallDialogue('「查到喇：文件08:14送到收發室。今日17:00前帶學生證嚟拎就得，唔需要網上補交費用。」', [
           ['confirm-hall', '记下信息'], ['call-official-later', '稍后处理']
         ], '');
         break;
-      case 'call-department-ask-research':
+      case 'call-department-ask-identity':
         callSession.step = 1;
+        renderCallDialogue('「呢度係 Department General Office。請問你想查咩事？」', [
+          ['call-department-describe-request', '我想核实一封研究邀请'], ['call-official-later', '稍后处理']
+        ], '');
+        break;
+      case 'call-department-describe-request':
+        callSession.step = 1;
+        renderCallDialogue('「可以。你唔使提供個人資料，講封郵件嘅主題同發件地址就得。」', [
+          ['call-department-ask-research', '提供邮件主题和发件地址'], ['call-official-later', '稍后处理']
+        ], '');
+        break;
+      case 'call-department-ask-research':
+        callSession.step = 2;
         renderCallDialogue('「Prof. Chan 冇發出呢封邀請。學院亦唔會要求學生先代購禮券；研究助理招募只會用 PolyU 官方電郵同部門系統。」', [
           ['confirm-department', '记下结果'], ['call-official-later', '稍后处理']
         ], '');
