@@ -35,7 +35,7 @@
     const contactRoll = Math.random();
     const contactVariant = contactRoll < 0.32 ? 'real' : (contactRoll < 0.78 ? 'fake' : 'grey');
     return {
-      version: 10,
+      version: 11,
       seed: Math.random().toString(36).slice(2),
       contactVariant,
       contactIsReal: contactVariant === 'real',
@@ -63,6 +63,7 @@
       cardFrozen: false,
       privacyExposure: 0,
       moneyLost: 0,
+      recoveryScamTriggered: false,
       evidence: [],
       history: [],
       callJudgements: {},
@@ -105,6 +106,28 @@
             feeCompared: false,
             registered: false
           }
+        },
+        career: {
+          status: 'pending',
+          steps: {
+            invitationRead: false,
+            trainingOpened: false,
+            profileSubmitted: false,
+            trialPaid: false,
+            trialCommissionReceived: false,
+            largeDepositRequested: false,
+            verified: false
+          }
+        },
+        recovery: {
+          status: 'locked',
+          steps: {
+            messageRead: false,
+            portalOpened: false,
+            bankingDetailsShared: false,
+            guaranteePaid: false,
+            officialAdviceChecked: false
+          }
         }
       },
       notifications: [
@@ -113,7 +136,9 @@
         { id: 'n-mail', app: 'mail', title: 'Hall Reception', body: 'Registered document ready for collection', time: '08:32', unread: true, target: 'mail-parcel' },
         { id: 'n-sms', app: 'messages', title: '未知号码', body: '包裹地址资料不完整', time: '08:35', unread: true, target: 'thread-parcel' },
         { id: 'n-research', app: 'mail', title: 'Prof. C. W. Chan', body: 'Research assistant opportunity', time: '08:41', unread: true, target: 'mail-research' },
-        { id: 'n-event-fee', app: 'mail', title: 'PolyU Student Event Team', body: 'Payment pending · Student Innovation Night', time: '08:45', unread: true, target: 'mail-event-fee' }
+        { id: 'n-event-fee', app: 'mail', title: 'PolyU Student Event Team', body: 'Payment pending · Student Innovation Night', time: '08:45', unread: true, target: 'mail-event-fee' },
+        { id: 'n-career', app: 'mail', title: 'Northbridge Talent', body: 'Alternative remote research role', time: '08:49', unread: true, target: 'mail-career' },
+        { id: 'n-health', app: 'messages', title: '医疗服务通知', body: '免费试用即将转为每月自动收费', time: '08:52', unread: true, target: 'thread-health' }
       ],
       messages: {
         parcel: {
@@ -134,6 +159,26 @@
           items: [
             { from: 'them', time: '08:12', text: '有人看到今天换课室了吗？PolyULife说改到N003。' },
             { from: 'mine', time: '08:14', text: '看到了，我晚点过去。' }
+          ]
+        },
+        health: {
+          id: 'thread-health',
+          sender: '医疗服务通知',
+          number: '+852 5XXX 0198',
+          unread: true,
+          items: [
+            { from: 'them', time: '08:52', text: '【医疗服务】你的健康保障免费试用将于今日结束，其后每月自动收取HK$388。如需取消，请致电+852 5XXX 0198或使用以下页面。' },
+            { from: 'them', time: '08:52', text: 'https://medical-service-cancel.example' }
+          ]
+        },
+        market: {
+          id: 'thread-market',
+          sender: '二手平台买家',
+          number: '平台对话',
+          unread: false,
+          items: [
+            { from: 'them', time: '08:18', text: '你好，我已经付款买你的计算器。平台说卖家账户要先完成一次收款验证，你看一下邮件或这个链接。' },
+            { from: 'them', time: '08:19', text: 'https://marketplace-protection.example/receive' }
           ]
         }
       },
@@ -192,6 +237,25 @@
             subject: '研究助理机会——请于今日回复',
             preview: '你的资料获推荐参与一项人工智能学习研究。',
             body: '同学你好：你的资料获推荐参加一个为期八周的人工智能学习研究项目。工作可远程完成，时薪为HK$180。请于今天通过入职表格确认是否有空。第一项任务包括代为安排参与者奖励电子礼券，所有费用随后报销。'
+          },
+          tracking: null
+        },
+        {
+          id: 'mail-career',
+          kind: 'career',
+          from: 'Northbridge Talent',
+          address: 'recruitment@northbridge-projects.example',
+          subject: 'Alternative remote Research Assistant role',
+          preview: 'The position you viewed is full, but a flexible project role is available.',
+          time: '08:49',
+          unread: true,
+          focused: true,
+          language: 'en',
+          body: 'Hello, the internship you viewed has reached capacity. Based on your student profile, we can instead offer a remote Research and Project Assistant role. The work includes product data collection and quality checks. Training takes around 40 minutes and the first trial task is paid immediately. Continue through our project workspace today if interested.',
+          translation: {
+            subject: '替代的远程研究助理职位',
+            preview: '你查看的职位已满，但现有一个时间灵活的项目岗位。',
+            body: '你好，你查看的实习职位已经满额。根据你的学生资料，我们可以改为提供远程研究及项目助理职位，工作包括产品资料搜集和质量检查。培训约需40分钟，首个试做任务会即时结算。如有兴趣，请于今天进入我们的项目工作平台。'
           },
           tracking: null
         },
