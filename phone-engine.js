@@ -15,7 +15,7 @@
   const EN_UI = {
     '模拟器': 'Simulator', '完成今天的事。相信谁，由你判断。': 'Get through the day. Decide who to trust.',
     '教学模拟 · 不使用真实账户': 'Training simulation · No real accounts', '两件事需要处理': 'Two things need your attention', '今日待办': 'Today',
-    '打开今日任务': 'Open today’s tasks', '返回主屏幕': 'Back to Home Screen', '更多选项': 'More options', '返回主屏幕': 'Back to Home Screen',
+    '打开今日任务': 'Open today’s tasks', '返回主屏幕': 'Back to Home Screen', '返回上一页': 'Back', '返回': 'Back', '主页': 'Home', '系统导航': 'System navigation', '更多选项': 'More options',
     '关闭声音': 'Mute sound', '打开声音': 'Turn on sound', '声音已开启': 'Sound on', '声音已关闭': 'Sound off',
     '领取交换申请文件': 'Collect exchange application documents', '宿舍收发室 · 17:00前': 'Hall reception · Before 5:00 PM',
     '核实迎新联系人': 'Verify orientation contact', '确认“阿杰”的新号码': 'Confirm Ah Kit’s new number',
@@ -379,9 +379,13 @@
     setText('homeDate', formatLocaleDate());
     if (els.todayCard) els.todayCard.setAttribute('aria-label', ui('打开今日任务'));
     if (els.openTasksShortcut) els.openTasksShortcut.setAttribute('aria-label', ui('打开今日任务'));
-    if (els.appBack) els.appBack.setAttribute('aria-label', ui('返回主屏幕'));
+    if (els.appBack) els.appBack.setAttribute('aria-label', ui('返回上一页'));
     if (els.appMore) els.appMore.setAttribute('aria-label', ui('更多选项'));
-    if (els.homeIndicator) els.homeIndicator.setAttribute('aria-label', ui('返回主屏幕'));
+    if (els.systemNavigation) els.systemNavigation.setAttribute('aria-label', ui('系统导航'));
+    if (els.systemBack) els.systemBack.setAttribute('aria-label', ui('返回上一页'));
+    if (els.systemHome) els.systemHome.setAttribute('aria-label', ui('返回主屏幕'));
+    if (els.systemBackLabel) els.systemBackLabel.textContent = ui('返回');
+    if (els.systemHomeLabel) els.systemHomeLabel.textContent = ui('主页');
     const stage = document.querySelector('.sim-stage');
     if (stage) stage.setAttribute('aria-label', localized('PolyU 学生生活模拟器', 'PolyU Student Life Simulator'));
     syncSoundButton();
@@ -440,6 +444,11 @@
     [els.lockScreen, els.homeScreen, els.appScreen].forEach((screen) => screen.classList.remove('is-active'));
     $(id).classList.add('is-active');
     if (els.phoneViewport) els.phoneViewport.classList.toggle('is-locked', id === 'lockScreen');
+    const unlockedScreen = id !== 'lockScreen';
+    if (els.phoneViewport) els.phoneViewport.classList.toggle('has-system-navigation', unlockedScreen);
+    if (els.systemNavigation) els.systemNavigation.classList.toggle('is-hidden', !unlockedScreen);
+    if (els.systemBack) els.systemBack.disabled = id !== 'appScreen';
+    if (els.systemHome) els.systemHome.disabled = !unlockedScreen;
   }
 
   function showToast(message) {
@@ -706,6 +715,43 @@
     showScreen('homeScreen');
   }
 
+  function navigateBack() {
+    if (!state.unlocked) return;
+    if (els.overlayLayer.firstElementChild) {
+      if (els.overlayLayer.querySelector('.outlook-mail-menu-overlay')) closeMailMessageMenu();
+      else if (callSession) endCall();
+      else closeOverlay();
+      return;
+    }
+    if (state.currentApp === 'mail' && els.appScreen.dataset.mailView === 'detail') {
+      renderMail();
+      return;
+    }
+    if (state.currentApp === 'messages' && els.appContent.querySelector('.conversation')) {
+      renderMessages();
+      return;
+    }
+    if (state.currentApp === 'browser' && state.browserPage !== 'home') {
+      state.browserPage = 'home';
+      saveState();
+      renderBrowser();
+      return;
+    }
+    if (state.currentApp === 'polyu' && state.polyuPage !== 'home') {
+      state.polyuPage = state.polyuPage === 'event-detail' ? 'calendar' : 'home';
+      saveState();
+      renderPolyU();
+      return;
+    }
+    goHome();
+  }
+
+  function navigateHome() {
+    if (!state.unlocked) return;
+    if (callSession) endCall();
+    goHome();
+  }
+
   function openApp(appId, target) {
     const app = DATA.apps[appId];
     if (!app) return;
@@ -903,7 +949,6 @@
 
   function setMailMenuBackgroundInert(inert) {
     els.appScreen.inert = inert;
-    els.homeIndicator.inert = inert;
     const statusBar = document.querySelector('.phone-status');
     if (statusBar) statusBar.inert = inert;
   }
@@ -2121,12 +2166,9 @@
       event.preventDefault(); playSound('tap'); openApp('tasks');
     });
     els.openTasksShortcut.addEventListener('click', () => { playSound('tap'); openApp('tasks'); });
-    els.appBack.addEventListener('click', () => {
-      playSound('tap');
-      if (state.currentApp === 'mail' && els.appScreen.dataset.mailView === 'detail') renderMail();
-      else goHome();
-    });
-    els.homeIndicator.addEventListener('click', () => state.unlocked ? goHome() : null);
+    els.appBack.addEventListener('click', () => { playSound('tap'); navigateBack(); });
+    els.systemBack.addEventListener('click', () => { playSound('tap'); navigateBack(); });
+    els.systemHome.addEventListener('click', () => { playSound('tap'); navigateHome(); });
     els.appMore.addEventListener('click', () => showDialog('模拟器', '当前进度会自动保存在这台设备上。你可以重新开始，系统会重新分配部分人物身份。', [
       { label: '重新开始', action: 'reset-day', kind: 'danger-action' },
       { label: '继续', action: 'close-overlay' }
@@ -2184,7 +2226,9 @@
       todayCard: $('todayCard'), homeTodoList: $('homeTodoList'), todayProgress: $('todayProgress'), todayProgressBar: $('todayProgressBar'),
       openTasksShortcut: $('openTasksShortcut'), appBack: $('appBack'), appMore: $('appMore'),
       appEyebrow: $('appEyebrow'), appTitle: $('appTitle'), appContent: $('appContent'),
-      soundToggle: $('soundToggle'), toast: $('toast'), overlayLayer: $('overlayLayer'), homeIndicator: $('homeIndicator')
+      soundToggle: $('soundToggle'), toast: $('toast'), overlayLayer: $('overlayLayer'),
+      systemNavigation: $('systemNavigation'), systemBack: $('systemBack'), systemHome: $('systemHome'),
+      systemBackLabel: $('systemBackLabel'), systemHomeLabel: $('systemHomeLabel')
     });
     bindEvents();
     renderLock();
