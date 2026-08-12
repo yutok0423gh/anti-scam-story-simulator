@@ -33,7 +33,7 @@
 
   function createInitialState() {
     return {
-      version: 7,
+      version: 8,
       seed: Math.random().toString(36).slice(2),
       contactIsReal: Math.random() < 0.35,
       unlocked: false,
@@ -47,6 +47,10 @@
       dialNumber: '',
       contactsQuery: '',
       investigationQueries: [],
+      messageDrafts: {},
+      mailDrafts: {},
+      mailReplies: {},
+      openMailComposerId: null,
       currentApp: null,
       mailTab: 'focused',
       mailUnreadOnly: false,
