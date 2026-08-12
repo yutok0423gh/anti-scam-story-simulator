@@ -33,7 +33,7 @@
 
   function createInitialState() {
     return {
-      version: 8,
+      version: 9,
       seed: Math.random().toString(36).slice(2),
       contactIsReal: Math.random() < 0.35,
       unlocked: false,
@@ -212,7 +212,7 @@
       ],
       callLog: [
         { id: 'call-unknown', name: '未知号码', number: '+852 6XXX 8704', time: '08:28', direction: '未接来电', unread: true },
-        { id: 'call-hall', name: 'Hall Reception', number: '+852 2XXX 0000', time: '昨天', direction: '呼出', unread: false }
+        { id: 'call-hall', name: '未知号码', number: '+852 2XXX 0000', time: '昨天', direction: '呼出', unread: false }
       ],
       contacts: [
         { id: 'contact-ajie', name: '阿杰（去年迎新）', initials: 'AJ', number: '+852 9XXX 4428', note: '模拟旧号码 · 去年活动联系人' },

@@ -170,6 +170,8 @@ await wait(2800);
 await capture('simulator-home-todo');
 
 await click('#appDock [data-open-app="phone"]');
+assert(await evaluate('Array.from(document.querySelectorAll(".phone-recents .list-copy strong")).every(el => el.textContent === "未知号码")'), 'Phone Recents exposed an automatic caller identity');
+assert(await evaluate('!document.querySelector(".phone-recents").textContent.includes("Hall Reception")'), 'A saved contact label leaked into Phone Recents');
 await click('[data-action="phone-view"][data-value="keypad"]');
 assert(await evaluate('document.querySelector("#dialForm") !== null && document.querySelectorAll(".dial-pad button").length === 12'), 'Free-form phone keypad did not render');
 await capture('simulator-free-keypad');
@@ -179,6 +181,7 @@ assert(await evaluate('document.querySelector(".dialog-sheet").textContent.inclu
 await click('[data-action="close-overlay"]');
 await click('[data-action="phone-view"][data-value="recents"]');
 assert(await evaluate('document.querySelector(".phone-recents").textContent.includes("5550123")'), 'Manual call was not added to Recents');
+assert(await evaluate('document.querySelector(".phone-recents [data-number=\\"5550123\\"] .list-copy strong").textContent === "未知号码"'), 'Manual number was used as an automatic caller identity');
 await click('#systemHome');
 
 await click('#appDock [data-open-app="contacts"]');
