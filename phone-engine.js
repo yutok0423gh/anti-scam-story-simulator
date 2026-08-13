@@ -135,6 +135,26 @@
     '损失后出现了自称协助追款的人；掌握旧案资料仍不等于身份可信。': 'After the loss, someone claiming to help recover the money appeared. Knowing case details still did not verify their identity.',
     '你没有把陌生招聘转介当成必须完成的任务。': 'You did not treat an unsolicited recruitment referral as a required task.',
     '今天没有触发失款后的二次联络。': 'No post-loss recovery contact was triggered today.'
+    , '先垫付印刷费': 'Pay the printing fee first'
+    , '用原号码联系 Mandy': 'Contact Mandy using her saved number'
+    , '查看案件摘要': 'View case summary'
+    , '查看委托摘要': 'View engagement summary'
+    , '同意转交合作律师': 'Agree to a partner lawyer referral'
+    , '查看律师联络': 'View the lawyer contact'
+    , '联络调查工作组': 'Contact the investigation team'
+    , '打开远程协助': 'Open remote assistance'
+    , '允许模拟远程协助': 'Allow simulated remote assistance'
+    , '另行查证机构': 'Verify the organisation independently'
+    , '案件转交记录': 'Case handoff history'
+    , '客服受理': 'Intake desk'
+    , '法律评估': 'Legal review'
+    , '调查协助': 'Investigation support'
+    , '熟人账号里的请求': 'A request from a familiar account'
+    , '你离开原聊天账号，从已保存号码联系Mandy；历史对话和熟悉语气没有被当成身份证明。': 'You left the original chat and contacted Mandy through her saved number. Familiar history and tone were not treated as identity proof.'
+    , '你根据聊天账号里的旧记录和熟悉语气完成了垫付款，但没有从原号码核实。': 'You paid based on old chat history and a familiar tone without checking through the saved number.'
+    , '你看过Mandy账号提出的垫付请求，暂时没有把它当成必须立刻完成的任务。': 'You read the payment request from Mandy’s account without treating it as something that had to be done immediately.'
+    , '你今天没有打开Mandy的聊天。': 'You did not open Mandy’s chat today.'
+    , '客服把你转给律师，律师再转给调查员；角色变多、文件变完整，并没有产生独立核实。': 'A service agent referred you to a lawyer, who referred you to an investigator. More roles and documents did not create independent verification.'
   });
 
   function ui(value) {
@@ -188,10 +208,10 @@
   function loadState() {
     try {
       const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
-      if (saved && [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].includes(saved.version)) {
+      if (saved && [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].includes(saved.version)) {
         const defaults = DATA.createInitialState();
         const savedVersion = saved.version;
-        saved.version = 11;
+        saved.version = 12;
         saved.contactVariant = ['real', 'fake', 'grey'].includes(saved.contactVariant)
           ? saved.contactVariant
           : (saved.contactIsReal ? 'real' : 'fake');
@@ -215,6 +235,7 @@
         saved.mailUnreadOnly = saved.mailUnreadOnly === true;
         saved.mailTranslations = saved.mailTranslations || {};
         saved.recoveryScamTriggered = saved.recoveryScamTriggered === true;
+        saved.hijackedFriendVariant = ['hijacked', 'real'].includes(saved.hijackedFriendVariant) ? saved.hijackedFriendVariant : defaults.hijackedFriendVariant;
         saved.callJudgements = saved.callJudgements && typeof saved.callJudgements === 'object' ? saved.callJudgements : {};
         saved.callRecords = Array.isArray(saved.callRecords) ? saved.callRecords.slice(-12) : [];
         saved.taskState = saved.taskState || {};
@@ -557,12 +578,29 @@
       if (intent.question) return '验证页面会显示我的付款记录；你输入银行资料后就能收款。';
       return '麻烦尽快完成验证，我等着取货。';
     }
+    if (channel === 'message' && id === 'friend') {
+      if (intent.verify || intent.refuse) return state.hijackedFriendVariant === 'real'
+        ? '可以，你打我平时个号码啦。我仲喺会议室，未必即刻听到。'
+        : '我部电话冇电，打唔到。你直接转俾印刷店同事就得，今晚一定还。';
+      if (intent.question) return '就係上次蓝色poster嗰间印刷店，佢哋而家赶住开机。收款名係店员，唔係我。';
+      if (intent.payment) return '好呀，转完cap张图俾我，今晚散会即刻还你。';
+      return '拜托你先帮我处理啦，大家等紧我呢张单。';
+    }
     if (channel === 'message' && id === 'recovery') {
-      if (intent.verify || intent.refuse) return '案件资料已由系统转交，不要另行报警，以免影响资金冻结。请只使用专员发给你的追回页面。';
-      if (intent.question) return '我们已掌握你的交易时间及金额，追回程序需先建立受理钱包。';
-      if (intent.sensitive) return '请在案件页面输入收款银行和账户资料，用于核对资金归属。';
-      if (intent.payment) return '最后需缴交HK$300可退还保证金，完成后资金会连同保证金一并退回。';
-      return '案件追回窗口只有今天有效，请按页面步骤完成。';
+      if (intent.verify || intent.refuse) return '你可以稍后决定；案件编号和资料摘要已经在受理页面，先看清楚再回复。';
+      if (intent.question) return '我们负责登记和分流，法律意见会由合作团队另行提供。受理本身暂时不收费。';
+      return '资料摘要只保留到今天，请用案件编号进入受理页面。';
+    }
+    if (channel === 'message' && id === 'lawyer') {
+      if (intent.verify || intent.refuse) return '你可以核对电子名片和委托摘要。调查期间请勿联络原收款人，以免资金路径改变。';
+      if (intent.question) return '我们会把案件转交调查工作组定位资金；成功前不收律师费，但需要按程序建立保证账户。';
+      return '请先打开委托摘要，之后我会安排调查人员与你对接。';
+    }
+    if (channel === 'message' && id === 'investigator') {
+      if (intent.verify || intent.refuse) return '这是联合调查流程，个案资料不能经一般热线核对。你若中断，冻结窗口可能失效。';
+      if (intent.sensitive) return '远程协助后我会带你检查银行记录，不用在聊天发送密码。';
+      if (intent.payment) return '保证金只是验证资金归属，结案时会连同追回款项退回。';
+      return '先打开协助页面，我会逐步提示你完成资金核验。';
     }
     if (channel === 'message') {
       if (intent.refuse || intent.verify) return '系统显示两小时后会退回。请不要致电其他号码，直接使用短信链接处理。';
@@ -1124,6 +1162,12 @@
     activeThreadKey = key;
     thread.unread = false;
     if (key === 'recovery') state.taskState.recovery.steps.messageRead = true;
+    if (key === 'friend') {
+      state.taskState.friend.steps.messageRead = true;
+      state.taskState.friend.steps.requestSeen = true;
+    }
+    if (key === 'lawyer') state.taskState.recovery.steps.lawyerContacted = true;
+    if (key === 'investigator') state.taskState.recovery.steps.investigatorContacted = true;
     saveState();
     els.appTitle.textContent = key === 'parcel' ? ui(thread.sender) : thread.sender;
     const pending = pendingReplies.has(`message:${key}`);
@@ -1690,12 +1734,27 @@
     };
     if (page === 'recovery-portal') {
       const steps = state.taskState.recovery.steps;
-      els.appContent.innerHTML = `<div class="fake-page"><span class="browser-domain">case-recovery-centre.example</span><div class="fake-logo">盾</div><h2>Emergency fund recovery</h2><p>Case reference HK-${String(state.seed).slice(0, 6).toUpperCase()} · Claimed loss ${esc(formatHKD(state.moneyLost))}. Create a receiving wallet so frozen funds can be returned.</p><div class="safe-input-note">教学模拟不会连接真实银行、警方系统或提交账户资料。</div><div class="action-row">${steps.bankingDetailsShared ? `<button class="primary-action" type="button" data-action="recovery-pay-guarantee">${esc(ui('支付可退还保证金'))}</button>` : `<button class="primary-action" type="button" data-action="recovery-share-details">${esc(ui('提交模拟资料'))}</button>`}<button class="secondary-action" type="button" data-action="recovery-check-official">${esc(ui('查看官方防骗建议'))}</button></div></div>`;
+      els.appContent.innerHTML = `<div class="fake-page handoff-page"><span class="browser-domain">claim-assistance.example/intake</span><div class="case-letterhead"><strong>Claim Assistance Desk</strong><small>Case intake summary</small></div>${recoveryHandoff(1)}<h2>案件资料摘要</h2><p>参考编号 CA-${String(state.seed).slice(0, 6).toUpperCase()} · 申报损失 ${esc(formatHKD(state.moneyLost))}。资料显示交易可能仍在分层转移，建议交由合作法律团队评估。</p><dl class="case-summary"><div><dt>状态</dt><dd>等待授权转介</dd></div><div><dt>初步费用</dt><dd>HK$0</dd></div><div><dt>时限</dt><dd>今天 18:00</dd></div></dl><div class="action-row"><button class="primary-action" type="button" data-action="recovery-accept-intake">${esc(ui(steps.intakeAccepted ? '查看律师联络' : '同意转交合作律师'))}</button><button class="secondary-action" type="button" data-action="recovery-check-official">${esc(ui('另行查证机构'))}</button></div></div>`;
+      return true;
+    }
+    if (page === 'recovery-lawyer') {
+      els.appContent.innerHTML = `<div class="fake-page handoff-page"><span class="browser-domain">chow-legal-associates.example/case</span><div class="case-letterhead"><strong>Chow Legal Associates</strong><small>Digital client memorandum</small></div>${recoveryHandoff(2)}<h2>资金追讨委托摘要</h2><p>周律师已接收案件 CA-${String(state.seed).slice(0, 6).toUpperCase()}。前期法律评估不收费；调查工作组会先定位收款路径，再决定是否启动资产冻结申请。</p><dl class="case-summary"><div><dt>负责人</dt><dd>周文轩律师</dd></div><div><dt>保密要求</dt><dd>避免接触涉案账户</dd></div><div><dt>下一步</dt><dd>转交调查工作组</dd></div></dl><div class="action-row"><button class="primary-action" type="button" data-action="recovery-transfer-investigator">${esc(ui('联络调查工作组'))}</button><button class="secondary-action" type="button" data-action="recovery-check-official">${esc(ui('另行查证机构'))}</button></div></div>`;
+      return true;
+    }
+    if (page === 'recovery-investigator') {
+      const steps = state.taskState.recovery.steps;
+      els.appContent.innerHTML = `<div class="fake-page handoff-page"><span class="browser-domain">secure-case-assist.example/session</span><div class="case-letterhead"><strong>Secure Case Assist</strong><small>Investigation session · L. Wong</small></div>${recoveryHandoff(3)}<h2>${steps.remoteAccessGranted ? '资金归属核验' : '建立远程核验会话'}</h2><p>${steps.remoteAccessGranted ? '设备协助已连接。为确认申请人有能力接收冻结款项，请建立一个HK$300核验余额；系统结案时会一并退回。' : '调查员会通过屏幕协助核对交易记录。无需在聊天发送密码，但协助期间可查看屏幕上的银行通知和账户资料。'}</p><div class="safe-input-note">教学模拟不会安装软件或读取设备；继续只会记录一次模拟远程访问。</div><div class="action-row">${steps.remoteAccessGranted ? `<button class="primary-action" type="button" data-action="recovery-pay-guarantee">${esc(ui('支付可退还保证金'))}</button>` : `<button class="primary-action" type="button" data-action="recovery-grant-remote">${esc(ui('允许模拟远程协助'))}</button>`}<button class="secondary-action" type="button" data-action="recovery-check-official">${esc(ui('另行查证机构'))}</button></div></div>`;
       return true;
     }
     if (!staticPages[page]) return false;
     els.appContent.innerHTML = staticPages[page];
     return true;
+  }
+
+  function recoveryHandoff(stage) {
+    return `<div class="handoff-chain" aria-label="${esc(ui('案件转交记录'))}">${[
+      ['客服受理', 1], ['法律评估', 2], ['调查协助', 3]
+    ].map(([label, index]) => `<span class="${index <= stage ? 'active' : ''}"><i>${index}</i>${esc(ui(label))}</span>`).join('')}</div>`;
   }
 
   function renderBrowserPage(page) {
@@ -1919,7 +1978,10 @@
   function messageThreadActions(key) {
     if (key === 'health') return `<div class="message-actions"><button class="primary-action" type="button" data-action="health-open-cancel">${esc(ui('打开取消页面'))}</button><button class="secondary-action" type="button" data-action="health-check-official">${esc(ui('自行查官方医疗应用'))}</button></div>`;
     if (key === 'market') return `<div class="message-actions"><button class="primary-action" type="button" data-action="market-open-protection">${esc(ui('查看收款验证'))}</button><button class="secondary-action" type="button" data-action="market-check-platform">${esc(ui('返回平台内交易'))}</button></div>`;
-    if (key === 'recovery') return `<div class="message-actions"><button class="primary-action" type="button" data-action="recovery-open-portal">${esc(ui('申请追回款项'))}</button><button class="secondary-action" type="button" data-action="recovery-check-official">${esc(ui('查看官方防骗建议'))}</button></div>`;
+    if (key === 'friend') return `<div class="message-actions"><button class="primary-action" type="button" data-action="friend-pay">${esc(ui('先垫付印刷费'))}</button><button class="secondary-action" type="button" data-action="friend-call-original">${esc(ui('用原号码联系 Mandy'))}</button></div>`;
+    if (key === 'recovery') return `<div class="message-actions"><button class="primary-action" type="button" data-action="recovery-open-portal">${esc(ui('查看案件摘要'))}</button><button class="secondary-action" type="button" data-action="recovery-check-official">${esc(ui('查看官方防骗建议'))}</button></div>`;
+    if (key === 'lawyer') return `<div class="message-actions"><button class="primary-action" type="button" data-action="recovery-open-lawyer">${esc(ui('查看委托摘要'))}</button><button class="secondary-action" type="button" data-action="recovery-check-official">${esc(ui('另行查证机构'))}</button></div>`;
+    if (key === 'investigator') return `<div class="message-actions"><button class="primary-action" type="button" data-action="recovery-open-investigator">${esc(ui('打开远程协助'))}</button><button class="secondary-action" type="button" data-action="recovery-check-official">${esc(ui('另行查证机构'))}</button></div>`;
     return '';
   }
 
@@ -2404,6 +2466,29 @@
       startOfficialCall(contactId);
       return;
     }
+    if (contactId === 'contact-mandy') {
+      const steps = state.taskState.friend.steps;
+      steps.originalNumberCalled = true;
+      steps.resolved = true;
+      state.taskState.friend.status = 'done';
+      advanceTime(4);
+      if (state.hijackedFriendVariant === 'hijacked') {
+        addEvidence('friend-original-number', '从Mandy原号码确认聊天账号已被盗用');
+        addHistory('friend-verified', '没有在原聊天账号继续猜身份，而是从已保存号码联系本人');
+        showDialog('Mandy', '“我个聊天账号俾人登入咗！我冇叫你帮我转钱，唔好理嗰边，我而家通知其他人。”', [
+          { label: '记下结果', action: 'close-overlay', kind: 'primary-action' }
+        ]);
+      } else {
+        addEvidence('friend-original-number', '从Mandy原号码确认印刷垫付款确由本人提出');
+        addHistory('friend-verified', '从已保存号码确认请求来自本人，并进一步核对收款安排');
+        showDialog('Mandy', '“係我呀，多谢你打嚟确认。印刷店可以等，我叫佢哋直接出正式单俾我，唔使你转去个人户口。”', [
+          { label: '记下结果', action: 'close-overlay', kind: 'primary-action' }
+        ]);
+      }
+      saveState();
+      playSound('success');
+      return;
+    }
     if (contactId === 'contact-ajie') {
       state.taskState.contact.steps.oldNumberCalled = true;
       advanceTime(4);
@@ -2484,16 +2569,33 @@
     state.taskState.recovery.status = 'active';
     state.messages.recovery = {
       id: 'thread-recovery',
-      sender: '案件跟进专员',
+      sender: '退款协助客服',
       number: '+852 6XXX 7742',
       unread: true,
       items: [
-        { from: 'them', time: formatTime(state.time), text: `你好，我们收到你刚才一笔${formatHKD(state.moneyLost)}可疑交易的资料，资金目前仍有机会追回。` },
-        { from: 'them', time: formatTime(state.time), text: '为免资金被转走，请不要再联络原收款人，也不要重复报警。立即进入专员案件页面建立退款钱包：https://case-recovery-centre.example' }
+        { from: 'them', time: formatTime(state.time), text: `你好，我们的合作渠道转来一笔${formatHKD(state.moneyLost)}交易争议。你可以先查看案件摘要，再决定是否委托处理。` },
+        { from: 'them', time: formatTime(state.time), text: '初步受理不收费。参考资料只保留到今天18:00：https://claim-assistance.example/intake' }
       ]
     };
-    state.notifications.unshift({ id: `n-recovery-${Date.now()}`, app: 'messages', title: '案件跟进专员', body: '已掌握你的交易资料，可协助追回', time: formatTime(state.time), unread: true, target: 'thread-recovery' });
-    addHistory('recovery-scam-arrived', '发生损失后收到自称案件专员的追款联络');
+    state.notifications.unshift({ id: `n-recovery-${Date.now()}`, app: 'messages', title: '退款协助客服', body: '案件摘要已建立，可选择是否转介', time: formatTime(state.time), unread: true, target: 'thread-recovery' });
+    addHistory('recovery-scam-arrived', '发生损失后收到掌握交易金额的退款协助联络');
+  }
+
+  function payFriendRequest() {
+    const steps = state.taskState.friend.steps;
+    if (steps.paid) return showToast('这笔模拟转账已经处理');
+    steps.paid = true;
+    steps.resolved = true;
+    state.taskState.friend.status = 'done';
+    state.balance -= 760;
+    state.transactions.unshift({ title: 'FPS · PRINTING', time: `今天 ${formatTime(state.time)}`, amount: -760 });
+    addHistory('friend-payment', '在聊天账号提出请求后向第三方FPS账户垫付HK$760');
+    if (state.hijackedFriendVariant === 'hijacked') state.moneyLost += 760;
+    advanceTime(3);
+    if (state.hijackedFriendVariant === 'hijacked') triggerRecoveryScam();
+    saveState();
+    showToast('模拟转账已提交');
+    renderMessageThread('friend');
   }
 
   function renderCareerWorkspace() {
@@ -2599,16 +2701,57 @@
     renderHome();
   }
 
-  function shareRecoveryDetails() {
+  function acceptRecoveryIntake() {
     const steps = state.taskState.recovery.steps;
-    if (!steps.bankingDetailsShared) {
+    if (!steps.intakeAccepted) {
+      steps.intakeAccepted = true;
+      state.messages.lawyer = {
+        id: 'thread-lawyer', sender: '周律师 · 资金追讨', number: '法律团队聊天', unread: true,
+        items: [
+          { from: 'them', time: formatTime(state.time), text: `你好，我是受理台转介的周律师。案件CA-${String(state.seed).slice(0, 6).toUpperCase()}由我作初步评估。` },
+          { from: 'them', time: formatTime(state.time), text: '我们在成功追回前不收律师费。请先看电子委托摘要；之后会由调查工作组与你核对资金路径。' }
+        ]
+      };
+      state.notifications.unshift({ id: `n-lawyer-${Date.now()}`, app: 'messages', title: '周律师 · 资金追讨', body: '已收到案件转介，请查看委托摘要', time: formatTime(state.time), unread: true, target: 'thread-lawyer' });
+      addHistory('recovery-intake-accepted', '同意退款协助客服把案件转交合作律师');
+      advanceTime(2);
+      saveState();
+      playSound('notification');
+    }
+    openApp('messages', 'thread-lawyer');
+  }
+
+  function transferRecoveryInvestigator() {
+    const steps = state.taskState.recovery.steps;
+    if (!steps.investigatorContacted) {
+      steps.investigatorContacted = true;
+      state.messages.investigator = {
+        id: 'thread-investigator', sender: '调查工作组 · L. Wong', number: '加密案件聊天', unread: true,
+        items: [
+          { from: 'them', time: formatTime(state.time), text: '周律师已把案件交给我。我们正在尝试锁定收款路径，请不要向原收款人透露调查进度。' },
+          { from: 'them', time: formatTime(state.time), text: '下一步要远程查看交易记录和银行通知。打开会话后我会逐项指示：https://secure-case-assist.example/session' }
+        ]
+      };
+      state.notifications.unshift({ id: `n-investigator-${Date.now()}`, app: 'messages', title: '调查工作组 · L. Wong', body: '已接收案件，请建立核验会话', time: formatTime(state.time), unread: true, target: 'thread-investigator' });
+      addHistory('recovery-investigator-handoff', '律师把案件转交自称调查工作组的另一联系人');
+      advanceTime(2);
+      saveState();
+      playSound('notification');
+    }
+    openApp('messages', 'thread-investigator');
+  }
+
+  function grantRecoveryRemoteAccess() {
+    const steps = state.taskState.recovery.steps;
+    if (!steps.remoteAccessGranted) {
+      steps.remoteAccessGranted = true;
       steps.bankingDetailsShared = true;
-      state.privacyExposure += 2;
-      addHistory('recovery-details-shared', '向假冒追款专员提供了模拟银行账户资料');
+      state.privacyExposure += 3;
+      addHistory('recovery-remote-access', '允许调查员进行模拟远程协助并查看银行通知');
       advanceTime(2);
       saveState();
     }
-    renderBrowserPage('recovery-portal');
+    renderBrowserPage('recovery-investigator');
   }
 
   function payRecoveryGuarantee() {
@@ -2618,12 +2761,12 @@
       state.balance -= 300;
       state.moneyLost += 300;
       state.transactions.unshift({ title: 'RECOVERY GUARANTEE', time: `今天 ${formatTime(state.time)}`, amount: -300 });
-      addHistory('recovery-guarantee-paid', '向假冒追款专员支付HK$300可退还保证金');
+      addHistory('recovery-guarantee-paid', '在多角色追款流程中支付HK$300资金核验保证金');
       advanceTime(2);
       saveState();
       playSound('notification');
     }
-    els.appContent.innerHTML = `<div class="fake-page"><span class="browser-domain">case-recovery-centre.example</span><div class="fake-logo">…</div><h2>Recovery queue pending</h2><p>Your guarantee is recorded. A further compliance payment may be required before funds can be released.</p><div class="action-row"><button class="primary-action" type="button" data-action="open-bank-app">${esc(ui('查看银行记录'))}</button><button class="secondary-action" type="button" data-action="recovery-check-official">${esc(ui('查看官方防骗建议'))}</button></div></div>`;
+    els.appContent.innerHTML = `<div class="fake-page handoff-page"><span class="browser-domain">secure-case-assist.example/session</span>${recoveryHandoff(3)}<div class="fake-logo">…</div><h2>Compliance review pending</h2><p>Your verification balance is recorded. The investigator may request another compliance amount before the release window can be opened.</p><div class="action-row"><button class="primary-action" type="button" data-action="open-bank-app">${esc(ui('查看银行记录'))}</button><button class="secondary-action" type="button" data-action="recovery-check-official">${esc(ui('查看官方防骗建议'))}</button></div></div>`;
     renderHome();
   }
 
@@ -2754,8 +2897,15 @@
       ? '你在收到小额返佣后继续支付了更大任务押金。'
       : (state.taskState.career.steps.trialCommissionReceived ? '你完成小额试做并收到返佣，但没有因此继续投入更大金额。' : (state.taskState.career.steps.verified ? '你从独立渠道核实了招聘或追款安排。' : '你没有把陌生招聘转介当成必须完成的任务。'));
     const recoveryOutcome = state.recoveryScamTriggered
-      ? '损失后出现了自称协助追款的人；掌握旧案资料仍不等于身份可信。'
+      ? (state.taskState.recovery.steps.investigatorContacted
+        ? '客服把你转给律师，律师再转给调查员；角色变多、文件变完整，并没有产生独立核实。'
+        : '损失后出现了自称协助追款的人；掌握旧案资料仍不等于身份可信。')
       : '今天没有触发失款后的二次联络。';
+    const friendOutcome = state.taskState.friend.steps.originalNumberCalled
+      ? '你离开原聊天账号，从已保存号码联系Mandy；历史对话和熟悉语气没有被当成身份证明。'
+      : (state.taskState.friend.steps.paid
+        ? '你根据聊天账号里的旧记录和熟悉语气完成了垫付款，但没有从原号码核实。'
+        : (state.taskState.friend.steps.messageRead ? '你看过Mandy账号提出的垫付请求，暂时没有把它当成必须立刻完成的任务。' : '你今天没有打开Mandy的聊天。'));
     els.overlayLayer.innerHTML = `
       <section class="review-overlay">
         <span class="simulation-tag">DAY REVIEW · ${formatTime(state.time)}</span>
@@ -2763,6 +2913,7 @@
         <p>${esc(ui('这不是正确答案清单，而是你今天留下的行动记录。'))}</p>
         <article class="review-card"><strong>${esc(ui('必须处理的事项'))} ${done} / ${total}</strong><p>${esc(ui(state.taskState.parcel.status === 'done' ? '交换申请文件已领取。' : '交换申请文件尚未领取。'))} ${esc(ui(state.taskState.contact.status === 'done' ? '迎新联系人已处理。' : '迎新联系人身份仍未确认。'))}</p></article>
         <article class="review-card"><strong>${esc(ui('收件箱里的选择'))}</strong><p>${esc(ui(researchOutcome))} ${esc(ui(eventOutcome))}</p></article>
+        <article class="review-card"><strong>${esc(ui('熟人账号里的请求'))}</strong><p>${esc(ui(friendOutcome))}</p></article>
         <article class="review-card"><strong>${esc(ui('早期返佣不等于工作真实'))}</strong><p>${esc(ui(careerOutcome))}</p></article>
         ${state.recoveryScamTriggered ? `<article class="review-card"><strong>${esc(ui('出现损失后的联络'))}</strong><p>${esc(ui(recoveryOutcome))}</p></article>` : ''}
         <article class="review-card"><strong>${esc(ui('独立来源'))} ${verification}</strong><p>${verification ? state.evidence.map((item) => esc(ui(item.label))).join(state.language === 'en' ? '; ' : '；') : esc(ui('今天没有从独立来源保存核实信息。'))}</p></article>
@@ -2961,10 +3112,16 @@
       case 'market-submit-verification': processMarketplaceVerification(); break;
       case 'market-save-check': addEvidence('market-official', '返回二手平台内订单确认买家并未付款'); saveState(); showToast('查询结果已保存'); break;
       case 'recovery-open-portal': state.taskState.recovery.steps.portalOpened = true; state.browserPage = 'recovery-portal'; saveState(); openApp('browser'); break;
-      case 'recovery-share-details': shareRecoveryDetails(); break;
+      case 'recovery-accept-intake': acceptRecoveryIntake(); break;
+      case 'recovery-open-lawyer': state.browserPage = 'recovery-lawyer'; saveState(); openApp('browser'); break;
+      case 'recovery-transfer-investigator': transferRecoveryInvestigator(); break;
+      case 'recovery-open-investigator': state.browserPage = 'recovery-investigator'; saveState(); openApp('browser'); break;
+      case 'recovery-grant-remote': grantRecoveryRemoteAccess(); break;
       case 'recovery-pay-guarantee': payRecoveryGuarantee(); break;
       case 'recovery-check-official': state.browserPage = 'adcc-advice'; saveState(); openApp('browser'); break;
       case 'recovery-save-official': state.taskState.recovery.steps.officialAdviceChecked = true; state.taskState.recovery.status = 'done'; addEvidence('recovery-official', '从官方防骗资讯确认追款机构不会要求转账、银行密码或保证金'); saveState(); showToast('查询结果已保存'); break;
+      case 'friend-pay': payFriendRequest(); break;
+      case 'friend-call-original': callContact('contact-mandy'); break;
       case 'event-open-payment':
         state.browserPage = 'event-payment'; state.browserQuery = ''; saveState(); openApp('browser'); break;
       case 'event-open-polyu':

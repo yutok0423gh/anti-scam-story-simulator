@@ -65,13 +65,13 @@ await command('Page.reload');
 await wait(500);
 
 await click('#appDock [data-open-app="messages"]');
-assert(await evaluate('JSON.parse(localStorage.getItem("polyu_simulator_phone_v1")).version === 11'), 'State version 11 missing');
+assert(await evaluate('JSON.parse(localStorage.getItem("polyu_simulator_phone_v1")).version === 12'), 'State version 12 missing');
 assert(await evaluate('Boolean(JSON.parse(localStorage.getItem("polyu_simulator_phone_v1")).messages.health)'), 'Health decoy missing');
 assert(await evaluate('JSON.parse(localStorage.getItem("polyu_simulator_phone_v1")).mails.some(mail => mail.id === "mail-career")'), 'Career mail missing');
 
 await evaluate(`(() => {
   const saved = JSON.parse(localStorage.getItem('polyu_simulator_phone_v1'));
-  saved.version = 10;
+  saved.version = 11;
   delete saved.taskState.career;
   delete saved.taskState.recovery;
   delete saved.messages.health;
@@ -82,10 +82,11 @@ await evaluate(`(() => {
 await command('Page.reload');
 await wait(450);
 await click('#appDock [data-open-app="messages"]');
-assert(await evaluate('JSON.parse(localStorage.getItem("polyu_simulator_phone_v1")).version === 11'), 'Version 10 state did not migrate');
+assert(await evaluate('JSON.parse(localStorage.getItem("polyu_simulator_phone_v1")).version === 12'), 'Version 11 state did not migrate');
 assert(await evaluate('Boolean(JSON.parse(localStorage.getItem("polyu_simulator_phone_v1")).taskState.career)'), 'Career state was not added during migration');
 assert(await evaluate('Boolean(JSON.parse(localStorage.getItem("polyu_simulator_phone_v1")).messages.health)'), 'Health thread was not added during migration');
 assert(await evaluate('JSON.parse(localStorage.getItem("polyu_simulator_phone_v1")).mails.some(mail => mail.id === "mail-career")'), 'Career mail was not added during migration');
+assert(await evaluate('Boolean(JSON.parse(localStorage.getItem("polyu_simulator_phone_v1")).messages.friend)'), 'Friend account thread was not added during migration');
 
 await click('[data-action="open-thread"][data-id="thread-health"]');
 await click('[data-action="health-open-cancel"]');
@@ -112,12 +113,28 @@ await click('#systemHome');
 await click('#appDock [data-open-app="messages"]');
 await click('[data-action="open-thread"][data-id="thread-recovery"]');
 await click('[data-action="recovery-open-portal"]');
-await click('[data-action="recovery-share-details"]');
-await capture('recovery-guarantee');
+await capture('recovery-intake');
+await click('[data-action="recovery-accept-intake"]');
+assert(await evaluate('Boolean(JSON.parse(localStorage.getItem("polyu_simulator_phone_v1")).messages.lawyer)'), 'Lawyer handoff did not arrive');
+await click('[data-action="recovery-open-lawyer"]');
+await click('[data-action="recovery-transfer-investigator"]');
+assert(await evaluate('Boolean(JSON.parse(localStorage.getItem("polyu_simulator_phone_v1")).messages.investigator)'), 'Investigator handoff did not arrive');
+await click('[data-action="recovery-open-investigator"]');
+await capture('recovery-handoff');
+await click('[data-action="recovery-grant-remote"]');
 await click('[data-action="recovery-pay-guarantee"]');
 
 state = await evaluate('JSON.parse(localStorage.getItem("polyu_simulator_phone_v1"))');
 assert(state.moneyLost === 2700, 'Secondary recovery loss was not recorded');
 assert(state.privacyExposure >= 3, 'Scenario data exposure was not recorded');
+
+await click('#systemHome');
+await click('#appDock [data-open-app="messages"]');
+await click('[data-action="open-thread"][data-id="thread-friend"]');
+await capture('friend-account-request');
+await click('[data-action="friend-call-original"]');
+state = await evaluate('JSON.parse(localStorage.getItem("polyu_simulator_phone_v1"))');
+assert(state.taskState.friend.steps.originalNumberCalled, 'Independent call to the friend was not recorded');
+assert(state.evidence.some((item) => item.id === 'friend-original-number'), 'Friend verification evidence was not recorded');
 socket.close();
 console.log('ADCC scenario regression passed');

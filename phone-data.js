@@ -35,7 +35,7 @@
     const contactRoll = Math.random();
     const contactVariant = contactRoll < 0.32 ? 'real' : (contactRoll < 0.78 ? 'fake' : 'grey');
     return {
-      version: 11,
+      version: 12,
       seed: Math.random().toString(36).slice(2),
       contactVariant,
       contactIsReal: contactVariant === 'real',
@@ -64,6 +64,7 @@
       privacyExposure: 0,
       moneyLost: 0,
       recoveryScamTriggered: false,
+      hijackedFriendVariant: Math.random() < 0.72 ? 'hijacked' : 'real',
       evidence: [],
       history: [],
       callJudgements: {},
@@ -124,9 +125,23 @@
           steps: {
             messageRead: false,
             portalOpened: false,
+            intakeAccepted: false,
+            lawyerContacted: false,
+            investigatorContacted: false,
+            remoteAccessGranted: false,
             bankingDetailsShared: false,
             guaranteePaid: false,
             officialAdviceChecked: false
+          }
+        },
+        friend: {
+          status: 'pending',
+          steps: {
+            messageRead: false,
+            requestSeen: false,
+            originalNumberCalled: false,
+            paid: false,
+            resolved: false
           }
         }
       },
@@ -138,7 +153,8 @@
         { id: 'n-research', app: 'mail', title: 'Prof. C. W. Chan', body: 'Research assistant opportunity', time: '08:41', unread: true, target: 'mail-research' },
         { id: 'n-event-fee', app: 'mail', title: 'PolyU Student Event Team', body: 'Payment pending · Student Innovation Night', time: '08:45', unread: true, target: 'mail-event-fee' },
         { id: 'n-career', app: 'mail', title: 'Northbridge Talent', body: 'Alternative remote research role', time: '08:49', unread: true, target: 'mail-career' },
-        { id: 'n-health', app: 'messages', title: '医疗服务通知', body: '免费试用即将转为每月自动收费', time: '08:52', unread: true, target: 'thread-health' }
+        { id: 'n-health', app: 'messages', title: '医疗服务通知', body: '免费试用即将转为每月自动收费', time: '08:52', unread: true, target: 'thread-health' },
+        { id: 'n-friend', app: 'messages', title: 'Mandy · Design Group', body: '你得闲帮我处理一下吗？', time: '09:02', unread: true, target: 'thread-friend' }
       ],
       messages: {
         parcel: {
@@ -179,6 +195,18 @@
           items: [
             { from: 'them', time: '08:18', text: '你好，我已经付款买你的计算器。平台说卖家账户要先完成一次收款验证，你看一下邮件或这个链接。' },
             { from: 'them', time: '08:19', text: 'https://marketplace-protection.example/receive' }
+          ]
+        },
+        friend: {
+          id: 'thread-friend',
+          sender: 'Mandy · Design Group',
+          number: '聊天账号',
+          unread: true,
+          items: [
+            { from: 'them', time: '上周五', text: '多谢你上次帮我改poster，最后老师选了蓝色那版 😂' },
+            { from: 'mine', time: '上周五', text: '记得请我饮咖啡就得。' },
+            { from: 'them', time: '09:02', text: '啱啱开会走不开，你得闲帮我先垫HK$760给印刷店吗？今晚转返给你。' },
+            { from: 'them', time: '09:03', text: 'FPS户口不是我名字，是印刷店同事。现在就差我这单，帮我一下 🙏' }
           ]
         }
       },
@@ -287,7 +315,8 @@
         { id: 'contact-ajie', name: '阿杰（去年迎新）', initials: 'AJ', number: '+852 9XXX 4428', note: '模拟旧号码 · 去年活动联系人' },
         { id: 'contact-kaman', name: '嘉敏', initials: 'KM', number: '+852 9XXX 2134', note: '模拟号码 · 迎新筹备组' },
         { id: 'contact-hall', name: 'Hall Reception', initials: 'HR', number: '+852 2XXX 0000', note: '模拟号码 · 宿舍收发室' },
-        { id: 'contact-department', name: 'Department General Office', initials: 'DO', number: '+852 2XXX 6200', note: '模拟号码 · 教职员及研究项目查询' }
+        { id: 'contact-department', name: 'Department General Office', initials: 'DO', number: '+852 2XXX 6200', note: '模拟号码 · 教职员及研究项目查询' },
+        { id: 'contact-mandy', name: 'Mandy', initials: 'MY', number: '+852 9XXX 5381', note: '模拟原号码 · Design Group同学' }
       ],
       transactions: [
         { title: 'Campus Café', time: '今天 08:06', amount: -36 },
