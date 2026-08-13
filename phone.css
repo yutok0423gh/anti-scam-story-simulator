@@ -1674,8 +1674,7 @@
   overflow-y: auto;
 }
 
-.judgement-options,
-.judgement-basis {
+.judgement-options {
   display: grid;
   gap: 8px;
 }
@@ -1684,8 +1683,7 @@
   grid-template-columns: 1fr 1fr;
 }
 
-.judgement-options button,
-.judgement-basis button {
+.judgement-options button {
   min-height: 48px;
   padding: 10px 12px;
   border: 1px solid #d9dde2;
@@ -1694,34 +1692,6 @@
   background: #f7f8fa;
   font-weight: 700;
   text-align: left;
-}
-
-.judgement-basis button {
-  display: grid;
-  grid-template-columns: 24px 1fr;
-  align-items: center;
-  gap: 8px;
-}
-
-.judgement-basis i {
-  width: 22px;
-  height: 22px;
-  display: grid;
-  place-items: center;
-  border: 1px solid #bec5cd;
-  border-radius: 7px;
-  font-style: normal;
-}
-
-.judgement-basis button[aria-pressed="true"] {
-  border-color: #3a8de0;
-  background: #edf6ff;
-}
-
-.judgement-basis button[aria-pressed="true"] i {
-  color: #fff;
-  border-color: #0877dd;
-  background: #0877dd;
 }
 
 @media (max-height: 760px) {

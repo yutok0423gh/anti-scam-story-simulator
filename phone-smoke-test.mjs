@@ -147,7 +147,7 @@ for (let step = 1; step <= 6; step += 1) {
   await wait(18);
 }
 await touchEnd();
-await wait(360);
+await wait(650);
 assert(await evaluate('document.querySelector(".opening-sheet").textContent.includes("院系与学生组织")'), 'Opening brief did not describe realistic campus senders');
 assert(await evaluate('document.querySelector(".opening-sheet").textContent.includes("研究参与邀请")'), 'Opening brief did not mention research invitations naturally');
 assert(await evaluate('document.querySelector(".opening-sheet").textContent.includes("看清来源和内容")'), 'Opening brief did not explain how to treat optional inbox items');
@@ -417,12 +417,10 @@ await click('#systemHome');
 await click('#appDock [data-open-app="contacts"]');
 assert(await evaluate('document.querySelector("#appScreen").dataset.app === "contacts" && !document.querySelector("#activeCallBar").hidden'), 'Orientation call could not be minimised for contact research');
 await click('#activeCallBar [data-action="call-finish-judge"]');
+await capture('simulator-call-judgement');
 await click('[data-action="call-judgement"][data-value="verify"]');
-await capture('simulator-call-judgement-basis');
-await click('[data-action="call-basis-toggle"][data-value="identity-claim"]');
-await click('[data-action="call-basis-toggle"][data-value="independent-check"]');
-await click('[data-action="call-judgement-save"]');
-assert(await evaluate('Object.values(JSON.parse(localStorage.getItem("polyu_simulator_phone_v1")).callJudgements).some(item => item.verdict === "verify" && item.basis.includes("independent-check"))'), 'Player call judgement and supporting basis were not saved');
+assert(await evaluate('document.querySelector(".call-judgement-sheet") === null'), 'Selecting a judgement still opened an evidence-basis screen');
+assert(await evaluate('Object.values(JSON.parse(localStorage.getItem("polyu_simulator_phone_v1")).callJudgements).some(item => item.verdict === "verify" && !("basis" in item))'), 'Player call judgement was not saved directly without basis data');
 await click('[data-action="call-contact"][data-id="contact-kaman"]');
 await click('[data-action="close-overlay"]');
 

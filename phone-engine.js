@@ -244,7 +244,17 @@
         saved.mailTranslations = saved.mailTranslations || {};
         saved.recoveryScamTriggered = saved.recoveryScamTriggered === true;
         saved.hijackedFriendVariant = ['hijacked', 'real'].includes(saved.hijackedFriendVariant) ? saved.hijackedFriendVariant : defaults.hijackedFriendVariant;
-        saved.callJudgements = saved.callJudgements && typeof saved.callJudgements === 'object' ? saved.callJudgements : {};
+        const savedCallJudgements = saved.callJudgements && typeof saved.callJudgements === 'object'
+          ? saved.callJudgements
+          : {};
+        saved.callJudgements = Object.fromEntries(
+          Object.entries(savedCallJudgements)
+            .filter(([, judgement]) => judgement && typeof judgement === 'object')
+            .map(([recordId, judgement]) => [recordId, {
+              verdict: judgement.verdict,
+              time: judgement.time
+            }])
+        );
         saved.callRecords = Array.isArray(saved.callRecords) ? saved.callRecords.slice(-12) : [];
         saved.taskState = saved.taskState || {};
         Object.entries(defaults.taskState).forEach(([key, task]) => {
@@ -2346,28 +2356,6 @@
       </div>`;
   }
 
-  function showCallBasis(recordId) {
-    const judgement = state.callJudgements[recordId];
-    if (!judgement) return showCallJudgement(recordId);
-    const choices = [
-      ['number-source', localized('号码从哪里取得', 'Where the number came from')],
-      ['identity-claim', localized('对方如何自称', 'How the caller identified themselves')],
-      ['specific-details', localized('对方能否提供具体资料', 'Whether the caller supplied specific details')],
-      ['payment-request', localized('是否要求付款或资料', 'Whether payment or data was requested')],
-      ['independent-check', localized('其他渠道的核对结果', 'Checks through another channel')]
-    ];
-    els.overlayLayer.innerHTML = `
-      <div class="dialog-overlay call-judgement-overlay">
-        <section class="dialog-sheet call-judgement-sheet">
-          <span class="detail-meta">${esc(localized('判断依据', 'Basis for your assessment'))}</span>
-          <h2>${esc(localized('你根据什么作出判断？', 'What informed your assessment?'))}</h2>
-          <p>${esc(localized('可选择多项。身份声明本身可以记录，但不等于已经核实。', 'Choose any that apply. An identity claim can be noted, but it is not verification.'))}</p>
-          <div class="judgement-basis">${choices.map(([value, label]) => `<button type="button" aria-pressed="${judgement.basis.includes(value)}" data-action="call-basis-toggle" data-id="${esc(recordId)}" data-value="${value}"><i>${judgement.basis.includes(value) ? '✓' : ''}</i><span>${esc(label)}</span></button>`).join('')}</div>
-          <button class="primary-action" type="button" data-action="call-judgement-save" data-id="${esc(recordId)}">${esc(localized('保存判断', 'Save assessment'))}</button>
-        </section>
-      </div>`;
-  }
-
   function endCall(note) {
     if (note) addHistory('call-ended', note);
     archiveCallSession(note);
@@ -3155,21 +3143,8 @@
       case 'call-resume': resumeCall(); break;
       case 'call-finish-judge': finishCallForJudgement(); break;
       case 'call-judgement':
-        state.callJudgements[id] = { verdict: target.dataset.value, basis: [], time: formatTime(state.time) };
-        saveState();
-        showCallBasis(id);
-        break;
-      case 'call-basis-toggle': {
-        const judgement = state.callJudgements[id];
-        if (!judgement) break;
-        const value = target.dataset.value;
-        judgement.basis = judgement.basis.includes(value) ? judgement.basis.filter((item) => item !== value) : [...judgement.basis, value];
-        saveState();
-        showCallBasis(id);
-        break;
-      }
-      case 'call-judgement-save':
-        addHistory('call-judgement', `保存了对号码的暂时判断：${state.callJudgements[id]?.verdict || '未判断'}`);
+        state.callJudgements[id] = { verdict: target.dataset.value, time: formatTime(state.time) };
+        addHistory('call-judgement', `保存了对号码的暂时判断：${target.dataset.value}`);
         saveState();
         closeOverlay();
         showToast('判断已保存，之后仍可继续核对');
