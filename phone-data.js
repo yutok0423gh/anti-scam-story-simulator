@@ -35,7 +35,7 @@
     const contactRoll = Math.random();
     const contactVariant = contactRoll < 0.32 ? 'real' : (contactRoll < 0.78 ? 'fake' : 'grey');
     return {
-      version: 12,
+      version: 14,
       seed: Math.random().toString(36).slice(2),
       contactVariant,
       contactIsReal: contactVariant === 'real',
@@ -63,6 +63,14 @@
       cardFrozen: false,
       privacyExposure: 0,
       moneyLost: 0,
+      consequences: {
+        goodsLost: 0,
+        debt: 0,
+        cashOrValuablesLost: 0,
+        accountTakeovers: 0,
+        remoteAccess: 0,
+        muleRisk: 0
+      },
       recoveryScamTriggered: false,
       hijackedFriendVariant: Math.random() < 0.72 ? 'hijacked' : 'real',
       evidence: [],
@@ -143,6 +151,52 @@
             paid: false,
             resolved: false
           }
+        },
+        government: {
+          status: 'pending',
+          steps: {
+            callbackMade: false,
+            studentIdShared: false,
+            identityDigitsShared: false,
+            bankingDetailsShared: false,
+            depositPaid: false,
+            valuablesHandedOver: false,
+            officialDirectoryOpened: false,
+            officialNumberCalled: false,
+            resolved: false
+          }
+        },
+        market: {
+          status: 'pending', route: null,
+          steps: { emailOpened: false, externalPageOpened: false, bankLinked: false, officialOrderChecked: false, pendingCreditSeen: false, itemReleased: false }
+        },
+        health: {
+          status: 'pending',
+          steps: { messageRead: false, callbackMade: false, fakePageOpened: false, cardShared: false, officialAppChecked: false }
+        },
+        investment: {
+          status: 'pending',
+          steps: { messageRead: false, groupOpened: false, firstDepositPaid: false, withdrawalRequested: false, unlockFeePaid: false, officialCheck: false }
+        },
+        jobLoan: {
+          status: 'pending',
+          steps: { messageRead: false, contractOpened: false, personalLoanTaken: false, transferred: false, secondLoanRequested: false, officialCheck: false }
+        },
+        campusBorrow: {
+          status: 'pending',
+          steps: { messageRead: false, privatePaymentMade: false, officialDirectoryChecked: false }
+        },
+        officialServices: {
+          status: 'pending',
+          steps: { waterOpened: false, ticketOpened: false, mpfOpened: false, cardShared: false, officialChecks: [] }
+        },
+        census: {
+          status: 'pending',
+          steps: { noticeRead: false, identityShared: false, officialCheck: false }
+        },
+        donation: {
+          status: 'pending',
+          steps: { messageRead: false, callbackMade: false, bankingShared: false, officialCheck: false }
         }
       },
       notifications: [
@@ -154,7 +208,17 @@
         { id: 'n-event-fee', app: 'mail', title: 'PolyU Student Event Team', body: 'Payment pending · Student Innovation Night', time: '08:45', unread: true, target: 'mail-event-fee' },
         { id: 'n-career', app: 'mail', title: 'Northbridge Talent', body: 'Alternative remote research role', time: '08:49', unread: true, target: 'mail-career' },
         { id: 'n-health', app: 'messages', title: '医疗服务通知', body: '免费试用即将转为每月自动收费', time: '08:52', unread: true, target: 'thread-health' },
-        { id: 'n-friend', app: 'messages', title: 'Mandy · Design Group', body: '你得闲帮我处理一下吗？', time: '09:02', unread: true, target: 'thread-friend' }
+        { id: 'n-friend', app: 'messages', title: 'Mandy · Design Group', body: '你得闲帮我处理一下吗？', time: '09:02', unread: true, target: 'thread-friend' },
+        { id: 'n-government-call', app: 'phone', title: '未接来电', body: '未知号码 · +852 3XXX 2147', time: '09:06', unread: true },
+        { id: 'n-market', app: 'messages', title: 'Carousell buyer', body: 'Payment sent — please check your email', time: '09:10', unread: true, target: 'thread-market' },
+        { id: 'n-investment', app: 'messages', title: 'Market Insight Group', body: 'Your trial account is ready', time: '09:14', unread: true, target: 'thread-investment' },
+        { id: 'n-job-loan', app: 'messages', title: 'Apex Campus Recruitment', body: 'Your e-contract has been approved', time: '09:18', unread: true, target: 'thread-job-loan' },
+        { id: 'n-campus-borrow', app: 'messages', title: 'Prof. Chan Office', body: 'Can you handle an urgent supplier payment?', time: '09:22', unread: true, target: 'thread-campus-borrow' },
+        { id: 'n-water', app: 'messages', title: 'WSD-eBill', body: 'Outstanding water charge HK$86.40', time: '09:26', unread: true, target: 'thread-water' },
+        { id: 'n-ticket', app: 'messages', title: 'eTrafficNotice', body: 'Electronic ticket pending', time: '09:29', unread: true, target: 'thread-ticket' },
+        { id: 'n-mpf', app: 'messages', title: 'eMPF Notice', body: 'Profile update required', time: '09:32', unread: true, target: 'thread-mpf' },
+        { id: 'n-census', app: 'messages', title: '访客登记', body: '人口普查人员正在大堂等候', time: '09:36', unread: true, target: 'thread-census' },
+        { id: 'n-donation', app: 'messages', title: 'Donation Confirmation', body: 'HK$580 debit scheduled today', time: '09:39', unread: true, target: 'thread-donation' }
       ],
       messages: {
         parcel: {
@@ -183,8 +247,8 @@
           number: '+852 5XXX 0198',
           unread: true,
           items: [
-            { from: 'them', time: '08:52', text: '【医疗服务】你的健康保障免费试用将于今日结束，其后每月自动收取HK$388。如需取消，请致电+852 5XXX 0198或使用以下页面。' },
-            { from: 'them', time: '08:52', text: 'https://medical-service-cancel.example' }
+            { from: 'them', time: '08:52', text: '【HA Go / eHealth Service】你的医疗计划将于今日自动续费HK$388。如非本人登记，请立即致电+852 5XXX 0198取消。' },
+            { from: 'them', time: '08:52', text: 'https://ha-go-account.example/cancel' }
           ]
         },
         market: {
@@ -193,8 +257,9 @@
           number: '平台对话',
           unread: false,
           items: [
-            { from: 'them', time: '08:18', text: '你好，我已经付款买你的计算器。平台说卖家账户要先完成一次收款验证，你看一下邮件或这个链接。' },
-            { from: 'them', time: '08:19', text: 'https://marketplace-protection.example/receive' }
+            { from: 'them', time: '09:10', text: 'Hi, I paid HK$680 for the calculator. Carousell says the confirmation was sent to your email. Can you check it now?' },
+            { from: 'them', time: '09:11', text: 'If the email is delayed, seller protection can release it here: https://marketplace-protection.example/receive' },
+            { from: 'them', time: '09:11', text: 'I can also deposit a cheque now. Once your banking app shows it, please leave the calculator at the lobby.' }
           ]
         },
         friend: {
@@ -208,9 +273,74 @@
             { from: 'them', time: '09:02', text: '啱啱开会走不开，你得闲帮我先垫HK$760给印刷店吗？今晚转返给你。' },
             { from: 'them', time: '09:03', text: 'FPS户口不是我名字，是印刷店同事。现在就差我这单，帮我一下 🙏' }
           ]
+        },
+        investment: {
+          id: 'thread-investment', sender: 'Market Insight Group', number: 'WhatsApp 群组', unread: true,
+          items: [
+            { from: 'them', time: '09:14', text: 'Assistant May: Welcome from the Instagram AI investing seminar. Mentor Leo has opened a HK$500 trial account for you.' },
+            { from: 'them', time: '09:15', text: 'Mentor Leo: Today’s AI signal is ready. Follow the assistant’s registration steps before the session closes.' },
+            { from: 'them', time: '09:15', text: 'Member Chloe: My HK$500 trial is showing HK$1,860 already. Withdrawal screenshot attached.' },
+            { from: 'them', time: '09:16', text: 'Platform Support: Accounts must be registered through https://meta-invest-pro.example/start to receive the group signal.' },
+            { from: 'them', time: '09:16', text: 'Assistant May: Message me after depositing and I will ask Compliance to activate withdrawals.' }
+          ]
+        },
+        jobLoan: {
+          id: 'thread-job-loan', sender: 'Apex Campus Recruitment', number: '+852 6XXX 4021', unread: true,
+          items: [
+            { from: 'them', time: '09:18', text: 'Your Administrative Project Assistant e-contract has been approved. Salary is HK$180/hour.' },
+            { from: 'them', time: '09:19', text: 'The client has an urgent procurement gap. This is not an onboarding fee: use a personal cash loan for HK$3,000 and the company will repay it today with commission.' },
+            { from: 'them', time: '09:19', text: 'Contract portal: https://apex-recruit-contract.example' }
+          ]
+        },
+        campusBorrow: {
+          id: 'thread-campus-borrow', sender: 'Prof. Chan Office', number: 'WhatsApp', unread: true,
+          items: [
+            { from: 'them', time: '09:22', text: 'I am in a faculty meeting. The seminar supplier needs a HK$960 deposit before 10:00.' },
+            { from: 'them', time: '09:23', text: 'Please pay the supplier’s personal FPS first. The department will reimburse you after the meeting. This will also help us confirm the student research team.' }
+          ]
+        },
+        water: {
+          id: 'thread-water', sender: 'WSD-eBill', number: 'SMS', unread: true,
+          items: [
+            { from: 'them', time: '09:26', text: 'Water account 83••19 has an outstanding HK$86.40 charge. Service may be suspended after today.' },
+            { from: 'them', time: '09:26', text: 'Review and pay: https://wsd-ebill-check.example' }
+          ]
+        },
+        ticket: {
+          id: 'thread-ticket', sender: 'eTrafficNotice', number: 'SMS', unread: true,
+          items: [
+            { from: 'them', time: '09:29', text: 'Electronic traffic ticket ET-260814-73 is pending. View notice and settle HK$320 today.' },
+            { from: 'them', time: '09:29', text: 'https://gov-eticket-view.example' }
+          ]
+        },
+        mpf: {
+          id: 'thread-mpf', sender: 'eMPF Notice', number: 'SMS', unread: true,
+          items: [
+            { from: 'them', time: '09:32', text: 'Your eMPF profile is incomplete. Contributions and withdrawals may be suspended unless details are updated today.' },
+            { from: 'them', time: '09:32', text: 'https://empf-profile-update.example' }
+          ]
+        },
+        census: {
+          id: 'thread-census', sender: '访客登记', number: '宿舍大堂', unread: true,
+          items: [
+            { from: 'them', time: '09:36', text: '一名自称人口普查统计员的人正在大堂等候，穿着工作背心并出示职员证。他说需要核对住户人数和身份证。' }
+          ]
+        },
+        donation: {
+          id: 'thread-donation', sender: 'Donation Confirmation', number: '+852 5XXX 7310', unread: true,
+          items: [
+            { from: 'them', time: '09:39', text: 'Your HK$580 donation to Community Relief Fund will be debited today.' },
+            { from: 'them', time: '09:39', text: 'If you did not authorise it, call +852 5XXX 7310 immediately to cancel.' }
+          ]
         }
       },
       mails: [
+        {
+          id: 'mail-market-payment', kind: 'market-payment', from: 'Carousell Payment', address: 'payment@carousell-secure.example',
+          subject: 'Buyer payment received — seller action required', preview: 'HK$680 is waiting for release to your account.', time: '09:10', unread: true, focused: true, language: 'en',
+          body: 'The buyer has completed payment for Calculator Listing #C-8142. Your HK$680 is currently on hold. Complete Seller Payment Protection using the secure button below. A bank card and one-time passcode may be required to activate receiving.',
+          translation: { subject: '已收到买家付款——卖家需要操作', preview: 'HK$680正在等待转入你的账户。', body: '买家已经为计算器商品#C-8142完成付款。HK$680目前被暂扣。请通过下方安全按钮完成“卖家付款保障”。激活收款可能需要银行卡及一次性密码。' }, tracking: null
+        },
         {
           id: 'mail-parcel',
           official: true,
@@ -308,6 +438,7 @@
         }
       ],
       callLog: [
+        { id: 'call-government', name: '未知号码', number: '+852 3XXX 2147', time: '09:06', direction: '未接来电', unread: true },
         { id: 'call-unknown', name: '未知号码', number: '+852 6XXX 8704', time: '08:28', direction: '未接来电', unread: true },
         { id: 'call-hall', name: '未知号码', number: '+852 2XXX 0000', time: '昨天', direction: '呼出', unread: false }
       ],
@@ -316,9 +447,11 @@
         { id: 'contact-kaman', name: '嘉敏', initials: 'KM', number: '+852 9XXX 2134', note: '模拟号码 · 迎新筹备组' },
         { id: 'contact-hall', name: 'Hall Reception', initials: 'HR', number: '+852 2XXX 0000', note: '模拟号码 · 宿舍收发室' },
         { id: 'contact-department', name: 'Department General Office', initials: 'DO', number: '+852 2XXX 6200', note: '模拟号码 · 教职员及研究项目查询' },
+        { id: 'contact-immigration', name: 'General Enquiries', initials: 'GE', number: '+852 2XXX 6111', note: '模拟号码 · 从政府网站取得' },
         { id: 'contact-mandy', name: 'Mandy', initials: 'MY', number: '+852 9XXX 5381', note: '模拟原号码 · Design Group同学' }
       ],
       transactions: [
+        { id: 'market-pending-credit', title: 'CHEQUE DEPOSIT · PENDING', time: '今天 09:12', amount: 680, pending: true },
         { title: 'Campus Café', time: '今天 08:06', amount: -36 },
         { title: 'MTR', time: '昨天 19:42', amount: -12.4 },
         { title: 'Opening balance', time: '8月25日', amount: 6888.4 }

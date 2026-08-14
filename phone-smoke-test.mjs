@@ -150,13 +150,13 @@ await touchEnd();
 await wait(650);
 assert(await evaluate('document.querySelector(".opening-sheet").textContent.includes("院系与学生组织")'), 'Opening brief did not describe realistic campus senders');
 assert(await evaluate('document.querySelector(".opening-sheet").textContent.includes("研究参与邀请")'), 'Opening brief did not mention research invitations naturally');
-assert(await evaluate('document.querySelector(".opening-sheet").textContent.includes("看清来源和内容")'), 'Opening brief did not explain how to treat optional inbox items');
+assert(await evaluate('document.querySelector(".opening-sheet").textContent.includes("没有唯一的操作顺序")'), 'Opening brief did not present inbox items as optional interactions');
 await capture('simulator-opening-brief');
 await click('[data-action="start-day"]');
 await command('Page.navigate', { url: `${pageBase}/?preview=home` });
 await wait(450);
 
-assert(await evaluate('JSON.parse(localStorage.getItem("polyu_simulator_phone_v1")).version === 12'), 'Scenario state was not migrated to version 12');
+assert(await evaluate('JSON.parse(localStorage.getItem("polyu_simulator_phone_v1")).version === 14'), 'Scenario state was not migrated to version 14');
 assert(await evaluate('["real", "fake", "grey"].includes(JSON.parse(localStorage.getItem("polyu_simulator_phone_v1")).contactVariant)'), 'The three-way caller variant was not initialised');
 assert(await evaluate('document.querySelectorAll("#homeTodoList .home-todo-item").length === 2'), 'Desktop to-do widget did not keep optional inbox items out of the task list');
 assert(await evaluate('!document.querySelector("#systemNavigation").classList.contains("is-hidden")'), 'System navigation buttons were not shown after unlocking');
@@ -370,8 +370,8 @@ assert(await evaluate('document.querySelector("#callReplyForm") !== null'), 'The
 await evaluate(`(() => { const input = document.querySelector('#callReplyInput'); input.value = '运单尾号是1305，送到学生宿舍'; document.querySelector('#callReplyForm').requestSubmit(); })()`);
 await evaluate(`(() => { const input = document.querySelector('#callReplyInput'); input.value = '完整运单号是 RR 482 917 305 HK'; document.querySelector('#callReplyForm').requestSubmit(); })()`);
 assert(await evaluate('document.querySelector(".call-turn.caller:last-child p").textContent.includes("08:14")'), 'Full tracking details did not reach the verified hall result');
-await click('[data-action="call-finish-judge"]');
-await click('[data-action="call-judgement-dismiss"]');
+await click('[data-action="end-call"]');
+assert(await evaluate('document.querySelector(".call-overlay") === null'), 'Ending the call still leaves a forced assessment overlay');
 await click('#systemHome');
 await click('#appGrid [data-open-app="tasks"]');
 assert((await evaluate('document.querySelectorAll(".task-panel:first-of-type .task-step.done").length')) >= 3, 'Parcel verification steps were not persisted');
@@ -416,20 +416,16 @@ await click('[data-action="call-minimize"]');
 await click('#systemHome');
 await click('#appDock [data-open-app="contacts"]');
 assert(await evaluate('document.querySelector("#appScreen").dataset.app === "contacts" && !document.querySelector("#activeCallBar").hidden'), 'Orientation call could not be minimised for contact research');
-await click('#activeCallBar [data-action="call-finish-judge"]');
-await capture('simulator-call-judgement');
-await click('[data-action="call-judgement"][data-value="verify"]');
-assert(await evaluate('document.querySelector(".call-judgement-sheet") === null'), 'Selecting a judgement still opened an evidence-basis screen');
-assert(await evaluate('Object.values(JSON.parse(localStorage.getItem("polyu_simulator_phone_v1")).callJudgements).some(item => item.verdict === "verify" && !("basis" in item))'), 'Player call judgement was not saved directly without basis data');
+await click('#activeCallBar [data-action="end-call"]');
+await capture('simulator-call-ended');
+assert(await evaluate('document.querySelector(".call-judgement-sheet") === null'), 'Ending a minimised call opened an assessment screen');
+assert(await evaluate('JSON.parse(localStorage.getItem("polyu_simulator_phone_v1")).callRecords.some(item => item.scenario === "orientation")'), 'Ended call transcript was not archived');
 await click('[data-action="call-contact"][data-id="contact-kaman"]');
 await click('[data-action="close-overlay"]');
 
 await click('#systemHome');
 await click('#appDock [data-open-app="phone"]');
-assert(await evaluate('document.querySelector(".call-assessment-list") && document.querySelector(".call-assessment-list").textContent.includes("需要其他渠道确认")'), 'Saved call assessment was not available from Phone Recents');
-await click('.call-assessment-list [data-action="call-review-judgement"]');
-assert(await evaluate('document.querySelector(".call-judgement-sheet") !== null'), 'A saved call assessment could not be reopened');
-await click('[data-action="call-judgement-dismiss"]');
+assert(await evaluate('document.querySelector(".call-assessment-list") === null'), 'Phone Recents still asks the player to label calls');
 await click('#systemHome');
 await click('#appGrid [data-open-app="mail"]');
 await click('[data-action="open-mail"][data-id="mail-research"]');
@@ -470,8 +466,7 @@ assert(await evaluate('!JSON.parse(localStorage.getItem("polyu_simulator_phone_v
 await evaluate(`(() => { const input = document.querySelector('#callReplyInput'); input.value = '我想核实一封研究邀请'; document.querySelector('#callReplyForm').requestSubmit(); })()`);
 await evaluate(`(() => { const input = document.querySelector('#callReplyInput'); input.value = '主题是Research Assistant，发件地址是outlook.example'; document.querySelector('#callReplyForm').requestSubmit(); })()`);
 assert(await evaluate('document.querySelector(".call-turn.caller:last-child p").textContent.includes("冇發出呢封邀請")'), 'Department confirmation did not resolve the research invitation');
-await click('[data-action="call-finish-judge"]');
-await click('[data-action="call-judgement-dismiss"]');
+await click('[data-action="end-call"]');
 
 await click('#systemHome');
 await click('#appGrid [data-open-app="mail"]');
@@ -515,9 +510,10 @@ await click('#appGrid [data-open-app="mail"]');
 await click('[data-action="mail-tab"][data-value="other"]');
 await click('[data-action="open-mail"][data-id="mail-event-fee"]');
 await click('[data-action="event-open-payment"]');
-await click('[data-action="event-pay-fake"]');
-assert(await evaluate('JSON.parse(localStorage.getItem("polyu_simulator_phone_v1")).moneyLost === 980'), 'Fake event FPS payment was not recorded as a loss');
-assert(await evaluate('JSON.parse(localStorage.getItem("polyu_simulator_phone_v1")).taskState.event.status === "pending"'), 'Fake event payment incorrectly completed official registration');
+  await click('[data-action="event-pay-fake"]');
+  assert(await evaluate('JSON.parse(localStorage.getItem("polyu_simulator_phone_v1")).moneyLost === 980'), 'Fake event FPS payment was not recorded as a loss');
+  assert(await evaluate('JSON.parse(localStorage.getItem("polyu_simulator_phone_v1")).taskState.event.status === "pending"'), 'Fake event payment incorrectly completed official registration');
+  assert(await evaluate('document.querySelector("[data-action=event-open-polyu], [data-action=open-bank-app]") === null'), 'Fake payment success page still suggests the verification path');
 
 console.log(JSON.stringify({
   result: 'PASS',

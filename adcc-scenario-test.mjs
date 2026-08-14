@@ -65,7 +65,7 @@ await command('Page.reload');
 await wait(500);
 
 await click('#appDock [data-open-app="messages"]');
-assert(await evaluate('JSON.parse(localStorage.getItem("polyu_simulator_phone_v1")).version === 12'), 'State version 12 missing');
+assert(await evaluate('JSON.parse(localStorage.getItem("polyu_simulator_phone_v1")).version === 14'), 'State version 14 missing');
 assert(await evaluate('Boolean(JSON.parse(localStorage.getItem("polyu_simulator_phone_v1")).messages.health)'), 'Health decoy missing');
 assert(await evaluate('JSON.parse(localStorage.getItem("polyu_simulator_phone_v1")).mails.some(mail => mail.id === "mail-career")'), 'Career mail missing');
 
@@ -82,7 +82,7 @@ await evaluate(`(() => {
 await command('Page.reload');
 await wait(450);
 await click('#appDock [data-open-app="messages"]');
-assert(await evaluate('JSON.parse(localStorage.getItem("polyu_simulator_phone_v1")).version === 12'), 'Version 11 state did not migrate');
+assert(await evaluate('JSON.parse(localStorage.getItem("polyu_simulator_phone_v1")).version === 14'), 'Version 11 state did not migrate');
 assert(await evaluate('Boolean(JSON.parse(localStorage.getItem("polyu_simulator_phone_v1")).taskState.career)'), 'Career state was not added during migration');
 assert(await evaluate('Boolean(JSON.parse(localStorage.getItem("polyu_simulator_phone_v1")).messages.health)'), 'Health thread was not added during migration');
 assert(await evaluate('JSON.parse(localStorage.getItem("polyu_simulator_phone_v1")).mails.some(mail => mail.id === "mail-career")'), 'Career mail was not added during migration');

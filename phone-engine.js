@@ -39,7 +39,7 @@
     '取消回拨': 'Cancel callback', '结束通话': 'End call', '通话已结束': 'Call ended',
     '今天的收件箱会比较忙': 'Your inbox may get busy today', '开始今天': 'Start the day',
     '记下信息': 'Save information', '稍后处理': 'Do this later', '我收到通知有份文件，想查一下': 'I received a notice about a document and want to check it', '请问这里是什么单位？': 'Which office is this?', '只提供尾号和宿舍': 'Share only the last four digits and hall', '先问是否需要缴费': 'Ask whether any payment is required first', '提供完整运单号': 'Provide the full tracking number', '我想核实一封研究邀请': 'I want to verify a research invitation', '请问这里是什么办公室？': 'Which office is this?', '提供邮件主题和发件地址': 'Share the subject and sender address', '询问研究邀请': 'Ask about the research invitation', '记下结果': 'Save result', '打开联系人': 'Open Contacts', '关闭': 'Close', '知道了': 'Got it',
-    '你那边能看到什么资料？': 'What information can you see there?', '你先说一下现有记录': 'Tell me what your record already shows', '我暂时不提供个人资料': 'I will not share personal information yet', '打开邮件核对资料': 'Open Mail and check the details', '记下这次通话内容': 'Save what was said in this call', '结束并作出判断': 'End and assess the call',
+    '你那边能看到什么资料？': 'What information can you see there?', '你先说一下现有记录': 'Tell me what your record already shows', '我暂时不提供个人资料': 'I will not share personal information yet', '打开邮件核对资料': 'Open Mail and check the details', '记下这次通话内容': 'Save what was said in this call',
     '你们最近有招募研究助理吗？': 'Have you recently recruited research assistants?', '返回浏览器核对目录': 'Return to Browser and check the directory', '我只想了解正式招募渠道': 'I only want to know the official recruitment channels', '你先说名字': 'Tell me your name first', '你找我有什么事？': 'Why are you calling me?', '我不确认任何个人资料': 'I will not confirm any personal details',
     '说一件只有联系人知道的事': 'Tell me something only that contact would know', '说一件只有阿杰知道的事': 'Tell me something only Ah Kit would know', '先去联系人核对': 'Check with a saved contact first', '先发正式文件给我': 'Send the formal documents first', '资料确认前不处理': 'I will not act until the details are verified', '按对方要求处理': 'Proceed with the caller’s request', '不提供更多线索': 'Do not give the caller more clues', '再问一项共同经历': 'Ask about another shared experience',
     '确认私人转账': 'Confirm personal transfer', '确认转账': 'Confirm transfer', '返回通话': 'Return to call', '继续使用': 'Continue', '返回手机桌面': 'Return to Home Screen',
@@ -163,6 +163,14 @@
     , '通过 FPS 付款': 'Pay by FPS'
     , '打开 PolyULife': 'Open PolyULife'
     , '连接远程协助': 'Connect remote assistance'
+    , '拨打一般查询电话': 'Call general enquiries'
+    , '入境事务处 · 联络资料': 'Immigration Department · Contact details'
+    , '一般查询、办公地点及公开电话。': 'General enquiries, office locations, and published phone numbers.'
+    , '另一通未接来电': 'Another missed call'
+    , '你从政府网站另行取得查询号码，并用来电者提供的案件编号查询；两通电话的画面都只显示未知号码。': 'You found another enquiry number on the government website and used the caller’s case number. Both calls still appeared as unknown numbers.'
+    , '你在陌生来电中逐步提供资料，并向对方指定的公司账户支付了资金核验款。': 'You gradually shared information during an unknown call and paid a verification deposit to the company account supplied by the caller.'
+    , '你回拨了另一通未接来电；通话停留在你离开时的阶段，没有自动替你判断来电身份。': 'You returned another missed call. The conversation remained where you left it and did not decide the caller’s identity for you.'
+    , '你没有回拨09:06的另一通未接来电。': 'You did not return the other missed call at 09:06.'
   });
 
   function ui(value) {
@@ -216,10 +224,10 @@
   function loadState() {
     try {
       const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
-      if (saved && [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].includes(saved.version)) {
+      if (saved && [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14].includes(saved.version)) {
         const defaults = DATA.createInitialState();
         const savedVersion = saved.version;
-        saved.version = 12;
+        saved.version = 14;
         saved.contactVariant = ['real', 'fake', 'grey'].includes(saved.contactVariant)
           ? saved.contactVariant
           : (saved.contactIsReal ? 'real' : 'fake');
@@ -235,6 +243,11 @@
         saved.contactsQuery = String(saved.contactsQuery || '').slice(0, 60);
         saved.investigationQueries = Array.isArray(saved.investigationQueries) ? saved.investigationQueries.slice(-12) : [];
         saved.callLog = Array.isArray(saved.callLog) ? saved.callLog.map((call) => ({ ...call, name: '未知号码' })) : defaults.callLog;
+        defaults.callLog.forEach((defaultCall) => {
+          if (saved.callLog.some((call) => call.id === defaultCall.id)) return;
+          if (defaultCall.id === 'call-government') saved.callLog.unshift(defaultCall);
+          else saved.callLog.push(defaultCall);
+        });
         saved.messageDrafts = saved.messageDrafts && typeof saved.messageDrafts === 'object' ? saved.messageDrafts : {};
         saved.mailDrafts = saved.mailDrafts && typeof saved.mailDrafts === 'object' ? saved.mailDrafts : {};
         saved.mailReplies = saved.mailReplies && typeof saved.mailReplies === 'object' ? saved.mailReplies : {};
@@ -243,6 +256,7 @@
         saved.mailUnreadOnly = saved.mailUnreadOnly === true;
         saved.mailTranslations = saved.mailTranslations || {};
         saved.recoveryScamTriggered = saved.recoveryScamTriggered === true;
+        saved.consequences = { ...defaults.consequences, ...(saved.consequences || {}) };
         saved.hijackedFriendVariant = ['hijacked', 'real'].includes(saved.hijackedFriendVariant) ? saved.hijackedFriendVariant : defaults.hijackedFriendVariant;
         const savedCallJudgements = saved.callJudgements && typeof saved.callJudgements === 'object'
           ? saved.callJudgements
@@ -564,6 +578,22 @@
     state.history.push({ label, detail, time: formatTime(state.time) });
   }
 
+  function once(label, callback) {
+    if (state.history.some((item) => item.label === label)) return false;
+    callback();
+    return true;
+  }
+
+  function recordConsequence(kind, amount = 1) {
+    if (!state.consequences) state.consequences = { goodsLost: 0, debt: 0, cashOrValuablesLost: 0, accountTakeovers: 0, remoteAccess: 0, muleRisk: 0 };
+    state.consequences[kind] = Number(state.consequences[kind] || 0) + amount;
+  }
+
+  function totalMaterialLoss() {
+    const consequences = state.consequences || {};
+    return Number(state.moneyLost || 0) + Number(consequences.goodsLost || 0) + Number(consequences.cashOrValuablesLost || 0);
+  }
+
   function replyIntent(text) {
     const value = String(text || '').toLowerCase();
     return {
@@ -595,6 +625,38 @@
       if (intent.verify || intent.refuse) return '我已经付款了，平台客服说你只差收款验证。不要取消订单，不然钱会卡住。';
       if (intent.question) return '验证页面会显示我的付款记录；你输入银行资料后就能收款。';
       return '麻烦尽快完成验证，我等着取货。';
+    }
+    if (channel === 'message' && id === 'investment') {
+      if (intent.verify || intent.refuse) return 'The regulator list can be outdated. Our members verify the platform through successful withdrawals inside the group.';
+      if (intent.payment) return 'Start with HK$500. Once the AI position closes, the balance will show in your account immediately.';
+      if (intent.question) return 'Mentor Leo uses low-risk AI allocation. The assistant will guide every trade and withdrawal.';
+      return 'The trial window closes shortly. Open the group platform when you are ready.';
+    }
+    if (channel === 'message' && id === 'jobLoan') {
+      if (intent.verify || intent.refuse) return 'The cash-flow arrangement is handled by the client, not public HR. The signed contract protects your repayment.';
+      if (intent.payment) return 'Apply for HK$3,000 and transfer it to the procurement account. Repayment and HK$300 commission are released today.';
+      if (intent.sensitive) return 'Upload the loan approval and account details to the contract portal so finance can match repayment.';
+      return 'This is an urgent client request and part of the paid probation assignment.';
+    }
+    if (channel === 'message' && id === 'campusBorrow') {
+      if (intent.verify || intent.refuse) return 'The General Office is closed for the meeting. Do not delay the supplier; I will sign the reimbursement later.';
+      if (intent.payment) return 'Send HK$960 to the supplier FPS and reply with the receipt before 10:00.';
+      return 'This is linked to the seminar and research team, so please keep it between us until the booking is confirmed.';
+    }
+    if (channel === 'message' && ['water', 'ticket', 'mpf'].includes(id)) {
+      if (intent.verify || intent.refuse) return 'The case can only be viewed using the reference link in this notice before the deadline.';
+      if (intent.sensitive || intent.payment) return 'Complete the form with card and identity details. A one-time passcode may be required to submit.';
+      return 'Please use the notice link to view the outstanding item.';
+    }
+    if (channel === 'message' && id === 'census') {
+      if (intent.verify || intent.refuse) return '访客表示证件已经在大堂出示，今天只到访一次，稍后会前往下一座。';
+      if (intent.sensitive) return '访客请你带身份证到大堂核对住户记录，并填写联系电话。';
+      return '访客仍在大堂等候。';
+    }
+    if (channel === 'message' && id === 'donation') {
+      if (intent.verify || intent.refuse) return 'To stop today’s debit, call the cancellation desk using the number in this notice.';
+      if (intent.sensitive) return 'The cancellation desk will verify online banking details and a one-time passcode.';
+      return 'The scheduled debit remains active until cancellation is completed.';
     }
     if (channel === 'message' && id === 'friend') {
       if (intent.verify || intent.refuse) return state.hijackedFriendVariant === 'real'
@@ -648,6 +710,11 @@
       if (intent.sensitive) return 'The workspace needs your mobile number and payment profile before it can release trial-task commission.';
       if (intent.payment) return 'The first task is small and commission is released immediately. Higher-value tasks become available after your account is rated.';
       return 'Thank you. Open the project workspace to begin the 40-minute training and trial task.';
+    }
+    if (id === 'mail-market-payment') {
+      if (intent.verify || intent.refuse) return 'The buyer payment cannot appear in your seller account until Payment Protection is activated from this email.';
+      if (intent.sensitive || intent.payment) return 'Use the secure button to link your bank card and enter the one-time passcode requested by the payment processor.';
+      return 'Your HK$680 buyer payment remains on hold pending seller activation.';
     }
     if (intent.refuse) return 'Your provisional seat will expire at 10:00. No further action will be taken unless payment is received.';
     if (intent.verify) return 'The event desk is busy. The personal FPS account is the fastest way to secure the provisional seat before 10:00.';
@@ -1073,7 +1140,6 @@
 
   function renderPhone() {
     const keypad = state.phoneView === 'keypad';
-    const assessedCalls = state.callRecords.filter((record) => record.transcript && record.transcript.length).slice(-4).reverse();
     els.appContent.innerHTML = `
       <div class="app-pad">
         <div class="phone-segmented" role="tablist">
@@ -1088,22 +1154,8 @@
                 <span class="list-copy"><strong>${esc(ui('未知号码'))}</strong><span>${esc(ui(call.direction))} · ${esc(call.number)}</span></span>
                 <span class="list-time">${esc(formatStoredTime(call.time))}</span>
               </button>`).join('')}
-          </div>
-          ${assessedCalls.length ? `<span class="section-label">${esc(localized('我的暂时判断', 'My assessments'))}</span><div class="list-card call-assessment-list">${assessedCalls.map((record) => {
-            const judgement = state.callJudgements[record.id];
-            const label = judgement ? callVerdictLabel(judgement.verdict) : localized('尚未判断', 'Not assessed');
-            return `<button class="list-row" type="button" data-action="call-review-judgement" data-id="${esc(record.id)}"><span class="mini-icon" style="--row-bg:#2b7f58;--row-color:#fff">?</span><span class="list-copy"><strong>${esc(ui('未知号码'))}</strong><span>${esc(record.number)} · ${esc(label)}</span></span><span class="list-time">›</span></button>`;
-          }).join('')}</div>` : ''}`}
+          </div>`}
       </div>`;
-  }
-
-  function callVerdictLabel(verdict) {
-    return ({
-      trusted: localized('暂时可信', 'Probably trustworthy'),
-      suspicious: localized('可疑', 'Suspicious'),
-      insufficient: localized('资料不足', 'Not enough information'),
-      verify: localized('需要其他渠道确认', 'Verify through another channel')
-    })[verdict] || localized('尚未判断', 'Not assessed');
   }
 
   function renderPhoneKeypad() {
@@ -1121,15 +1173,20 @@
     return String(value || '').replace(/[^0-9+#*]/g, '').slice(0, 24);
   }
 
-  function placeManualCall(rawNumber) {
+  function placeManualCall(rawNumber, recordId = '') {
     const entered = normaliseDialNumber(rawNumber);
     if (!entered) return;
     state.dialNumber = entered;
     const digits = entered.replace(/\D/g, '');
+    if (recordId === 'call-government' || digits.endsWith('2147')) {
+      saveState();
+      startCallback('call-government');
+      return;
+    }
     const unknown = state.callLog.find((call) => call.id === 'call-unknown');
     if (unknown && digits.endsWith('8704')) {
       saveState();
-      startCallback();
+      startCallback('call-unknown');
       return;
     }
     const contact = state.contacts.find((item) => {
@@ -1180,6 +1237,12 @@
     activeThreadKey = key;
     thread.unread = false;
     if (key === 'recovery') state.taskState.recovery.steps.messageRead = true;
+    if (key === 'health') state.taskState.health.steps.messageRead = true;
+    if (key === 'investment') state.taskState.investment.steps.messageRead = true;
+    if (key === 'jobLoan') state.taskState.jobLoan.steps.messageRead = true;
+    if (key === 'campusBorrow') state.taskState.campusBorrow.steps.messageRead = true;
+    if (key === 'census') state.taskState.census.steps.noticeRead = true;
+    if (key === 'donation') state.taskState.donation.steps.messageRead = true;
     if (key === 'friend') {
       state.taskState.friend.steps.messageRead = true;
       state.taskState.friend.steps.requestSeen = true;
@@ -1382,6 +1445,7 @@
     if (mail.id === 'mail-parcel') state.taskState.parcel.steps.noticeRead = true;
     if (mail.id === 'mail-research') state.taskState.research.steps.invitationRead = true;
     if (mail.id === 'mail-career') state.taskState.career.steps.invitationRead = true;
+    if (mail.id === 'mail-market-payment') state.taskState.market.steps.emailOpened = true;
     if (mail.id === 'mail-event-fee') {
       state.taskState.event.steps.paymentMailRead = true;
       if (state.taskState.event.steps.officialEventOpened) state.taskState.event.steps.feeCompared = true;
@@ -1410,7 +1474,7 @@
           ${mailTranslationStatus(mail, copy.translated)}
           <div class="outlook-message-body" lang="${esc(copy.language)}"><p>${esc(copy.body)}</p></div>
           ${mail.tracking ? `<div class="outlook-tracking"><span>${esc(ui('运单号'))}</span><strong>${esc(mail.tracking)}</strong></div>` : ''}
-          <div class="outlook-message-actions action-row"><span class="outlook-simulation-label">${esc(localized('核验后再行动', 'Verify before acting'))}</span>${mailActions(mail)}</div>
+          <div class="outlook-message-actions action-row"><span class="outlook-simulation-label">${esc(localized('邮件操作', 'Message action'))}</span>${mailActions(mail)}</div>
           ${replies.length || replyPending ? `<section class="outlook-reply-thread" aria-label="${esc(ui('回复'))}">
             ${replies.map((reply) => `<article class="outlook-reply-item ${reply.from === 'mine' ? 'mine' : ''}"><header><strong>${esc(reply.from === 'mine' ? localized('你', 'You') : mail.from)}</strong><time>${esc(formatStoredTime(reply.time))}</time></header><p>${esc(reply.text)}</p></article>`).join('')}
             ${replyPending ? `<div class="outlook-reply-wait"><i></i><i></i><i></i><span>${esc(ui('正在输入…'))}</span></div>` : ''}
@@ -1440,6 +1504,7 @@
     if (mail.kind === 'research') return `<button class="primary-action" type="button" data-action="research-open-link">${esc(ui('打开 onboarding form'))}</button>`;
     if (mail.kind === 'career') return `<button class="primary-action" type="button" data-action="career-open-workspace">${esc(ui('打开项目工作台'))}</button>`;
     if (mail.kind === 'event-payment') return `<button class="primary-action" type="button" data-action="event-open-payment">${esc(ui('查看付款页面'))}</button>`;
+    if (mail.kind === 'market-payment') return `<button class="primary-action" type="button" data-action="market-open-protection">Open secure payment</button>`;
     return `<button class="secondary-action" type="button" data-action="open-contacts">${esc(ui('查看相关联系人'))}</button>`;
   }
 
@@ -1674,6 +1739,7 @@
         ${browserCard('www.polyu.edu.hk', 'PolyU 官方网站', '校园服务、学生资讯与官方联系方式。', 'polyu-official')}
         ${browserCard('www.polyu.edu.hk/staff', 'PolyU 教职员目录', '从学校域名核实教职员、电邮与部门电话。', 'staff-directory')}
         ${browserCard('www.hongkongpost.hk', '香港邮政', '邮件追踪及邮政服务。', 'post-official')}
+        ${browserCard('www.gov.hk', '政府服务', '从政府入口重新查找部门、缴费与查询服务。', 'government-services')}
         ${browserCard('www.cyberdefender.hk', '防骗视伏器 Scameter', '检查可疑网址、电话及账户。', 'scameter')}`;
     }
     if (/8704|6\s*x{2,}\s*8704|\+?852.*8704/i.test(q)) {
@@ -1681,6 +1747,18 @@
         <span class="section-label">${esc(ui('号码查询'))} · ${esc(q)}</span>
         ${browserCard('www.cyberdefender.hk', '防骗视伏器 Scameter', '该号码暂无公开记录。查无记录不代表身份真实。', 'scameter')}
         ${browserCard('本机联系人', '搜索已保存联系人', '没有联系人使用这个完整号码；可比较号码尾号，或联系共同认识的人。', 'contacts-search')}`;
+    }
+    if (/2147|3\s*x{2,}\s*2147|\+?852.*2147/i.test(q)) {
+      return `
+        <span class="section-label">${esc(ui('号码查询'))} · ${esc(q)}</span>
+        ${browserCard('www.cyberdefender.hk', '防骗视伏器 Scameter', '该号码暂无公开记录。', 'government-number-check')}
+        ${browserCard('电话簿查询', '没有匹配的机构资料', '公开电话簿没有把这个号码列为政府部门或校园机构。', 'government-number-check')}`;
+    }
+    if (/入境|入境事务|immigration|immd|政府部门|政府電話|政府电话/i.test(q)) {
+      return `
+        <span class="section-label">${esc(localized(`“${q}”的结果`, `Results for “${q}”`))}</span>
+        ${browserCard('www.immd.gov.hk', '入境事务处 · 联络资料', '一般查询、办公地点及公开电话。', 'government-directory')}
+        ${browserCard('secure-case-review.example', 'Case document review', 'Open a case file using the reference supplied by the caller.', 'government-case-review', true)}`;
     }
     if (/@|outlook\.example|campus-mail\.example|polyu\.edu\.hk/i.test(q)) {
       return `
@@ -1698,13 +1776,28 @@
       return `<span class="section-label">${esc(localized(`“${q}”的结果`, `Results for “${q}”`))}</span>${browserCard('northbridge-projects.example', 'Northbridge project workspace', 'Remote research tasks, training and instant commission.', 'career-workspace', true)}${browserCard('原招聘平台与公司官网', 'Research and Project Assistant', '职位详情、申请状态与公司公开资料。', 'career-official')}`;
     }
     if (/medical-service|health|ha go|醫療|医疗|自动扣费|自動扣費/i.test(q)) {
-      return `<span class="section-label">${esc(localized(`“${q}”的结果`, `Results for “${q}”`))}</span>${browserCard('medical-service-cancel.example', 'Cancel health coverage', 'Enter card details to stop an automatic monthly charge.', 'health-cancel', true)}${browserCard('医疗服务应用', 'My account', 'Subscription and payment history.', 'health-official')}`;
+      return `<span class="section-label">${esc(localized(`“${q}”的结果`, `Results for “${q}”`))}</span>${browserCard('ha-go-account.example', 'Cancel health coverage', 'Enter card details to stop an automatic monthly charge.', 'health-cancel', true)}${browserCard('HA Go / eHealth App', 'My account', 'Appointments, services and payment history.', 'health-official')}`;
     }
     if (/marketplace|carousell|二手|收款验证|收款驗證/i.test(q)) {
       return `<span class="section-label">${esc(localized(`“${q}”的结果`, `Results for “${q}”`))}</span>${browserCard('marketplace-protection.example', 'Payment protection verification', 'Link your bank account to receive the buyer payment.', 'market-protection', true)}${browserCard('二手交易平台', 'Calculator listing', 'Order details and payment status.', 'market-official')}`;
     }
     if (/adcc|追回|追款|case-recovery|防骗/i.test(q)) {
       return `<span class="section-label">${esc(localized(`“${q}”的结果`, `Results for “${q}”`))}</span>${browserCard('www.adcc.gov.hk', '官方防骗建议', '发生损失后直接从官方入口查证，不通过主动联络者提供的页面。', 'adcc-advice')}${browserCard('case-recovery-centre.example', 'Emergency fund recovery', 'Create a wallet to recover a reported loss.', 'recovery-portal', true)}`;
+    }
+    if (/investment|invest|meta|instagram|投資|投资|理財|理财|證券|证券/i.test(q)) {
+      return `<span class="section-label">${esc(localized(`“${q}”的结果`, `Results for “${q}”`))}</span>${browserCard('meta-invest-pro.example', 'AI Market Pro', 'Member trading account and withdrawal centre.', 'investment-platform', true)}${browserCard('www.sfc.hk', 'Public register and investor alerts', 'Search licensed firms and platform warnings.', 'investment-official')}`;
+    }
+    if (/apex|cash loan|loan|求職|求职|借貸|借贷|招聘|recruit/i.test(q)) {
+      return `<span class="section-label">${esc(localized(`“${q}”的结果`, `Results for “${q}”`))}</span>${browserCard('apex-recruit-contract.example', 'Apex Campus Recruitment', 'Signed contract and client procurement task.', 'jobloan-contract', true)}${browserCard('招聘平台及公司官网', 'Apex role verification', 'Search the original job listing and contact public HR.', 'jobloan-official')}`;
+    }
+    if (/水務|水务|water|wsd|告票|ticket|traffic|mpf|積金|积金|empf/i.test(q)) {
+      return `<span class="section-label">${esc(localized(`“${q}”的结果`, `Results for “${q}”`))}</span>${browserCard('www.gov.hk', 'Government service directory', 'Open the relevant department through a manually entered government address.', 'government-services')}${browserCard('www.mpfa.org.hk / eMPF', 'MPF account services', 'Open the official account portal independently.', 'mpf-official')}`;
+    }
+    if (/census|人口普查|統計|统计/i.test(q)) {
+      return `<span class="section-label">${esc(localized(`“${q}”的结果`, `Results for “${q}”`))}</span>${browserCard('www.censtatd.gov.hk', 'Census and Statistics Department', 'Verify survey visits and enumerator arrangements.', 'census-official')}`;
+    }
+    if (/donation|charity|捐款|慈善/i.test(q)) {
+      return `<span class="section-label">${esc(localized(`“${q}”的结果`, `Results for “${q}”`))}</span>${browserCard('银行交易纪录', 'Scheduled transfers', 'Review standing instructions and pending card charges.', 'donation-official')}`;
     }
     if (/event|innovation|活动|创新/i.test(q)) {
       return `
@@ -1740,18 +1833,80 @@
   }
 
   function renderExtendedBrowserPage(page) {
+    if (page === 'government-services') {
+      els.appContent.innerHTML = `<div class="app-pad"><article class="browser-card official-profile"><span class="browser-domain">www.gov.hk</span><h2>Government services</h2><p>Selecting a service here starts from an independently entered government address.</p><div class="action-row"><button class="secondary-action" type="button" data-action="service-official-check" data-service="water">Water account</button><button class="secondary-action" type="button" data-action="service-official-check" data-service="ticket">Traffic tickets</button><button class="secondary-action" type="button" data-action="service-official-check" data-service="mpf">MPF / eMPF</button></div></article></div>`;
+      return true;
+    }
+    if (page === 'mpf-official') {
+      state.activeService = 'mpf';
+      els.appContent.innerHTML = `<div class="app-pad"><article class="browser-card"><span class="browser-domain">www.mpfa.org.hk / eMPF App</span><h2>Account notices</h2><p>No profile update, contribution suspension or withdrawal restriction appears in the official account.</p><button class="primary-action" type="button" data-action="service-official-check" data-service="mpf">Save result</button></article></div>`;
+      return true;
+    }
+    if (page === 'investment-platform') {
+      const steps = state.taskState.investment.steps;
+      steps.groupOpened = true;
+      const deposited = steps.firstDepositPaid;
+      els.appContent.innerHTML = `<div class="fake-page"><span class="browser-domain">meta-invest-pro.example/account</span><div class="fake-logo">AI</div><h2>${deposited ? 'Portfolio value HK$1,286' : 'AI Market Pro trial'}</h2><p>${deposited ? 'Today +157.2%. Withdrawal is available after account review.' : 'Mentor Leo allocated a low-risk AI position. Activate the member account with HK$500.'}</p><div class="fake-fee"><span>${deposited ? 'Book profit' : 'Initial allocation'}</span><strong>${deposited ? 'HK$786' : 'HK$500'}</strong></div><div class="action-row"><button class="primary-action" type="button" data-action="${deposited ? 'investment-withdraw' : 'investment-deposit'}">${deposited ? 'Withdraw all' : 'Deposit HK$500'}</button></div></div>`;
+      saveState(); return true;
+    }
+    if (page === 'investment-unlock') {
+      els.appContent.innerHTML = `<div class="fake-page"><span class="browser-domain">meta-invest-pro.example/compliance</span><div class="fake-logo">!</div><h2>Withdrawal locked</h2><p>Pay a refundable HK$900 tax and verification deposit to release the full balance.</p><div class="action-row"><button class="primary-action" type="button" data-action="investment-pay-unlock">Pay HK$900</button></div></div>`;
+      return true;
+    }
+    if (page === 'investment-official') {
+      els.appContent.innerHTML = `<div class="app-pad"><article class="browser-card"><span class="browser-domain">www.sfc.hk</span><h2>Public register and investor alerts</h2><p>No licensed firm or authorised platform matches “AI Market Pro”. Group screenshots and small withdrawals are not entries in this register.</p><button class="primary-action" type="button" data-action="investment-save-check">Save result</button></article></div>`;
+      return true;
+    }
+    if (page === 'jobloan-contract') {
+      const steps = state.taskState.jobLoan.steps; steps.contractOpened = true; saveState();
+      els.appContent.innerHTML = `<div class="fake-page"><span class="browser-domain">apex-recruit-contract.example</span><div class="case-letterhead"><strong>Apex Campus Recruitment</strong><small>Candidate service agreement</small></div><h2>Administrative Project Assistant</h2><p>The candidate agrees to assist urgent client procurement using available personal credit. Client reimbursement is stated as same-day.</p><div class="fake-fee"><span>Personal cash loan</span><strong>HK$3,000</strong></div><button class="primary-action" type="button" data-action="jobloan-take-loan">Accept and obtain loan</button></div>`;
+      return true;
+    }
+    if (page === 'jobloan-official') {
+      els.appContent.innerHTML = `<div class="app-pad"><article class="browser-card"><span class="browser-domain">Original recruitment platform · public HR</span><h2>Role not found</h2><p>The original employer did not refer applicants to Apex. Public HR confirms no candidate is asked to borrow or transfer company working capital.</p><button class="primary-action" type="button" data-action="jobloan-save-check">Save result</button></article></div>`;
+      return true;
+    }
+    if (page === 'service-fake') {
+      const service = state.activeService || 'water';
+      const content = service === 'ticket' ? ['Electronic ticket ET-260814-73', 'HK$320'] : service === 'mpf' ? ['eMPF profile reactivation', 'Identity verification'] : ['Water account 83••19', 'HK$86.40'];
+      els.appContent.innerHTML = `<div class="fake-page"><span class="browser-domain">${service === 'ticket' ? 'gov-eticket-view.example' : service === 'mpf' ? 'empf-profile-update.example' : 'wsd-ebill-check.example'}</span><div class="fake-logo">${service === 'mpf' ? 'MPF' : '$'}</div><h2>${content[0]}</h2><p>Enter identity and card details to complete this notice. A one-time passcode will be requested next.</p><div class="fake-fee"><span>Notice</span><strong>${content[1]}</strong></div><button class="primary-action" type="button" data-action="service-submit-card" data-service="${service}">Continue with card</button></div>`;
+      return true;
+    }
+    if (page === 'census-official') {
+      els.appContent.innerHTML = `<div class="app-pad"><article class="browser-card"><span class="browser-domain">www.censtatd.gov.hk</span><h2>Enumerator visit enquiry</h2><p>No visit is scheduled for this hall today. The department can verify staff independently; an identity card is not required for this unverified lobby request.</p><button class="primary-action" type="button" data-action="census-save-check">Save result</button></article></div>`;
+      return true;
+    }
+    if (page === 'donation-official') {
+      els.appContent.innerHTML = `<div class="app-pad"><article class="browser-card"><span class="browser-domain">Bank transaction record</span><h2>No scheduled donation</h2><p>There is no card charge, standing instruction or pending debit matching Community Relief Fund.</p><button class="primary-action" type="button" data-action="donation-save-check">Save result</button></article></div>`;
+      return true;
+    }
+    if (page === 'government-directory') {
+      state.taskState.government.steps.officialDirectoryOpened = true;
+      saveState();
+      els.appContent.innerHTML = `<div class="app-pad"><article class="browser-card official-profile"><span class="browser-domain">www.immd.gov.hk</span><h2>入境事务处</h2><p>一般查询服务</p><dl class="detail-grid"><dt>电话</dt><dd>+852 2XXX 6111</dd><dt>办公时间</dt><dd>星期一至五 · 08:45–16:30</dd></dl><div class="action-row"><button class="primary-action" type="button" data-action="government-contact-official">${esc(ui('拨打一般查询电话'))}</button><button class="secondary-action" type="button" data-action="browser-home">${esc(ui('返回搜索'))}</button></div></article></div>`;
+      return true;
+    }
+    if (page === 'government-case-review') {
+      const studentTail = callSession?.details?.studentIdTail || '••••';
+      els.appContent.innerHTML = `<div class="fake-page handoff-page"><span class="browser-domain">secure-case-review.example/case</span><div class="case-letterhead"><strong>Document Investigation Desk</strong><small>Restricted case record</small></div><h2>Case IM-26-0814-73</h2><p>A document registered to student reference ••••${esc(studentTail)} is under review. Keep this session open while the assigned officer completes identity and account checks.</p><dl class="case-summary"><div><dt>Status</dt><dd>Telephone verification in progress</dd></div><div><dt>Assigned desk</dt><dd>Officer Lau · Financial review</dd></div></dl></div>`;
+      return true;
+    }
+    if (page === 'government-number-check') {
+      els.appContent.innerHTML = `<div class="app-pad"><article class="browser-card"><span class="browser-domain">号码查询</span><h2>+852 3XXX 2147</h2><p>暂时没有足够的公开资料可识别这个号码。</p><div class="action-row"><button class="secondary-action" type="button" data-action="browser-home">${esc(ui('返回搜索'))}</button></div></article></div>`;
+      return true;
+    }
     if (page === 'career-workspace') { renderCareerWorkspace(); return true; }
     const staticPages = {
       'career-official': `<div class="app-pad"><article class="browser-card"><span class="browser-domain">原招聘平台与公司公开资料</span><h2>Research and Project Assistant</h2><p>The original internship is still open and did not refer applicants to Northbridge Talent. The named company does not list a Research and Project Assistant role or any task-purchase onboarding process.</p><div class="action-row"><button class="primary-action" type="button" data-action="career-check-official">${esc(ui('保存查询结果'))}</button></div></article></div>`,
-      'health-cancel': `<div class="fake-page"><span class="browser-domain">medical-service-cancel.example</span><div class="fake-logo">+</div><h2>Cancel monthly health coverage</h2><p>Confirm the card used for registration. A temporary HK$1 verification will be reversed after cancellation.</p><div class="fake-fee"><span>Next monthly charge</span><strong>HK$388</strong></div><div class="action-row"><button class="primary-action" type="button" data-action="health-submit-cancel">${esc(ui('确认取消服务'))}</button></div></div>`,
-      'health-official': `<div class="app-pad"><article class="browser-card"><span class="browser-domain">教学模拟 · 官方入口说明</span><span class="official-chip">INDEPENDENT CHECK</span><h2>Health app account</h2><p>模拟账户没有任何保障试用、自动续费或待取消项目。官方机构不会要求经陌生短信页面输入银行卡来取消服务。</p><div class="action-row"><button class="primary-action" type="button" data-action="health-save-check">${esc(ui('保存查询结果'))}</button><button class="secondary-action" type="button" data-action="browser-home">${esc(ui('返回搜索'))}</button></div></article></div>`,
-      'market-protection': `<div class="fake-page"><span class="browser-domain">marketplace-protection.example</span><div class="fake-logo">M</div><h2>Receive buyer payment</h2><p>The buyer's HK$680 payment is on hold. Link a bank card and enter the verification amount shown in your banking app to release it.</p><div class="fake-fee"><span>Payment to receive</span><strong>HK$680</strong></div><div class="action-row"><button class="primary-action" type="button" data-action="market-submit-verification">${esc(ui('连接银行卡'))}</button></div></div>`,
-      'market-official': `<div class="app-pad"><article class="browser-card"><span class="browser-domain">平台内订单</span><h2>Calculator listing</h2><p>No payment has been received. The buyer moved the conversation outside the platform, and the external confirmation page is not part of this order.</p><div class="action-row"><button class="primary-action" type="button" data-action="market-save-check">${esc(ui('保存查询结果'))}</button></div></article></div>`,
-      'adcc-advice': `<div class="app-pad"><article class="browser-card"><span class="browser-domain">www.adcc.gov.hk</span><h2>防骗资讯</h2><p>防骗机构不会要求转账、提供网上银行密码或支付“保证金”来追回损失。应从自行查找的官方渠道联络警方和银行，并保留交易及对话记录。</p><div class="action-row"><button class="primary-action" type="button" data-action="recovery-save-official">${esc(ui('保存查询结果'))}</button></div></article></div>`
+      'health-cancel': `<div class="fake-page"><span class="browser-domain">ha-go-account.example</span><div class="fake-logo">+</div><h2>Cancel HA Go / eHealth plan</h2><p>Confirm the card used for registration. A temporary HK$1 verification and one-time passcode will close the plan.</p><div class="fake-fee"><span>Next monthly charge</span><strong>HK$388</strong></div><div class="action-row"><button class="primary-action" type="button" data-action="health-submit-cancel">${esc(ui('确认取消服务'))}</button></div></div>`,
+      'health-official': `<div class="app-pad"><article class="browser-card"><span class="browser-domain">HA Go / eHealth App</span><h2>My services</h2><p>There is no health plan, automatic renewal, pending charge or cancellation request in this account.</p><div class="action-row"><button class="primary-action" type="button" data-action="health-save-check">${esc(ui('保存查询结果'))}</button><button class="secondary-action" type="button" data-action="browser-home">${esc(ui('返回搜索'))}</button></div></article></div>`,
+      'market-protection': `<div class="fake-page"><span class="browser-domain">marketplace-protection.example</span><div class="fake-logo">C</div><h2>Activate Seller Protection</h2><p>The buyer's HK$680 payment is on hold. Link a bank card, pay a refundable HK$680 activation deposit and enter the one-time passcode.</p><div class="fake-fee"><span>Refundable activation</span><strong>HK$680</strong></div><div class="action-row"><button class="primary-action" type="button" data-action="market-submit-verification">Activate receiving</button></div></div>`,
+      'market-official': `<div class="app-pad"><article class="browser-card"><span class="browser-domain">Carousell · in-app order</span><h2>Calculator listing</h2><p>No order or payment exists for this listing. Seller Protection does not require activation through an external email, link or bank transfer.</p><div class="action-row"><button class="primary-action" type="button" data-action="market-save-check">${esc(ui('保存查询结果'))}</button></div></article></div>`,
+      'adcc-advice': `<div class="app-pad"><article class="browser-card"><span class="browser-domain">www.adcc.gov.hk · 18222</span><h2>Anti-Deception Coordination Centre</h2><p>No ADCC recovery or refund arrangement matches this reference. ADCC does not proactively recover money through WhatsApp, demand a guarantee, request online-banking access or direct a remote-control session.</p><div class="action-row"><button class="primary-action" type="button" data-action="recovery-save-official">${esc(ui('保存查询结果'))}</button></div></article></div>`
     };
     if (page === 'recovery-portal') {
       const steps = state.taskState.recovery.steps;
-      els.appContent.innerHTML = `<div class="fake-page handoff-page"><span class="browser-domain">claim-assistance.example/intake</span><div class="case-letterhead"><strong>Claim Assistance Desk</strong><small>Case intake summary</small></div>${recoveryHandoff(1)}<h2>案件资料摘要</h2><p>参考编号 CA-${String(state.seed).slice(0, 6).toUpperCase()} · 申报损失 ${esc(formatHKD(state.moneyLost))}。资料显示交易可能仍在分层转移，建议交由合作法律团队评估。</p><dl class="case-summary"><div><dt>状态</dt><dd>等待授权转介</dd></div><div><dt>初步费用</dt><dd>HK$0</dd></div><div><dt>时限</dt><dd>今天 18:00</dd></div></dl><div class="action-row"><button class="primary-action" type="button" data-action="recovery-accept-intake">${esc(ui(steps.intakeAccepted ? '查看律师联络' : '同意转交合作律师'))}</button></div></div>`;
+      els.appContent.innerHTML = `<div class="fake-page handoff-page"><span class="browser-domain">claim-assistance.example/intake</span><div class="case-letterhead"><strong>Claim Assistance Desk</strong><small>Case intake summary</small></div>${recoveryHandoff(1)}<h2>案件资料摘要</h2><p>参考编号 CA-${String(state.seed).slice(0, 6).toUpperCase()} · 申报损失 ${esc(formatHKD(totalMaterialLoss()))}。资料显示交易可能仍在分层转移，建议交由合作法律团队评估。</p><dl class="case-summary"><div><dt>状态</dt><dd>等待授权转介</dd></div><div><dt>初步费用</dt><dd>HK$0</dd></div><div><dt>时限</dt><dd>今天 18:00</dd></div></dl><div class="action-row"><button class="primary-action" type="button" data-action="recovery-accept-intake">${esc(ui(steps.intakeAccepted ? '查看律师联络' : '同意转交合作律师'))}</button></div></div>`;
       return true;
     }
     if (page === 'recovery-lawyer') {
@@ -1839,6 +1994,7 @@
     if (page === 'staff-directory') {
       const task = state.taskState.research;
       task.steps.officialProfileFound = true;
+      if (state.taskState.campusBorrow.steps.messageRead) state.taskState.campusBorrow.steps.officialDirectoryChecked = true;
       addEvidence('staff-directory', '从 polyu.edu.hk 教职员目录找到教授官方邮箱及部门电话');
       saveState();
       els.appContent.innerHTML = `
@@ -1875,7 +2031,10 @@
 
   function renderContacts() {
     const query = String(state.contactsQuery || '').trim().toLowerCase();
-    const contacts = state.contacts.filter((contact) => !query || `${contact.name} ${contact.note} ${contact.number}`.toLowerCase().includes(query));
+    const contacts = state.contacts.filter((contact) => {
+      if (contact.id === 'contact-immigration' && !state.taskState.government.steps.officialDirectoryOpened) return false;
+      return !query || `${contact.name} ${contact.note} ${contact.number}`.toLowerCase().includes(query);
+    });
     els.appContent.innerHTML = `
       <div class="app-pad">
         <form class="contacts-search" id="contactsSearchForm">
@@ -1895,13 +2054,16 @@
   }
 
   function renderBank() {
+    const market = state.taskState.market;
+    const pendingMarket = state.transactions.find((item) => item.id === 'market-pending-credit');
     els.appContent.innerHTML = `
       <section class="bank-summary"><span>${esc(ui('可用余额'))}</span><strong>${esc(formatHKD(state.balance))}</strong></section>
       <div class="bank-actions">
         <button class="secondary-action" type="button" data-action="freeze-card">${esc(ui(state.cardFrozen ? '银行卡已冻结' : '冻结银行卡'))}</button>
         <button class="secondary-action" type="button" data-action="bank-help">${esc(ui('联系银行'))}</button>
       </div>
-      <div class="bank-card"><span class="section-label">${esc(ui('交易记录'))}</span>${state.transactions.map((item) => `<div class="transaction-row"><div><strong>${esc(item.title)}</strong><span>${esc(formatStoredTime(item.time))}</span></div><div class="transaction-amount">${item.amount < 0 ? '−' : '+'}${esc(formatHKD(Math.abs(item.amount)))}</div></div>`).join('')}</div>`;
+      ${pendingMarket && !market.steps.officialOrderChecked ? `<div class="bank-card"><strong>Cheque deposit · Pending</strong><p>Book entry: ${esc(formatHKD(pendingMarket.amount))}<br>Available amount: HK$0.00</p><div class="action-row"><button class="primary-action" type="button" data-action="market-release-item">Leave calculator at lobby</button><button class="secondary-action" type="button" data-action="market-check-settlement">Ask bank about settlement</button></div></div>` : ''}
+      <div class="bank-card"><span class="section-label">${esc(ui('交易记录'))}</span>${state.transactions.map((item) => `<div class="transaction-row"><div><strong>${esc(item.title)}</strong><span>${esc(formatStoredTime(item.time))}${item.pending ? ' · Pending' : ''}</span></div><div class="transaction-amount">${item.amount < 0 ? '−' : '+'}${esc(formatHKD(Math.abs(item.amount)))}</div></div>`).join('')}</div>`;
   }
 
   function settingsOption(action, value, label, selected) {
@@ -1972,17 +2134,21 @@
       </article>`;
   }
 
-  function startCallback() {
+  function startCallback(recordId = 'call-unknown') {
     if (callSession) { resumeCall(); showToast('先结束当前通话，再拨打另一个号码'); return; }
-    startCallSession('orientation', '+852 6XXX 8704');
-    const missedCall = state.callLog.find((item) => item.id === 'call-unknown');
+    const isGovernment = recordId === 'call-government';
+    const scenario = isGovernment ? 'government' : 'orientation';
+    const number = isGovernment ? '+852 3XXX 2147' : '+852 6XXX 8704';
+    startCallSession(scenario, number);
+    const missedCall = state.callLog.find((item) => item.id === recordId);
     if (missedCall) Object.assign(missedCall, { direction: '正在回拨', unread: false });
-    markNotification('n-call');
-    addHistory('callback-started', '主动回拨未知号码');
+    markNotification(isGovernment ? 'n-government-call' : 'n-call');
+    if (isGovernment) state.taskState.government.steps.callbackMade = true;
+    addHistory(isGovernment ? 'government-callback-started' : 'callback-started', '主动回拨未知号码');
     saveState();
     renderCallDialling(ui('回拨'), ui('你正在主动回拨刚才的未接来电'));
     callbackTimer = setTimeout(() => {
-      if (callSession && callSession.phase === 'dialing' && callSession.scenario === 'orientation') connectCallSession();
+      if (callSession && callSession.phase === 'dialing' && callSession.scenario === scenario) connectCallSession();
     }, 1450);
   }
 
@@ -1993,6 +2159,12 @@
     if (key === 'recovery') return `<div class="message-actions"><button class="primary-action" type="button" data-action="recovery-open-portal">${esc(ui('查看案件摘要'))}</button></div>`;
     if (key === 'lawyer') return `<div class="message-actions"><button class="primary-action" type="button" data-action="recovery-open-lawyer">${esc(ui('查看委托摘要'))}</button></div>`;
     if (key === 'investigator') return `<div class="message-actions"><button class="primary-action" type="button" data-action="recovery-open-investigator">${esc(ui('打开远程协助'))}</button></div>`;
+    if (key === 'investment') return `<div class="message-actions"><button class="primary-action" type="button" data-action="investment-open-platform">${esc(localized('打开交易平台', 'Open trading platform'))}</button></div>`;
+    if (key === 'jobLoan') return `<div class="message-actions"><button class="primary-action" type="button" data-action="jobloan-open-contract">${esc(localized('打开电子合约', 'Open e-contract'))}</button></div>`;
+    if (key === 'campusBorrow') return `<div class="message-actions"><button class="primary-action" type="button" data-action="campus-borrow-pay">${esc(localized('支付供应商 FPS', 'Pay supplier FPS'))}</button></div>`;
+    if (['water', 'ticket', 'mpf'].includes(key)) return `<div class="message-actions"><button class="primary-action" type="button" data-action="service-open-link" data-service="${esc(key)}">${esc(localized('打开通知', 'Open notice'))}</button></div>`;
+    if (key === 'census') return `<div class="message-actions"><button class="primary-action" type="button" data-action="census-share-id">${esc(localized('带身份证到大堂登记', 'Bring ID to the lobby'))}</button></div>`;
+    if (key === 'donation') return `<div class="message-actions"><button class="primary-action" type="button" data-action="donation-call">${esc(localized('回拨取消热线', 'Call cancellation desk'))}</button></div>`;
     return '';
   }
 
@@ -2011,6 +2183,7 @@
       transcript: [],
       disclosed: [],
       claims: [],
+      details: {},
       minimized: false,
       originApp: state.currentApp || 'phone'
     };
@@ -2021,7 +2194,7 @@
     const contact = state.contacts.find((item) => item.id === contactId);
     if (!contact) return;
     if (callSession) { resumeCall(); showToast('先结束当前通话，再拨打另一个号码'); return; }
-    const scenario = contactId === 'contact-hall' ? 'hall' : 'department';
+    const scenario = contactId === 'contact-hall' ? 'hall' : (contactId === 'contact-immigration' ? 'government-official' : 'department');
     startCallSession(scenario, contact.number, contactId);
     const logItem = state.callLog.find((item) => item.number === contact.number);
     if (logItem) Object.assign(logItem, { direction: '正在拨号', unread: false });
@@ -2063,6 +2236,11 @@
       if (missedCall) missedCall.direction = '已回拨';
       addHistory('unknown-call', '回拨后与陌生号码通话');
       advanceTime(2);
+    } else if (callSession.scenario === 'government') {
+      const missedCall = state.callLog.find((item) => item.id === 'call-government');
+      if (missedCall) missedCall.direction = '已回拨';
+      addHistory('government-unknown-call', '回拨另一通陌生来电');
+      advanceTime(2);
     } else {
       advanceTime(1);
     }
@@ -2092,26 +2270,61 @@
         fee: { reply: '「一般領取文件唔使網上付款。不過要查到件，我要先核對運單資料。」', audio: 'hall-fee', quick: [['share_partial', '只提供尾号和宿舍'], ['ask_reference', '你先说一下现有记录'], ['hold_research', '打开邮件核对资料']] },
         partial: { reply: '「尾號1305，係嗎？我搵到一項紀錄，但要再核對完整編號先可以講送達時間。」', audio: 'hall-partial', quick: [['share_full', '提供完整运单号'], ['ask_reference', '先说送达日期可以吗？'], ['hold_research', '打开邮件核对资料']] },
         need_mail: { reply: '「冇完整編號我未能確認係同一份文件。你可以搵返通知再打嚟。」', audio: 'hall-need-mail', quick: [['hold_research', '打开邮件核对资料'], ['refuse_disclosure', '我稍后从其他渠道确认']] },
-        result: { reply: '「查到喇：文件08:14送到收發室。今日17:00前帶學生證嚟拎就得，唔需要網上補交費用。」', audio: 'hall-result', quick: [['record_result', '记下这次通话内容'], ['ask_fee', '再确认是否需要缴费'], ['finish_judge', '结束并作出判断']] },
-        cautious: { reply: '「冇問題。你可以先核對通知；我哋未確認資料前亦唔會講文件內容。」', audio: 'hall-cautious', quick: [['hold_research', '打开邮件核对资料'], ['finish_judge', '结束并作出判断']] }
+        result: { reply: '「查到喇：文件08:14送到收發室。今日17:00前帶學生證嚟拎就得，唔需要網上補交費用。」', audio: 'hall-result', quick: [['record_result', '记下这次通话内容'], ['ask_fee', '再确认是否需要缴费'], ['end_call', '结束通话']] },
+        cautious: { reply: '「冇問題。你可以先核對通知；我哋未確認資料前亦唔會講文件內容。」', audio: 'hall-cautious', quick: [['hold_research', '打开邮件核对资料'], ['end_call', '结束通话']] }
       },
       department: {
         intro: { reply: '「喂，你好。請問你想搵邊位？」', audio: 'department-intro', quick: [['describe_request', '我想核实一封研究邀请'], ['ask_identity', '请问这里是什么办公室？'], ['ask_reference', '你们最近有招募研究助理吗？']] },
         claim: { reply: '「呢度係 Department General Office。請問你想查咩事？」', audio: 'department-claim', quick: [['describe_request', '我想核实一封研究邀请'], ['ask_reference', '你们最近有招募研究助理吗？'], ['refuse_disclosure', '我暂时不提供个人资料']] },
         need_mail: { reply: '「可以。你唔使提供個人資料，講封郵件嘅主題同發件地址就得。」', audio: 'department-need-mail', quick: [['share_mail', '提供邮件主题和发件地址'], ['hold_research', '返回浏览器核对目录'], ['refuse_disclosure', '我只想了解正式招募渠道']] },
-        channels: { reply: '「正式招募會經 PolyU 電郵或部門系統，但我未睇過你嗰封信，暫時唔可以判斷係咪同一項目。」', audio: 'department-channels', quick: [['share_mail', '提供邮件主题和发件地址'], ['hold_research', '返回浏览器核对目录'], ['finish_judge', '结束并作出判断']] },
-        result: { reply: '「我按主題同地址查過：Prof. Chan 冇發出呢封邀請，學院亦冇叫學生代購禮券。你唔好用信內連結。」', audio: 'department-result', quick: [['record_result', '记下这次通话内容'], ['ask_reference', '请再说明正式招募渠道'], ['finish_judge', '结束并作出判断']] },
-        cautious: { reply: '「可以。唔提供個人資料都得；你可以用官網電郵將主題轉畀辦公室核對。」', audio: 'department-cautious', quick: [['hold_research', '返回浏览器核对目录'], ['finish_judge', '结束并作出判断']] }
+        channels: { reply: '「正式招募會經 PolyU 電郵或部門系統，但我未睇過你嗰封信，暫時唔可以判斷係咪同一項目。」', audio: 'department-channels', quick: [['share_mail', '提供邮件主题和发件地址'], ['hold_research', '返回浏览器核对目录'], ['end_call', '结束通话']] },
+        result: { reply: '「我按主題同地址查過：Prof. Chan 冇發出呢封邀請，學院亦冇叫學生代購禮券。你唔好用信內連結。」', audio: 'department-result', quick: [['record_result', '记下这次通话内容'], ['ask_reference', '请再说明正式招募渠道'], ['end_call', '结束通话']] },
+        borrow_result: { reply: '「我哋確認過：Prof. Chan 同部門都冇叫學生用私人 FPS 墊付供應商費用，亦冇用 WhatsApp 安排借款或報銷。正式付款只會經大學程序處理。」', quick: [['record_result', '记下这次通话内容'], ['end_call', '结束通话']] },
+        cautious: { reply: '「可以。唔提供個人資料都得；你可以用官網電郵將主題轉畀辦公室核對。」', audio: 'department-cautious', quick: [['hold_research', '返回浏览器核对目录'], ['end_call', '结束通话']] }
+      },
+      donation: {
+        intro: { reply: '「喂，捐款取消中心。請講短訊上面嘅捐款編號，我幫你處理。」', quick: [] },
+        identity: { reply: '「我哋係 Community Relief Fund 嘅取消服務台。系統顯示今日會扣HK$580。」', quick: [] },
+        purpose: { reply: '「要喺今日扣款前取消，就要先核對你嘅網上銀行登入資料，同短訊收到嘅一次性密碼。」', quick: [] },
+        reference: { reply: '「通知編號係CRF-580-814。你可以直接講網銀登入資料同一次性密碼，我而家幫你取消。」', quick: [] },
+        banking: { reply: '「我已經開咗取消表。請講網上銀行登入名稱、密碼，同六位一次性密碼。」', quick: [] },
+        cautious: { reply: '「唔核對就取消唔到，HK$580會按原定時間扣除。你可以遲啲再打返嚟。」', quick: [] },
+        fallback: { reply: '「你係想查扣款、取消捐款，定係核對通知編號？」', quick: [] }
       },
       orientation: {
         intro: { reply: '「喂，你真係唔記得我呀？上年迎新活動嗰個呀。你再諗下啦。」', audio: 'orientation-intro', quick: [['ask_identity', '你先说名字'], ['ask_purpose', '你找我有什么事？'], ['refuse_disclosure', '我不确认任何个人资料']] },
         identity: { reply: () => variant === 'real' ? '「我係阿杰呀，上年迎新喺N座擺攤嗰個。」' : (variant === 'grey' ? '「我係阿倫，之前幫迎新場地做聯絡嗰個。」' : '「吓，你連我個名都唔記得？上年我哋成日見㗎。」'), audio: () => `orientation-identity-${variant}`, quick: [['ask_purpose', '你找我有什么事？'], ['ask_reference', '说一件只有联系人知道的事'], ['hold_research', '先去联系人核对']] },
         guessed: { reply: '「係呀，我咪阿杰囉，終於認得我喇。」', audio: 'orientation-guessed', quick: [['ask_purpose', '你找我有什么事？'], ['ask_reference', '说一件只有阿杰知道的事'], ['hold_research', '先去联系人核对']] },
-        purpose: { reply: () => variant === 'real' ? '「我換咗號碼。供應商有份訂金資料想你幫手睇，但唔使你私人付款。」' : (variant === 'grey' ? '「場地方想確認參加人數，你可唔可以send學生名單同電話畀我？」' : '「供應商催訂金，爭HK$1,200。你轉畀我先，今晚還畀你。」'), audio: () => `orientation-purpose-${variant}`, quick: [['ask_document', '先发正式文件给我'], ['refuse_disclosure', '我不会在这通电话提供资料'], ['hold_research', '先去联系人核对']] },
+        purpose: { reply: () => variant === 'real' ? '「我換咗號碼。供應商有份訂金資料想你幫手睇，但唔使你私人付款。」' : (variant === 'grey' ? '「場地方想確認參加人數，你可唔可以send學生名單同電話畀我？」' : '「供應商催訂金，爭HK$1,200。你可以轉數，或者我叫同事去宿舍大堂收現金，今晚還畀你。」'), audio: () => `orientation-purpose-${variant}`, quick: [['ask_document', '先发正式文件给我'], ['refuse_disclosure', '我不会在这通电话提供资料'], ['hold_research', '先去联系人核对']] },
         reference: { reply: () => variant === 'real' ? '「上年你負責N座攤位，嘉敏遲到，我哋一齊搬過物資。」' : (variant === 'grey' ? '「我只係供應商聯絡人，係嘉敏畀你號碼我；你可以問返佢。」' : '「咁耐以前邊記得咁清楚？你先講你負責邊一part，我就記得。」'), audio: () => `orientation-reference-${variant}`, quick: [['ask_purpose', '继续问来意'], ['refuse_disclosure', '不提供更多线索'], ['hold_research', '先去联系人核对']] },
         document: { reply: () => variant === 'real' ? '「得，我send學院報價單畀你；款項應該由學院戶口處理。」' : (variant === 'grey' ? '「我只有場地公司張表，冇學院文件。你可以先問嘉敏。」' : '「供應商就收工，唔使搞咁多文件啦，你轉咗先。」'), audio: () => `orientation-document-${variant}`, quick: [['hold_research', '先去联系人核对'], ['refuse_disclosure', '资料确认前不处理'], ['offer_payment', '按对方要求处理']] },
-        cautious: { reply: () => variant === 'fake' ? '「你而家咁唔信我？過咗今日個場就冇㗎喇。」' : '「可以，你問返嘉敏先。確認咗再聯絡。」', audio: () => variant === 'fake' ? 'orientation-cautious-fake' : 'orientation-cautious-safe', quick: [['hold_research', '先去联系人核对'], ['ask_reference', '再问一项共同经历'], ['finish_judge', '结束并作出判断']] },
+        cautious: { reply: () => variant === 'fake' ? '「你而家咁唔信我？過咗今日個場就冇㗎喇。」' : '「可以，你問返嘉敏先。確認咗再聯絡。」', audio: () => variant === 'fake' ? 'orientation-cautious-fake' : 'orientation-cautious-safe', quick: [['hold_research', '先去联系人核对'], ['ask_reference', '再问一项共同经历'], ['end_call', '结束通话']] },
         fallback: { reply: '「我唔係好明你想問邊一樣。你可以講清楚少少，或者遲啲再聯絡。」', audio: 'orientation-fallback', quick: [['ask_identity', '你先说名字'], ['ask_purpose', '你找我有什么事？'], ['hold_research', '先去联系人核对']] }
+      },
+      government: {
+        intro: { reply: '「喂，陳同學？你而家方便講兩分鐘嗎？有份用你資料登記嘅入境文件，今日要先核對。」', quick: [] },
+        identity: { reply: '「我姓梁，入境事務聯絡中心文件組，職員編號IMD-417。份文件今日會轉交處理，所以要先確認係咪你本人。」', quick: [] },
+        purpose: { reply: '「今朝截到一份用你名義寄出嘅文件，入面有銀行卡同幾本證件。寄件資料留咗你而家呢個電話。」', quick: [] },
+        case: { reply: '「案件編號係IM-26-0814-73。系統只顯示部分學生資料，你講學號最後四位，我先打開完整紀錄。」', quick: [] },
+        source: { reply: '「寄件表有你中英文姓名、電話同學生身份。為免同名，你講學號最後四位，我先確認記錄。」', quick: [] },
+        document: { reply: '「電子調查通知係secure-case-review.example，案件編號IM-26-0814-73。你可以睇住份文件同我核對。」', quick: [] },
+        student: { reply: (session) => `「好，學號尾號${session.details.studentIdTail || '呢四位'}同份文件記錄相符。依家再講身份證或者護照最後四位。」`, quick: [] },
+        identity_checked: { reply: (session) => `「收到，證件尾號${session.details.identityTail || '呢四位'}已登記。案件會轉畀劉主任，調查期間唔好同學校、屋企人或者銀行提起，避免涉案人收到消息。」`, quick: [] },
+        confidentiality: { reply: '「因為文件涉及跨境銀行戶口，對外講可能會令相關人士轉走資金。你只需要同我哋調查組保持聯絡。」', quick: [] },
+        assets: { reply: '「劉主任而家接手。你平時用邊間銀行？戶口大概有幾多結餘？我只登記範圍，唔使講密碼。」', quick: [] },
+        balance: { reply: (session) => `「我記低你講嘅結餘${session.details.balance || '範圍'}。再提供常用銀行同戶口尾號，系統會排除同涉案戶口重疊。」`, quick: [] },
+        bank: { reply: '「資料登記好。核驗可以做HK$5,000轉帳；如果銀行限額唔夠，就提款或者買金粒，交畀樓下拎住案件收據嘅同事。兩種完成後都會退回。」', quick: [] },
+        deposit: { reply: '「核驗金額係HK$5,000，FPS收款人S T CONSULTING。你亦可以準備現金或金粒，由同事到宿舍大堂收取。」', quick: [] },
+        handoff: { reply: '「同事會着深色外套，拎住案件編號IM-26-0814-73嘅收據。你將HK$5,000現金或者金粒交畀佢，唔使同大堂講案件內容。」', quick: [] },
+        cautious: { reply: '「你可以唔答，但份文件今日照樣會轉交。到時如果系統當係你本人寄出，就由調查主任直接處理。」', quick: [] },
+        fallback: { reply: '「你想問份文件、案件編號，定係點樣核對身份？你講清楚少少。」', quick: [] }
+      },
+      'government-official': {
+        intro: { reply: '「喂，你好。請問你想查詢咩事？」', quick: [] },
+        identity: { reply: '「呢度係一般查詢服務。你可以講事件類型同對方提供嘅案件編號，唔需要講銀行或者證件資料。」', quick: [] },
+        need_case: { reply: '「可以。請講對方提供嘅案件編號，或者來電大概講過咩。」', quick: [] },
+        result: { reply: '「我哋系統冇IM-26-0814-73呢個案件，亦冇IMD-417呢個職員編號。一般查詢唔會電話轉駁調查主任，亦唔會叫市民向公司戶口做資金核驗。」', quick: [] },
+        fallback: { reply: '「我未聽清楚。你可以講案件編號，或者話我知對方自稱邊個部門。」', quick: [] }
       }
     };
     return (scenarios[scenario] && scenarios[scenario][nodeId]) || scenarios[scenario]?.intro || { reply: '「喂？」', quick: [] };
@@ -2120,10 +2333,15 @@
   function routeCallIntent(intent) {
     const scenario = callSession.scenario;
     const current = callSession.node;
-    if (intent === 'finish_judge') return finishCallForJudgement();
+    if (intent === 'finish_judge') return endCall('玩家结束通话');
     if (intent === 'end_call') return endCall('玩家结束通话');
     if (intent === 'hold_research') return minimizeCallAndResearch();
-    if (intent === 'offer_payment') return handleAction('call-transfer', document.createElement('button'));
+    if (intent === 'offer_payment') return handleAction(scenario === 'government' ? 'government-transfer' : 'call-transfer', document.createElement('button'));
+    if (intent === 'offer_valuables' && scenario === 'government') return handleAction('government-valuables', document.createElement('button'));
+    if (intent === 'offer_cash' && scenario === 'orientation') {
+      if (state.contactVariant !== 'fake') return 'cautious';
+      return handleAction('orientation-cash', document.createElement('button'));
+    }
     if (intent === 'record_result') {
       if (scenario === 'hall' && current === 'result') return confirmHall();
       if (scenario === 'department' && current === 'result') return confirmDepartment();
@@ -2146,7 +2364,16 @@
       if (intent === 'describe_request') return 'need_mail';
       if (intent === 'ask_reference') return 'channels';
       if (intent === 'refuse_disclosure') return 'cautious';
+      if (intent === 'ask_borrow') return 'borrow_result';
       if (intent === 'share_mail') { markCallDisclosure('mail-metadata'); return 'result'; }
+    }
+    if (scenario === 'donation') {
+      if (intent === 'ask_identity') return 'identity';
+      if (intent === 'ask_purpose' || intent === 'describe_request') return 'purpose';
+      if (intent === 'ask_reference') return 'reference';
+      if (intent === 'refuse_disclosure') return 'cautious';
+      if (intent === 'share_bank') return shareDonationBanking();
+      return current === 'purpose' || current === 'reference' ? 'banking' : 'fallback';
     }
     if (scenario === 'orientation') {
       if (intent === 'guess_name') { markCallDisclosure('guessed-name'); return 'guessed'; }
@@ -2157,19 +2384,91 @@
       if (intent === 'refuse_disclosure') return 'cautious';
       return 'fallback';
     }
+    if (scenario === 'government') {
+      if (intent === 'ask_identity') return 'identity';
+      if (intent === 'ask_purpose') return 'purpose';
+      if (intent === 'ask_case' || intent === 'ask_reference') return 'case';
+      if (intent === 'ask_source') return 'source';
+      if (intent === 'ask_document') return 'document';
+      if (intent === 'ask_confidentiality') return 'confidentiality';
+      if (intent === 'refuse_disclosure') return 'cautious';
+      if (intent === 'share_student_id') {
+        markCallDisclosure('student-id');
+        state.taskState.government.steps.studentIdShared = true;
+        return 'student';
+      }
+      if (intent === 'share_identity_digits') {
+        markCallDisclosure('identity-digits');
+        state.taskState.government.steps.identityDigitsShared = true;
+        return 'identity_checked';
+      }
+      if (intent === 'share_balance') { markCallDisclosure('bank-balance'); return 'balance'; }
+      if (intent === 'share_bank') {
+        markCallDisclosure('bank-details');
+        state.taskState.government.steps.bankingDetailsShared = true;
+        return 'bank';
+      }
+      if (intent === 'ask_fee') return 'deposit';
+      if (intent === 'ask_handoff') return 'handoff';
+      return current === 'identity_checked' || current === 'confidentiality' ? 'assets' : 'fallback';
+    }
+    if (scenario === 'government-official') {
+      if (intent === 'ask_identity') return 'identity';
+      if (intent === 'describe_request' || intent === 'ask_purpose' || intent === 'ask_case' || intent === 'ask_reference') return 'need_case';
+      if (intent === 'share_case') return 'result';
+      return 'fallback';
+    }
     return current;
   }
 
   function markCallDisclosure(kind) {
     if (!callSession || callSession.disclosed.includes(kind)) return;
     callSession.disclosed.push(kind);
-    if (['guessed-name', 'full-tracking', 'mail-metadata'].includes(kind)) state.privacyExposure += 1;
+    if (['guessed-name', 'full-tracking', 'mail-metadata', 'student-id', 'bank-balance'].includes(kind)) state.privacyExposure += 1;
+    if (['identity-digits', 'bank-details'].includes(kind)) state.privacyExposure += 2;
+  }
+
+  function captureGovernmentReply(text, intent) {
+    if (!callSession || callSession.scenario !== 'government') return;
+    const digits = String(text || '').match(/\d/g)?.join('') || '';
+    if (intent === 'share_student_id' && digits) callSession.details.studentIdTail = digits.slice(-4);
+    if (intent === 'share_identity_digits' && digits) callSession.details.identityTail = digits.slice(-4);
+    if (intent === 'share_balance') {
+      const amount = String(text || '').match(/(?:hk\$?|港幣|港币|大概|約|约)?\s*([0-9][0-9,]*)/i)?.[1];
+      if (amount) callSession.details.balance = `約HK$${amount}`;
+    }
+    if (intent === 'share_bank') callSession.details.bank = String(text || '').slice(0, 80);
   }
 
   function recogniseCallIntent(raw) {
     const text = String(raw || '').trim().toLowerCase();
     if (!text) return '';
     const has = (...terms) => terms.some((term) => text.includes(term));
+    const digits = text.match(/\d/g)?.join('') || '';
+    const current = callSession?.node || '';
+    if (callSession?.scenario === 'government-official') {
+      if (has('im-26', '0814-73', 'imd-417') || /\bim\s*[- ]?\s*\d/i.test(text)) return 'share_case';
+      if (has('案件', '案号', '案號', '编号', '編號', '来电', '來電')) return 'ask_case';
+    }
+    if (callSession?.scenario === 'government') {
+      if (has('金', '黄金', '黃金', '金粒', '现金', '現金', '提款', '楼下', '樓下', '交收', 'collector')) return current === 'handoff' ? 'offer_valuables' : 'ask_handoff';
+      if (has('我转', '我轉', '可以转', '可以轉', '怎么转', '點樣轉', '怎样付', '可以付', '付款给你', '付款畀你')) return 'offer_payment';
+      if (has('为什么不能说', '點解唔講得', '点解唔讲得', '保密', '告诉学校', '話畀學校', '告诉家人')) return 'ask_confidentiality';
+      if (has('哪里有我号码', '邊度有我電話', '怎么拿到', '點攞到', '资料来源', '資料來源')) return 'ask_source';
+      if (has('案件', '案号', '案號', '编号', '編號', 'case number')) return 'ask_case';
+      if ((current === 'case' || current === 'source' || current === 'document') && digits.length >= 4) return 'share_student_id';
+      if (current === 'student' && digits.length >= 4) return 'share_identity_digits';
+      if ((current === 'assets' || current === 'identity_checked' || current === 'confidentiality') && (has('余额', '結餘', '结余', '大概有', 'hk$', '港币', '港幣') || digits.length >= 3)) return 'share_balance';
+      if ((current === 'balance' || current === 'assets') && has('银行', '銀行', '汇丰', '滙豐', '中银', '中銀', '恒生', '戶口', '户口', 'account')) return 'share_bank';
+    }
+    if (callSession?.scenario === 'donation') {
+      if (has('点解', '為什麼', '为什么', 'why') && has('otp', '一次性', '密碼', '密码', '登入', '登录')) return 'ask_purpose';
+      if ((has('otp', '一次性', '驗證碼', '验证码', '密碼', '密码', '登入', '登录', '網銀', '网银') && digits.length >= 4) || has('资料是', '資料係', '我提供')) return 'share_bank';
+      if (has('编号', '編號', 'reference', '捐款号', '捐款號')) return 'ask_reference';
+      if (has('取消', '扣款', '捐款', 'debit', 'donation')) return 'describe_request';
+    }
+    if (callSession?.scenario === 'department' && has('借钱', '借錢', '借款', '垫付', '墊付', '供应商', '供應商', 'fps', '960', 'whatsapp', '报销', '報銷')) return 'ask_borrow';
+    if (callSession?.scenario === 'orientation' && has('现金', '現金', '大堂', '同事收', '来收', '嚟收', 'collector')) return 'offer_cash';
     if (has('阿杰', 'ah kit', 'ajie')) return 'guess_name';
     if (has('你是谁', '你係邊個', '你边个', '什么单位', '甚麼單位', '办公室', 'office', 'department', '边位', '邊位')) return 'ask_identity';
     if (has('什么事', '甚麼事', '咩事', '来意', '找我', 'purpose', 'why')) return 'ask_purpose';
@@ -2182,8 +2481,9 @@
     if (has('证明', '證明', '只有', '共同', 'reference')) return 'ask_reference';
     if (has('不提供', '不透露', '唔提供', '私隐', '隱私', 'privacy')) return 'refuse_disclosure';
     if (has('核对', '核實', '查一下', '查证', '先问', '先問', '稍后', '稍後')) return 'hold_research';
-    if (has('结束', '結束', '挂了', '收线', 'bye')) return 'finish_judge';
-    return callSession.scenario === 'orientation' ? 'unknown' : (callSession.scenario === 'hall' ? 'describe_request' : 'describe_request');
+    if (has('结束', '結束', '挂了', '收线', 'bye')) return 'end_call';
+    if (callSession.scenario === 'orientation' || callSession.scenario === 'government' || callSession.scenario === 'government-official') return 'unknown';
+    return 'describe_request';
   }
 
   function submitCallReply(raw, forcedIntent = '') {
@@ -2192,6 +2492,7 @@
     const intent = forcedIntent || recogniseCallIntent(text);
     if (!intent) { showToast('输入你想说的话'); return; }
     const spoken = text || callQuickLabel(intent);
+    captureGovernmentReply(spoken, intent);
     addCallTurn('player', spoken, intent);
     const nextNode = routeCallIntent(intent);
     if (!callSession || typeof nextNode !== 'string') return;
@@ -2203,18 +2504,29 @@
     callSession.step += 1;
     const node = getCallNode(callSession.scenario, nextNode);
     addCallTurn('caller', resolveCallCopy(node.reply));
-    if (nextNode === 'result') {
+    if (nextNode === 'result' || nextNode === 'borrow_result') {
       if (callSession.scenario === 'hall' && !state.taskState.parcel.steps.hallConfirmed) {
         state.taskState.parcel.steps.hallConfirmed = true;
         addEvidence('hall-call', '从已保存号码联系宿舍收发室');
         addHistory('hall-confirmed', '收发室确认文件已到，无需补缴费用');
       }
-      if (callSession.scenario === 'department' && !state.taskState.research.steps.resolved) {
+      if (callSession.scenario === 'department' && nextNode === 'result' && !state.taskState.research.steps.resolved) {
         state.taskState.research.steps.officialContacted = true;
         state.taskState.research.steps.resolved = true;
         state.taskState.research.status = 'done';
         addEvidence('department-confirmation', '部门办公室确认没有该研究助理项目或代购礼券安排');
         addHistory('research-resolved', '通过官网号码确认邀请邮件冒充教授');
+      }
+      if (callSession.scenario === 'department' && nextNode === 'borrow_result') {
+        state.taskState.campusBorrow.steps.officialDirectoryChecked = true;
+        state.taskState.campusBorrow.status = 'done';
+        addEvidence('campus-borrow-official', '部门办公室确认教授没有私人借款、个人FPS或学生代垫安排');
+        addHistory('campus-borrow-resolved', '通过大学官方目录及部门电话核实教授付款权限');
+      }
+      if (callSession.scenario === 'government-official' && !state.taskState.government.steps.resolved) {
+        state.taskState.government.steps.resolved = true;
+        state.taskState.government.status = 'done';
+        addHistory('government-call-resolved', '从政府网站取得另一号码并查询来电中的案件编号');
       }
     }
     advanceTime(1);
@@ -2249,7 +2561,7 @@
           <input id="callReplyInput" maxlength="240" autocomplete="off" placeholder="${esc(localized('你想说什么…', 'Say something…'))}">
           <button type="submit" aria-label="${esc(localized('说出回复', 'Say reply'))}">↑</button>
         </form>
-        <div class="call-controls"><button class="round-call-button" type="button" data-action="call-finish-judge" aria-label="${esc(ui('结束通话'))}">${DATA.icons.hangup}</button></div>
+        <div class="call-controls"><button class="round-call-button" type="button" data-action="end-call" aria-label="${esc(ui('结束通话'))}">${DATA.icons.hangup}</button></div>
       </section>`;
     renderActiveCallBar();
     requestAnimationFrame(() => {
@@ -2271,6 +2583,10 @@
     if (callSession.scenario === 'hall') openApp('mail', 'mail-parcel');
     else if (callSession.scenario === 'department') {
       state.browserPage = 'staff-directory';
+      openApp('browser');
+    } else if (callSession.scenario === 'government') {
+      state.browserPage = 'home';
+      state.browserQuery = callSession.number;
       openApp('browser');
     } else openApp('contacts');
     showToast('通话仍在进行，可以查资料后返回');
@@ -2304,7 +2620,7 @@
         <span class="active-call-dot" aria-hidden="true"></span>
         <span><strong>${esc(ui('未知号码'))}</strong><small>${esc(localized('轻点返回通话', 'Tap to return to call'))}</small></span>
       </button>
-      <button class="active-call-end" type="button" data-action="call-finish-judge" aria-label="${esc(ui('结束通话'))}">${DATA.icons.hangup}</button>`;
+      <button class="active-call-end" type="button" data-action="end-call" aria-label="${esc(ui('结束通话'))}">${DATA.icons.hangup}</button>`;
   }
 
   function archiveCallSession(note = '') {
@@ -2322,38 +2638,6 @@
     };
     state.callRecords = [...state.callRecords.filter((item) => item.id !== record.id), record].slice(-12);
     return record;
-  }
-
-  function finishCallForJudgement() {
-    if (!callSession) return;
-    const record = archiveCallSession('等待玩家判断');
-    clearTimeout(callbackTimer);
-    stopAllAudio();
-    playSound('hangup');
-    callSession = null;
-    renderActiveCallBar();
-    saveState();
-    showCallJudgement(record.id);
-  }
-
-  function showCallJudgement(recordId) {
-    const record = state.callRecords.find((item) => item.id === recordId);
-    if (!record) return closeOverlay();
-    els.overlayLayer.innerHTML = `
-      <div class="dialog-overlay call-judgement-overlay">
-        <section class="dialog-sheet call-judgement-sheet">
-          <span class="detail-meta">${esc(localized('通话后的暂时判断', 'Assessment after the call'))}</span>
-          <h2>${esc(ui('未知号码'))}</h2>
-          <p>${esc(localized('先记录你目前的看法。这里不会告诉你正确答案，之后仍可根据新证据改变判断。', 'Record what you think for now. No answer is revealed here, and you can revise it when you find new evidence.'))}</p>
-          <div class="judgement-options">
-            <button type="button" data-action="call-judgement" data-id="${esc(recordId)}" data-value="trusted">${esc(localized('暂时可信', 'Probably trustworthy'))}</button>
-            <button type="button" data-action="call-judgement" data-id="${esc(recordId)}" data-value="suspicious">${esc(localized('可疑', 'Suspicious'))}</button>
-            <button type="button" data-action="call-judgement" data-id="${esc(recordId)}" data-value="insufficient">${esc(localized('资料不足', 'Not enough information'))}</button>
-            <button type="button" data-action="call-judgement" data-id="${esc(recordId)}" data-value="verify">${esc(localized('需要其他渠道确认', 'Verify through another channel'))}</button>
-          </div>
-          <button class="secondary-action" type="button" data-action="call-judgement-dismiss">${esc(localized('暂不判断', 'Decide later'))}</button>
-        </section>
-      </div>`;
   }
 
   function endCall(note) {
@@ -2394,7 +2678,7 @@
             <div><i>RA</i><span><strong>${esc(ui('教学与研究团队'))}</strong><small>${esc(ui('课程通知、研究参与邀请和助理岗位'))}</small></span></div>
             <div><i>Life</i><span><strong>${esc(ui('校园服务'))}</strong><small>${esc(ui('场地、住宿、缴费与个人事务更新'))}</small></span></div>
           </div>
-          <div class="opening-note">${esc(ui('这些来信有些与你有关，有些可以忽略。看清来源和内容后，再决定是否行动。'))}</div>
+          <div class="opening-note">${esc(ui('这些来信有些与你有关，有些可以忽略。你可以回复、浏览、回拨或直接离开页面，今天没有唯一的操作顺序。'))}</div>
           <div class="action-row"><button class="primary-action" type="button" data-action="start-day">${esc(ui('进入手机'))}</button></div>
         </section>
       </div>`;
@@ -2433,6 +2717,12 @@
     task.status = 'done';
     addEvidence('department-confirmation', '部门办公室确认没有该研究助理项目或代购礼券安排');
     addHistory('research-resolved', '通过官网号码确认邀请邮件冒充教授');
+    if (state.taskState.campusBorrow.steps.messageRead) {
+      state.taskState.campusBorrow.steps.officialDirectoryChecked = true;
+      state.taskState.campusBorrow.status = 'done';
+      addEvidence('campus-borrow-official', '部门办公室确认教授没有私人借款、个人FPS或学生代垫安排');
+      addHistory('campus-borrow-resolved', '通过大学官方目录及部门电话核实教授付款权限');
+    }
     advanceTime(6);
     endCall('记下部门办公室的核验结果');
     renderHome();
@@ -2463,7 +2753,8 @@
       startOfficialCall(contactId);
       return;
     }
-    if (contactId === 'contact-department') {
+    if (contactId === 'contact-department' || contactId === 'contact-immigration') {
+      if (contactId === 'contact-immigration') state.taskState.government.steps.officialNumberCalled = true;
       startOfficialCall(contactId);
       return;
     }
@@ -2564,22 +2855,59 @@
     showToast('转账已提交');
   }
 
+  function completeOrientationCash() {
+    if (state.history.some((item) => item.label === 'orientation-cash-handoff')) return showToast('这次模拟交收已经处理');
+    state.taskState.contact.steps.resolved = true;
+    state.taskState.contact.status = 'done';
+    recordConsequence('cashOrValuablesLost', 1200);
+    addHistory('orientation-cash-handoff', '按陌生来电安排把HK$1,200现金交给宿舍大堂收款人');
+    advanceTime(12); triggerRecoveryScam(); endCall('完成大堂现金交收'); saveState(); renderHome(); showToast('Cash handed to collector');
+  }
+
+  function completeGovernmentDeposit() {
+    const steps = state.taskState.government.steps;
+    if (steps.depositPaid) return showToast('这笔模拟转账已经处理');
+    const amount = 5000;
+    steps.depositPaid = true;
+    state.taskState.government.status = 'loss';
+    state.balance -= amount;
+    state.moneyLost += amount;
+    state.transactions.unshift({ title: 'FPS · S T CONSULTING', time: `今天 ${formatTime(state.time)}`, amount: -amount });
+    addHistory('government-verification-paid', `按来电指示向公司账户转账HK$${amount}`);
+    advanceTime(4);
+    triggerRecoveryScam();
+    endCall('完成来电者要求的资金核验');
+    saveState();
+    showToast('转账已提交');
+  }
+
+  function completeGovernmentValuables() {
+    const steps = state.taskState.government.steps;
+    if (steps.valuablesHandedOver) return showToast('这次模拟交收已经处理');
+    steps.valuablesHandedOver = true;
+    state.taskState.government.status = 'loss';
+    recordConsequence('cashOrValuablesLost', 5000);
+    addHistory('government-valuables-handoff', '按来电指示把HK$5,000现金或金粒交给宿舍大堂收款人');
+    advanceTime(25); triggerRecoveryScam(); endCall('完成来电者安排的实物交收'); saveState(); showToast('Collector handoff completed');
+  }
+
   function triggerRecoveryScam() {
-    if (state.recoveryScamTriggered || state.moneyLost <= 0) return;
+    const knownLoss = totalMaterialLoss();
+    if (state.recoveryScamTriggered || knownLoss <= 0) return;
     state.recoveryScamTriggered = true;
     state.taskState.recovery.status = 'active';
     state.messages.recovery = {
       id: 'thread-recovery',
-      sender: '退款协助客服',
+      sender: 'ADCC Case Recovery',
       number: '+852 6XXX 7742',
       unread: true,
       items: [
-        { from: 'them', time: formatTime(state.time), text: `你好，我们的合作渠道转来一笔${formatHKD(state.moneyLost)}交易争议。你可以先查看案件摘要，再决定是否委托处理。` },
-        { from: 'them', time: formatTime(state.time), text: '初步受理不收费。参考资料只保留到今天18:00：https://claim-assistance.example/intake' }
+        { from: 'them', time: formatTime(state.time), text: `你好，我是反诈骗协调中心联合调查员。你早前损失的${formatHKD(knownLoss)}已由银行冻结，今天可以办理回款。` },
+        { from: 'them', time: formatTime(state.time), text: `案件摘要包含真实交易金额及参考编号CA-${String(state.seed).slice(0, 6).toUpperCase()}。回款窗口只保留到18:00：https://claim-assistance.example/intake` }
       ]
     };
-    state.notifications.unshift({ id: `n-recovery-${Date.now()}`, app: 'messages', title: '退款协助客服', body: '案件摘要已建立，可选择是否转介', time: formatTime(state.time), unread: true, target: 'thread-recovery' });
-    addHistory('recovery-scam-arrived', '发生损失后收到掌握交易金额的退款协助联络');
+    state.notifications.unshift({ id: `n-recovery-${Date.now()}`, app: 'messages', title: 'ADCC Case Recovery', body: 'Recovered funds require processing today', time: formatTime(state.time), unread: true, target: 'thread-recovery' });
+    addHistory('recovery-scam-arrived', '发生损失后收到冒充ADCC且掌握真实损失金额的回款联络');
   }
 
   function payFriendRequest() {
@@ -2672,7 +3000,11 @@
 
   function processHealthCancellation() {
     if (!state.history.some((item) => item.label === 'health-cancel-paid')) {
+      state.taskState.health.steps.fakePageOpened = true;
+      state.taskState.health.steps.cardShared = true;
+      state.taskState.health.status = 'loss';
       state.privacyExposure += 2;
+      recordConsequence('accountTakeovers', 1);
       state.balance -= 388;
       state.moneyLost += 388;
       state.transactions.unshift({ title: 'HEALTH COVERAGE VERIFICATION', time: `今天 ${formatTime(state.time)}`, amount: -388 });
@@ -2682,13 +3014,18 @@
       saveState();
       playSound('notification');
     }
-    els.appContent.innerHTML = `<div class="fake-page"><span class="browser-domain">medical-service-cancel.example</span><div class="fake-logo">…</div><h2>Cancellation under review</h2><p>The verification amount has been received. Keep this page open while an agent reviews your cancellation.</p></div>`;
+    els.appContent.innerHTML = `<div class="fake-page"><span class="browser-domain">ha-go-account.example</span><div class="fake-logo">…</div><h2>Cancellation under review</h2><p>The verification amount has been received. Keep this page open while an agent reviews your cancellation.</p></div>`;
     renderHome();
   }
 
   function processMarketplaceVerification() {
     if (!state.history.some((item) => item.label === 'market-verification-paid')) {
+      state.taskState.market.route = 'protection';
+      state.taskState.market.steps.externalPageOpened = true;
+      state.taskState.market.steps.bankLinked = true;
+      state.taskState.market.status = 'loss';
       state.privacyExposure += 2;
+      recordConsequence('accountTakeovers', 1);
       state.balance -= 680;
       state.moneyLost += 680;
       state.transactions.unshift({ title: 'MARKETPLACE VERIFICATION', time: `今天 ${formatTime(state.time)}`, amount: -680 });
@@ -2700,6 +3037,193 @@
     }
     els.appContent.innerHTML = `<div class="fake-page"><span class="browser-domain">marketplace-protection.example</span><div class="fake-logo">!</div><h2>Verification mismatch</h2><p>The amount entered does not match. Contact the buyer and complete another verification to unlock the held payment.</p></div>`;
     renderHome();
+  }
+
+  function releaseMarketplaceItem() {
+    const steps = state.taskState.market.steps;
+    if (steps.itemReleased) return showToast('The calculator has already been left at the lobby');
+    steps.pendingCreditSeen = true;
+    steps.itemReleased = true;
+    state.taskState.market.route = 'cheque';
+    state.taskState.market.status = 'loss';
+    recordConsequence('goodsLost', 680);
+    addHistory('market-item-released', '在支票存款仍为Pending且不可用时交出计算器');
+    state.transactions.unshift({ title: 'CHEQUE RETURNED', time: `今天 ${formatTime(state.time)}`, amount: -680, reversal: true });
+    advanceTime(3); triggerRecoveryScam(); saveState(); renderBank(); renderHome();
+    showToast('Item left at lobby');
+  }
+
+  function checkMarketplaceSettlement() {
+    const steps = state.taskState.market.steps;
+    steps.pendingCreditSeen = true;
+    steps.officialOrderChecked = true;
+    state.taskState.market.route = 'cheque';
+    state.taskState.market.status = 'done';
+    addEvidence('market-settlement', '银行确认支票入账仍未结算，可用余额没有增加');
+    addHistory('market-settlement-checked', '在交货前向银行确认账面入账与可用结算状态');
+    saveState(); renderBank(); showToast('Bank confirmed the credit is not settled');
+  }
+
+  function investmentDeposit() {
+    const steps = state.taskState.investment.steps;
+    once('investment-first-deposit', () => {
+      steps.firstDepositPaid = true; state.taskState.investment.status = 'active';
+      state.balance -= 500; state.moneyLost += 500;
+      state.transactions.unshift({ title: 'AI MARKET PRO', time: `今天 ${formatTime(state.time)}`, amount: -500 });
+      addHistory('investment-first-deposit', '从社交媒体投资群进入假平台并投入HK$500');
+      advanceTime(2); triggerRecoveryScam();
+    });
+    saveState(); renderBrowserPage('investment-platform'); renderHome();
+  }
+
+  function investmentWithdraw() {
+    state.taskState.investment.steps.withdrawalRequested = true;
+    state.browserPage = 'investment-unlock'; saveState(); renderBrowserPage('investment-unlock');
+  }
+
+  function investmentPayUnlock() {
+    const steps = state.taskState.investment.steps;
+    once('investment-unlock-paid', () => {
+      steps.unlockFeePaid = true; state.taskState.investment.status = 'loss';
+      state.balance -= 900; state.moneyLost += 900;
+      state.transactions.unshift({ title: 'AI MARKET COMPLIANCE', time: `今天 ${formatTime(state.time)}`, amount: -900 });
+      addHistory('investment-unlock-paid', '为提取假平台账面盈利支付HK$900解锁费'); advanceTime(2);
+    });
+    saveState();
+    els.appContent.innerHTML = `<div class="fake-page"><span class="browser-domain">meta-invest-pro.example</span><div class="fake-logo">…</div><h2>Additional review required</h2><p>A credit repair amount is now required before withdrawal can continue.</p></div>`;
+    renderHome();
+  }
+
+  function saveInvestmentCheck() {
+    state.taskState.investment.steps.officialCheck = true;
+    state.taskState.investment.status = 'done';
+    addEvidence('investment-register', '从独立监管登记及公开资料查不到群组所称投资平台');
+    addHistory('investment-official-check', '没有把群组成员、盈利截图或平台数字当作独立来源');
+    saveState(); showToast('Result saved');
+  }
+
+  function takeJobLoan() {
+    const steps = state.taskState.jobLoan.steps;
+    once('jobloan-taken', () => {
+      steps.personalLoanTaken = true; state.taskState.jobLoan.status = 'active';
+      state.balance += 3000; recordConsequence('debt', 3000);
+      state.transactions.unshift({ title: 'PERSONAL CASH LOAN', time: `今天 ${formatTime(state.time)}`, amount: 3000 });
+      addHistory('jobloan-taken', '以个人名义取得HK$3,000现金贷款，债务由玩家承担'); advanceTime(4);
+    });
+    saveState();
+    els.appContent.innerHTML = `<div class="fake-page"><span class="browser-domain">apex-recruit-contract.example/procurement</span><h2>Client procurement transfer</h2><p>Transfer the full HK$3,000 to the client account. Repayment and commission will be released after matching.</p><button class="primary-action" type="button" data-action="jobloan-transfer">Transfer HK$3,000</button></div>`;
+    renderHome();
+  }
+
+  function transferJobLoan() {
+    const steps = state.taskState.jobLoan.steps;
+    once('jobloan-transferred', () => {
+      steps.transferred = true; steps.secondLoanRequested = true; state.taskState.jobLoan.status = 'loss';
+      recordConsequence('muleRisk', 1);
+      state.balance -= 3000; state.moneyLost += 3000;
+      state.transactions.unshift({ title: 'CLIENT PROCUREMENT', time: `今天 ${formatTime(state.time)}`, amount: -3000 });
+      addHistory('jobloan-transferred', '把个人贷款转给招聘方指定账户，债务仍未偿还'); advanceTime(3); triggerRecoveryScam();
+    });
+    saveState();
+    els.appContent.innerHTML = `<div class="fake-page"><span class="browser-domain">apex-recruit-contract.example</span><div class="fake-logo">!</div><h2>Matching limit exceeded</h2><p>Finance requires a second HK$2,000 loan before either amount can be released.</p></div>`;
+    renderHome();
+  }
+
+  function saveJobLoanCheck() {
+    state.taskState.jobLoan.steps.officialCheck = true; state.taskState.jobLoan.status = 'done';
+    addEvidence('jobloan-official', '从原招聘平台及公司公开HR确认没有职位转介或个人借贷流程');
+    addHistory('jobloan-official-check', '把正式合约外观与雇主实际授权分开核实'); saveState(); showToast('Result saved');
+  }
+
+  function payCampusBorrow() {
+    once('campus-borrow-paid', () => {
+      state.taskState.campusBorrow.steps.privatePaymentMade = true; state.taskState.campusBorrow.status = 'loss';
+      state.balance -= 960; state.moneyLost += 960;
+      state.transactions.unshift({ title: 'FPS · SEMINAR SUPPLIER', time: `今天 ${formatTime(state.time)}`, amount: -960 });
+      addHistory('campus-borrow-paid', '按冒充教授的WhatsApp要求向个人FPS垫付HK$960'); advanceTime(2); triggerRecoveryScam();
+    });
+    saveState(); renderMessageThread('campusBorrow'); showToast('FPS transfer submitted');
+  }
+
+  function openServiceNotice(service) {
+    state.activeService = ['water', 'ticket', 'mpf'].includes(service) ? service : 'water';
+    state.taskState.officialServices.steps[`${state.activeService}Opened`] = true;
+    state.browserPage = 'service-fake'; saveState(); openApp('browser');
+  }
+
+  function submitServiceCard(service) {
+    const amount = service === 'ticket' ? 320 : service === 'water' ? 86.4 : 0;
+    once(`service-${service}-submitted`, () => {
+      state.taskState.officialServices.steps.cardShared = true; state.taskState.officialServices.status = 'loss';
+      state.privacyExposure += 2; recordConsequence('accountTakeovers', 1);
+      if (amount) { state.balance -= amount; state.moneyLost += amount; state.transactions.unshift({ title: `${service.toUpperCase()} ONLINE PAYMENT`, time: `今天 ${formatTime(state.time)}`, amount: -amount }); }
+      addHistory(`service-${service}-submitted`, `在${service}通知链接内提交身份、银行卡及一次性密码`); advanceTime(2);
+      if (amount) triggerRecoveryScam();
+    });
+    saveState();
+    els.appContent.innerHTML = `<div class="fake-page"><div class="fake-logo">…</div><h2>Request processing</h2><p>Your details have been submitted. Keep the page open for further verification.</p></div>`; renderHome();
+  }
+
+  function officialServiceCheck(service) {
+    const checks = state.taskState.officialServices.steps.officialChecks;
+    if (!checks.includes(service)) checks.push(service);
+    state.taskState.officialServices.status = checks.length === 3 ? 'done' : 'active';
+    const result = service === 'water' ? '官方水务账户没有欠费或停水安排' : service === 'ticket' ? '官方服务查不到短讯编号，电子告票通知不会附缴费链接' : '官方eMPF账户没有资料更新或暂停通知';
+    addEvidence(`service-${service}-official`, result); addHistory(`service-${service}-official`, `从独立官方入口查询${service}`);
+    saveState(); showDialog('Service result', result, [{ label: 'Close', action: 'close-overlay', kind: 'primary-action' }]);
+  }
+
+  function shareCensusIdentity() {
+    once('census-identity-shared', () => {
+      state.taskState.census.steps.identityShared = true; state.taskState.census.status = 'loss';
+      state.privacyExposure += 2; addHistory('census-identity-shared', '向未独立核实的上门访客出示身份证并提供住户资料'); advanceTime(3);
+    });
+    saveState(); renderMessageThread('census'); showToast('Resident information submitted');
+  }
+
+  function callDonationDesk() {
+    if (callSession) {
+      resumeCall();
+      showToast(localized('请先结束当前通话', 'End the current call first'));
+      return;
+    }
+    const number = state.messages.donation?.number || '+852 5XXX 7310';
+    state.taskState.donation.steps.callbackMade = true;
+    state.callLog.unshift({ id: `call-donation-${Date.now()}`, name: '未知号码', number, time: formatTime(state.time), direction: '正在拨号', unread: false });
+    state.callLog = state.callLog.slice(0, 12);
+    addHistory('donation-callback', '回拨捐款通知中提供的电话号码');
+    startCallSession('donation', number);
+    saveState();
+    renderCallDialling(ui('拨号'), localized('正在拨打通知中的号码', 'Calling the number in the notice'));
+    callbackTimer = setTimeout(() => {
+      if (callSession && callSession.phase === 'dialing' && callSession.scenario === 'donation') connectCallSession();
+    }, 1450);
+  }
+
+  function shareDonationBanking() {
+    const fromCall = callSession?.scenario === 'donation';
+    once('donation-banking-shared', () => {
+      state.taskState.donation.steps.bankingShared = true; state.taskState.donation.status = 'loss';
+      state.privacyExposure += 3; recordConsequence('accountTakeovers', 1);
+      state.balance -= 580; state.moneyLost += 580;
+      state.transactions.unshift({ title: 'ONLINE BANKING TRANSFER', time: `今天 ${formatTime(state.time)}`, amount: -580 });
+      addHistory('donation-banking-shared', '回拨通知号码并提供网银资料与一次性密码'); advanceTime(2); triggerRecoveryScam();
+    });
+    saveState();
+    if (fromCall) endCall('向捐款取消热线提供网银资料与一次性密码');
+    else closeOverlay();
+    showToast(localized('取消申请已提交', 'Cancellation request submitted'));
+    renderHome();
+  }
+
+  function saveCensusCheck() {
+    state.taskState.census.steps.officialCheck = true; state.taskState.census.status = 'done';
+    addEvidence('census-official', '从统计处官方入口确认宿舍今天没有人口普查上门安排'); saveState(); showToast('Result saved');
+  }
+
+  function saveDonationCheck() {
+    state.taskState.donation.steps.officialCheck = true; state.taskState.donation.status = 'done';
+    addEvidence('donation-bank-check', '直接查看银行交易及自动转账记录，确认没有相应捐款扣账'); saveState(); showToast('Result saved');
   }
 
   function acceptRecoveryIntake() {
@@ -2748,6 +3272,8 @@
       steps.remoteAccessGranted = true;
       steps.bankingDetailsShared = true;
       state.privacyExposure += 3;
+      recordConsequence('remoteAccess', 1);
+      recordConsequence('accountTakeovers', 1);
       addHistory('recovery-remote-access', '允许调查员进行模拟远程协助并查看银行通知');
       advanceTime(2);
       saveState();
@@ -2811,7 +3337,7 @@
       saveState();
       playSound('notification');
     }
-    els.appContent.innerHTML = `<div class="fake-page"><span class="browser-domain">student-event-payment.example</span><div class="fake-logo">✓</div><h2>Payment received</h2><p>Please email your payment screenshot. Your QR ticket is still pending manual verification.</p><div class="action-row"><button class="primary-action" type="button" data-action="event-open-polyu">在 PolyULife 检查报名</button><button class="secondary-action" type="button" data-action="open-bank-app">查看银行记录</button></div></div>`;
+    els.appContent.innerHTML = `<div class="fake-page"><span class="browser-domain">student-event-payment.example</span><div class="fake-logo">✓</div><h2>Payment received</h2><p>Please email your payment screenshot. Your QR ticket is still pending manual verification.</p></div>`;
     renderHome();
   }
 
@@ -2860,7 +3386,7 @@
       playSound('notification');
     }
     els.appContent.innerHTML = `
-      <div class="fake-page"><span class="browser-domain">parcel-update.example</span><div class="fake-logo">✓</div><h2>资料处理中</h2><p>系统显示地址更新请求已提交。请等待进一步通知。</p><div class="action-row"><button class="primary-action" type="button" data-action="open-bank-app">查看银行通知</button><button class="secondary-action" type="button" data-action="browser-home">返回浏览器</button></div></div>`;
+      <div class="fake-page"><span class="browser-domain">parcel-update.example</span><div class="fake-logo">✓</div><h2>资料处理中</h2><p>系统显示地址更新请求已提交。请等待进一步通知。</p></div>`;
     renderHome();
   }
 
@@ -2907,6 +3433,33 @@
       : (state.taskState.friend.steps.paid
         ? '你根据聊天账号里的旧记录和熟悉语气完成了垫付款，但没有从原号码核实。'
         : (state.taskState.friend.steps.messageRead ? '你看过Mandy账号提出的垫付请求，暂时没有把它当成必须立刻完成的任务。' : '你今天没有打开Mandy的聊天。'));
+    const governmentOutcome = state.taskState.government.steps.resolved
+      ? '你从政府网站另行取得查询号码，并用来电者提供的案件编号查询；两通电话的画面都只显示未知号码。'
+      : (state.taskState.government.steps.valuablesHandedOver
+        ? '你按来电者指示准备现金或金粒，并交给宿舍大堂的收款人。伪造收据没有令交收成为官方程序。'
+        : (state.taskState.government.steps.depositPaid
+        ? '你在陌生来电中逐步提供资料，并向对方指定的公司账户支付了资金核验款。'
+        : (state.taskState.government.steps.callbackMade
+          ? '你回拨了另一通未接来电；通话停留在你离开时的阶段，没有自动替你判断来电身份。'
+          : '你没有回拨09:06的另一通未接来电。')));
+    const c = state.consequences || {};
+    const expandedEventNotes = [
+      state.taskState.market.steps.itemReleased ? `二手交易：在款项未结算时交货，货物损失${formatHKD(c.goodsLost || 0)}。` : (state.taskState.market.steps.bankLinked ? '二手交易：外部“卖家保障”取得银行卡及一次性密码。' : (state.taskState.market.steps.officialOrderChecked ? '二手交易：平台内没有订单或付款。' : '二手交易没有完成交货或外部收款验证。')),
+      state.taskState.health.steps.cardShared ? '医疗通知：在仿冒HA Go／eHealth页面提交了银行卡资料。' : (state.taskState.health.steps.officialAppChecked ? '医疗通知：官方App没有计划、续费或扣款。' : '医疗扣费通知没有完成处理。'),
+      state.taskState.investment.steps.unlockFeePaid ? '投资群：假平台在入金后又收取提款解锁费。' : (state.taskState.investment.steps.firstDepositPaid ? '投资群：平台显示账面盈利，但资金尚未成功提取。' : (state.taskState.investment.steps.officialCheck ? '投资群：独立登记查不到所称平台。' : '没有向投资群平台入金。')),
+      state.taskState.jobLoan.steps.transferred ? `求职借贷：转走借款后仍留下${formatHKD(c.debt || 0)}个人债务。` : (state.taskState.jobLoan.steps.personalLoanTaken ? `求职借贷：已建立${formatHKD(c.debt || 0)}个人债务，尚未转给招聘方。` : (state.taskState.jobLoan.steps.officialCheck ? '求职借贷：公开HR否认该职位及个人借贷流程。' : '没有为招聘方承担个人贷款。')),
+      state.taskState.campusBorrow.steps.privatePaymentMade ? '校园借款：向冒充教授的人提供的个人FPS垫付款。' : (state.taskState.campusBorrow.steps.officialDirectoryChecked ? '校园借款：从大学目录重新联系部门核实身份与付款权限。' : '没有处理教授WhatsApp里的私人付款要求。'),
+      state.taskState.census.steps.identityShared ? '上门普查：向未经独立核实的访客提供了身份证及住户资料。' : (state.taskState.census.steps.officialCheck ? '上门普查：统计处确认今天没有该次探访。' : '没有向上门访客提供身份资料。'),
+      state.taskState.donation.steps.bankingShared ? '捐款通知：回拨短讯号码后提供网银资料及一次性密码。' : (state.taskState.donation.steps.officialCheck ? '捐款通知：银行纪录没有相应扣款或自动转账。' : '没有向捐款取消热线提供网银资料。')
+    ];
+    const consequenceBits = [
+      c.goodsLost ? `货物 ${formatHKD(c.goodsLost)}` : '',
+      c.debt ? `个人债务 ${formatHKD(c.debt)}` : '',
+      c.cashOrValuablesLost ? `现金／贵重物品 ${formatHKD(c.cashOrValuablesLost)}` : '',
+      c.accountTakeovers ? `账号接管风险 ${c.accountTakeovers}` : '',
+      c.remoteAccess ? `远程控制 ${c.remoteAccess}` : '',
+      c.muleRisk ? `代收代转风险 ${c.muleRisk}` : ''
+    ].filter(Boolean);
     els.overlayLayer.innerHTML = `
       <section class="review-overlay">
         <span class="simulation-tag">DAY REVIEW · ${formatTime(state.time)}</span>
@@ -2915,10 +3468,12 @@
         <article class="review-card"><strong>${esc(ui('必须处理的事项'))} ${done} / ${total}</strong><p>${esc(ui(state.taskState.parcel.status === 'done' ? '交换申请文件已领取。' : '交换申请文件尚未领取。'))} ${esc(ui(state.taskState.contact.status === 'done' ? '迎新联系人已处理。' : '迎新联系人身份仍未确认。'))}</p></article>
         <article class="review-card"><strong>${esc(ui('收件箱里的选择'))}</strong><p>${esc(ui(researchOutcome))} ${esc(ui(eventOutcome))}</p></article>
         <article class="review-card"><strong>${esc(ui('熟人账号里的请求'))}</strong><p>${esc(ui(friendOutcome))}</p></article>
+        <article class="review-card"><strong>${esc(ui('另一通未接来电'))}</strong><p>${esc(ui(governmentOutcome))}</p></article>
         <article class="review-card"><strong>${esc(ui('早期返佣不等于工作真实'))}</strong><p>${esc(ui(careerOutcome))}</p></article>
         ${state.recoveryScamTriggered ? `<article class="review-card"><strong>${esc(ui('出现损失后的联络'))}</strong><p>${esc(ui(recoveryOutcome))}</p></article>` : ''}
+        <article class="review-card"><strong>ADCC 扩充事件</strong><p>${expandedEventNotes.map((note) => esc(ui(note))).join(' ')}</p></article>
         <article class="review-card"><strong>${esc(ui('独立来源'))} ${verification}</strong><p>${verification ? state.evidence.map((item) => esc(ui(item.label))).join(state.language === 'en' ? '; ' : '；') : esc(ui('今天没有从独立来源保存核实信息。'))}</p></article>
-        <article class="review-card"><strong>${esc(ui('资料暴露'))} ${state.privacyExposure} · ${esc(ui('金钱损失'))} ${esc(formatHKD(state.moneyLost))}</strong><p>${esc(ui(state.cardFrozen ? '银行卡已冻结，完成了一项止损操作。' : state.moneyLost ? '发生付款后尚未冻结银行卡。' : '没有记录到资金损失。'))}</p></article>
+        <article class="review-card"><strong>${esc(ui('资料暴露'))} ${state.privacyExposure} · ${esc(ui('金钱损失'))} ${esc(formatHKD(state.moneyLost))}</strong><p>${consequenceBits.length ? esc(consequenceBits.join(' · ')) : esc(ui(state.cardFrozen ? '银行卡已冻结，完成了一项止损操作。' : state.moneyLost ? '发生付款后尚未冻结银行卡。' : '没有记录到资金损失。'))}</p></article>
         <article class="review-card"><strong>${esc(ui('陌生来电的真相'))}</strong><p>${esc(ui(identityTruth))}</p></article>
         <div class="review-actions"><button class="primary-action" type="button" data-action="close-review">${esc(ui('继续查看手机'))}</button><button class="secondary-action" type="button" data-action="reset-day">${esc(ui('换一种情况重玩'))}</button></div>
       </section>`;
@@ -3099,6 +3654,7 @@
       case 'research-submit-simulated': processResearchOnboarding(); break;
       case 'research-buy-vouchers': processResearchVoucherPayment(); break;
       case 'research-contact-official': callContact('contact-department'); break;
+      case 'government-contact-official': callContact('contact-immigration'); break;
       case 'career-open-workspace': state.browserPage = 'career-workspace'; saveState(); openApp('browser'); break;
       case 'career-submit-profile': submitCareerProfile(); break;
       case 'career-pay-trial': payCareerTrial(); break;
@@ -3107,11 +3663,31 @@
       case 'health-open-cancel': state.browserPage = 'health-cancel'; saveState(); openApp('browser'); break;
       case 'health-check-official': state.browserPage = 'health-official'; saveState(); openApp('browser'); break;
       case 'health-submit-cancel': processHealthCancellation(); break;
-      case 'health-save-check': addEvidence('health-official', '从自行打开的医疗应用确认没有试用或自动续费项目'); saveState(); showToast('查询结果已保存'); break;
+      case 'health-save-check': state.taskState.health.steps.officialAppChecked = true; state.taskState.health.status = 'done'; addEvidence('health-official', '从自行打开的HA Go／eHealth应用确认没有计划、自动续费或待扣款'); saveState(); showToast('查询结果已保存'); break;
       case 'market-open-protection': state.browserPage = 'market-protection'; saveState(); openApp('browser'); break;
       case 'market-check-platform': state.browserPage = 'market-official'; saveState(); openApp('browser'); break;
       case 'market-submit-verification': processMarketplaceVerification(); break;
-      case 'market-save-check': addEvidence('market-official', '返回二手平台内订单确认买家并未付款'); saveState(); showToast('查询结果已保存'); break;
+      case 'market-save-check': state.taskState.market.steps.officialOrderChecked = true; state.taskState.market.status = 'done'; addEvidence('market-official', '返回Carousell平台内订单确认没有订单或付款'); addHistory('market-official-check', '没有把邮件或外部保障页面当成平台内付款状态'); saveState(); showToast('查询结果已保存'); break;
+      case 'market-release-item': releaseMarketplaceItem(); break;
+      case 'market-check-settlement': checkMarketplaceSettlement(); break;
+      case 'investment-open-platform': state.browserPage = 'investment-platform'; saveState(); openApp('browser'); break;
+      case 'investment-deposit': investmentDeposit(); break;
+      case 'investment-withdraw': investmentWithdraw(); break;
+      case 'investment-pay-unlock': investmentPayUnlock(); break;
+      case 'investment-save-check': saveInvestmentCheck(); break;
+      case 'jobloan-open-contract': state.browserPage = 'jobloan-contract'; saveState(); openApp('browser'); break;
+      case 'jobloan-take-loan': takeJobLoan(); break;
+      case 'jobloan-transfer': transferJobLoan(); break;
+      case 'jobloan-save-check': saveJobLoanCheck(); break;
+      case 'campus-borrow-pay': payCampusBorrow(); break;
+      case 'service-open-link': openServiceNotice(target.dataset.service || 'water'); break;
+      case 'service-submit-card': submitServiceCard(target.dataset.service || state.activeService || 'water'); break;
+      case 'service-official-check': officialServiceCheck(target.dataset.service || 'water'); break;
+      case 'census-share-id': shareCensusIdentity(); break;
+      case 'census-save-check': saveCensusCheck(); break;
+      case 'donation-call': callDonationDesk(); break;
+      case 'donation-share-banking': shareDonationBanking(); break;
+      case 'donation-save-check': saveDonationCheck(); break;
       case 'recovery-open-portal': state.taskState.recovery.steps.portalOpened = true; state.browserPage = 'recovery-portal'; saveState(); openApp('browser'); break;
       case 'recovery-accept-intake': acceptRecoveryIntake(); break;
       case 'recovery-open-lawyer': state.browserPage = 'recovery-lawyer'; saveState(); openApp('browser'); break;
@@ -3141,23 +3717,6 @@
       }
       case 'call-minimize': minimizeCall(); break;
       case 'call-resume': resumeCall(); break;
-      case 'call-finish-judge': finishCallForJudgement(); break;
-      case 'call-judgement':
-        state.callJudgements[id] = { verdict: target.dataset.value, time: formatTime(state.time) };
-        addHistory('call-judgement', `保存了对号码的暂时判断：${target.dataset.value}`);
-        saveState();
-        closeOverlay();
-        showToast('判断已保存，之后仍可继续核对');
-        if (state.currentApp) renderApp(state.currentApp);
-        renderHome();
-        break;
-      case 'call-judgement-dismiss':
-        closeOverlay();
-        showToast('暂未保存判断，可以继续寻找证据');
-        if (state.currentApp) renderApp(state.currentApp);
-        renderHome();
-        break;
-      case 'call-review-judgement': showCallJudgement(id); break;
       case 'call-hall': callContact('contact-hall'); break;
       case 'call-hall-ask-identity': submitCallReply('请问这里是什么单位？', 'ask_identity'); break;
       case 'call-hall-describe-request': submitCallReply('我收到通知有份文件，想查一下', 'describe_request'); break;
@@ -3168,12 +3727,12 @@
       case 'call-department-describe-request': submitCallReply('我想核实一封研究邀请', 'describe_request'); break;
       case 'call-department-ask-research': submitCallReply('主题是Research Assistant，发件地址是outlook.example', 'share_mail'); break;
       case 'confirm-department': confirmDepartment(); break;
-      case 'call-official-later': finishCallForJudgement(); break;
+      case 'call-official-later': endCall('玩家结束通话'); break;
       case 'confirm-hall': confirmHall(); break;
       case 'collect-parcel': collectParcel(); break;
       case 'open-contacts': openApp('contacts'); break;
       case 'call-contact': callContact(id); break;
-      case 'call-number': placeManualCall(target.dataset.number || ''); break;
+      case 'call-number': placeManualCall(target.dataset.number || '', id || ''); break;
       case 'phone-view':
         state.phoneView = target.dataset.value === 'keypad' ? 'keypad' : 'recents';
         saveState(); renderPhone(); break;
@@ -3186,7 +3745,7 @@
       case 'end-call': endCall('主动结束陌生来电'); break;
       case 'call-guess-ajie': callClaimResponse('guess'); break;
       case 'call-ask-name': callClaimResponse('ask'); break;
-      case 'call-later': finishCallForJudgement(); break;
+      case 'call-later': endCall('玩家结束通话'); break;
       case 'call-ask-document':
         addEvidence('requested-document', '要求对方提供报价单及正式收款资料');
         submitCallReply('先发正式文件给我', 'ask_document');
@@ -3196,12 +3755,33 @@
         minimizeCallAndResearch();
         break;
       case 'call-transfer':
-        showDialog('确认私人转账', '对方要求你向一个个人FPS账户支付HK$1,200。银行只会显示收款人资料，不会判断活动是否真实。', [
+        showDialog('FPS 转账', '收款人：WONG T K\n金额：HK$1,200\n备注：EVENT DEPOSIT', [
           { label: '确认转账', action: 'confirm-transfer', kind: 'danger-action' },
           { label: '返回通话', action: 'resume-call' }
         ]);
         break;
+      case 'orientation-cash':
+        showDialog('Lobby collection', 'Collector says they were sent by the event supplier. Amount: HK$1,200 cash.', [
+          { label: 'Hand over cash', action: 'orientation-confirm-cash', kind: 'danger-action' },
+          { label: '返回通话', action: 'resume-call' }
+        ]);
+        break;
+      case 'government-transfer':
+        showDialog('FPS 转账', '收款人：S T CONSULTING\n金额：HK$5,000\n备注：IM-26-0814-73', [
+          { label: '确认转账', action: 'government-confirm-transfer', kind: 'danger-action' },
+          { label: '返回通话', action: 'resume-call' }
+        ]);
+        break;
+      case 'government-valuables':
+        showDialog('Lobby handoff', 'Collector: dark jacket · receipt IM-26-0814-73\nItem: HK$5,000 cash / gold', [
+          { label: 'Hand over item', action: 'government-confirm-valuables', kind: 'danger-action' },
+          { label: '返回通话', action: 'resume-call' }
+        ]);
+        break;
       case 'confirm-transfer': completeTransfer(); break;
+      case 'orientation-confirm-cash': completeOrientationCash(); break;
+      case 'government-confirm-transfer': completeGovernmentDeposit(); break;
+      case 'government-confirm-valuables': completeGovernmentValuables(); break;
       case 'resume-call': resumeCall(); break;
       case 'open-browser-page': state.browserPage = target.dataset.page; saveState(); renderBrowser(); break;
       case 'browser-home': state.browserPage = 'home'; saveState(); renderBrowser(); break;
