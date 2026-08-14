@@ -148,6 +148,11 @@
             messageRead: false,
             requestSeen: false,
             originalNumberCalled: false,
+            mandyConfirmed: false,
+            shopCalled: false,
+            shopOrderMatched: false,
+            merchantInvoicePaid: false,
+            repaid: false,
             paid: false,
             resolved: false
           }
@@ -339,6 +344,7 @@
           id: 'mail-market-payment', kind: 'market-payment', from: 'Carousell Payment', address: 'payment@carousell-secure.example',
           subject: 'Buyer payment received — seller action required', preview: 'HK$680 is waiting for release to your account.', time: '09:10', unread: true, focused: true, language: 'en',
           body: 'The buyer has completed payment for Calculator Listing #C-8142. Your HK$680 is currently on hold. Complete Seller Payment Protection using the secure button below. A bank card and one-time passcode may be required to activate receiving.',
+          linkUrl: 'https://marketplace-protection.example/receive',
           translation: { subject: '已收到买家付款——卖家需要操作', preview: 'HK$680正在等待转入你的账户。', body: '买家已经为计算器商品#C-8142完成付款。HK$680目前被暂扣。请通过下方安全按钮完成“卖家付款保障”。激活收款可能需要银行卡及一次性密码。' }, tracking: null
         },
         {
@@ -391,6 +397,7 @@
           focused: true,
           language: 'en',
           body: 'Dear Student, your profile was recommended for an eight-week AI learning research project. The work pays HK$180 per hour and can be completed remotely. Please confirm your availability today through the onboarding form. The first assignment involves arranging participant incentive e-vouchers; all costs will be reimbursed.',
+          linkUrl: 'https://research-onboarding.example/start',
           translation: {
             subject: '研究助理机会——请于今日回复',
             preview: '你的资料获推荐参与一项人工智能学习研究。',
@@ -410,6 +417,7 @@
           focused: true,
           language: 'en',
           body: 'Hello, the internship you viewed has reached capacity. Based on your student profile, we can instead offer a remote Research and Project Assistant role. The work includes product data collection and quality checks. Training takes around 40 minutes and the first trial task is paid immediately. Continue through our project workspace today if interested.',
+          linkUrl: 'https://northbridge-projects.example/workspace',
           translation: {
             subject: '替代的远程研究助理职位',
             preview: '你查看的职位已满，但现有一个时间灵活的项目岗位。',
@@ -429,6 +437,7 @@
           focused: false,
           language: 'en',
           body: 'Your provisional seat for Student Innovation Night is being held until 10:00. Complete the HK$180 participation fee using the personal FPS account shown on the payment page. Reply with the payment screenshot to receive your QR ticket.',
+          linkUrl: 'https://student-event-payment.example/seat',
           translation: {
             subject: '付款待处理 · 学生创新之夜',
             preview: '你的临时席位将于10:00失效。请通过FPS支付HK$180。',
@@ -448,7 +457,8 @@
         { id: 'contact-hall', name: 'Hall Reception', initials: 'HR', number: '+852 2XXX 0000', note: '模拟号码 · 宿舍收发室' },
         { id: 'contact-department', name: 'Department General Office', initials: 'DO', number: '+852 2XXX 6200', note: '模拟号码 · 教职员及研究项目查询' },
         { id: 'contact-immigration', name: 'General Enquiries', initials: 'GE', number: '+852 2XXX 6111', note: '模拟号码 · 从政府网站取得' },
-        { id: 'contact-mandy', name: 'Mandy', initials: 'MY', number: '+852 9XXX 5381', note: '模拟原号码 · Design Group同学' }
+        { id: 'contact-mandy', name: 'Mandy', initials: 'MY', number: '+852 9XXX 5381', note: '模拟原号码 · Design Group同学' },
+        { id: 'contact-printshop', name: 'Blue Peak Printing', initials: 'BP', number: '+852 2XXX 7718', note: '模拟号码 · 上次蓝色海报订单保存的店铺' }
       ],
       transactions: [
         { id: 'market-pending-credit', title: 'CHEQUE DEPOSIT · PENDING', time: '今天 09:12', amount: 680, pending: true },
@@ -458,6 +468,8 @@
       ],
       browserPage: 'home',
       browserQuery: '',
+      browserUrl: '',
+      browserUrlPage: '',
       dayEnded: false
     };
   }

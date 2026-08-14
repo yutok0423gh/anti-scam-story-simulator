@@ -895,14 +895,22 @@ flowchart TD
     PAY --> VAR{"账号随机状态"}
 
     VAR -->|"72% 账号被盗"| LOSS["损失HK$760<br/>触发追款骗局"]
-    VAR -->|"28% 本人"| REAL["余额减少HK$760<br/>不计诈骗损失"]
+    VAR -->|"28% 本人"| REAL["朋友稍后归还HK$760<br/>不计诈骗损失"]
 
     C --> CONTACT["玩家自行打开联系人"]
     CONTACT --> CALL["拨打Mandy原号码"]
     CALL --> VAR2{"账号随机状态"}
 
     VAR2 -->|"账号被盗"| DENY["Mandy否认转账要求"]
-    VAR2 -->|"本人"| CONFIRM["确认是本人<br/>改为要求印刷店出正式单"]
+    VAR2 -->|"本人"| CONFIRM["Mandy确认请求<br/>提供订单BP-8147"]
+
+    CONTACT --> SHOP["拨打以前保存的印刷店号码"]
+    SHOP --> SHOPVAR{"账号随机状态"}
+    SHOPVAR -->|"账号被盗"| NOMATCH["没有BP-8147或Mandy新订单"]
+    SHOPVAR -->|"本人"| MATCH["项目、HK$760、电话尾号与商户名一致"]
+    MATCH --> BANK["银行出现BLUE PEAK PRINTING LTD商户账单"]
+    BANK --> HELP["玩家选择支付HK$760"]
+    HELP --> REPAY["Mandy稍后FPS归还HK$760"]
 ```
 
 ### 自由回复差异
@@ -936,13 +944,19 @@ flowchart TD
 ├─ 余额 -760
 ├─ friend.status = done
 ├─ 账号被盗 → moneyLost += 760 → 触发追款骗局
-└─ 本人账号 → 不计诈骗损失
+└─ 本人账号 → Mandy稍后归还HK$760 → 不计诈骗损失
 
 联系人中拨打Mandy原号码
 ├─ originalNumberCalled = true
-├─ friend.status = done
 ├─ 账号被盗 → Mandy说明账号被登入，否认付款要求
-└─ 本人账号 → Mandy确认请求，但改为由印刷店出正式单
+└─ 本人账号 → Mandy确认请求并提供订单BP-8147
+
+联系人中拨打Blue Peak Printing
+├─ 通话页仍只显示未知号码
+├─ 账号被盗 → 店铺查不到订单 → friend.status = done
+└─ 本人账号 → 订单编号、项目、金额、联系人尾号和商户名一致
+   └─ 银行出现商户账单
+      └─ 玩家付款 → 朋友稍后归还垫款 → friend.status = done
 ```
 
 ---
@@ -1149,6 +1163,19 @@ More
 ---
 
 ## 15. 浏览器完整搜索树
+
+所有短信、聊天及邮件中的 `http://`／`https://` 地址使用同一个模拟浏览器路由：
+
+```text
+点击正文网址
+├─ 已配置域名
+│  └─ 打开对应官方、普通或仿冒互动页
+└─ 其他合法网址
+   └─ 打开通用模拟页
+      ├─ 保留完整原始网址
+      ├─ 显示主机、路径和查询参数
+      └─ 不访问真实互联网
+```
 
 ```text
 空白首页
@@ -1494,7 +1521,8 @@ Mandy
 | 医疗取消 | 提交取消 | -HK$388 | +HK$388 | +2 | 触发追款 |
 | 二手收款 | 连接银行卡 | -HK$680 | +HK$680 | +2 | 触发追款 |
 | Mandy被盗 | 垫付印刷费 | -HK$760 | +HK$760 | HK$0 | 触发追款 |
-| Mandy本人 | 垫付印刷费 | -HK$760 | HK$0 | HK$0 | friend完成 |
+| Mandy本人 | 未核对直接垫付 | -HK$760后+HK$760 | HK$0 | HK$0 | 朋友归还，friend完成 |
+| Mandy本人 | 双重核对后付商户账单 | -HK$760后+HK$760 | HK$0 | HK$0 | 商户订单完成，朋友归还 |
 | 二次追款 | 远程协助 | HK$0 | HK$0 | +3 | 查看银行通知 |
 | 二次追款 | 保证金 | -HK$300 | +HK$300 | 已累计 | 可能继续索款 |
 
@@ -1571,6 +1599,7 @@ Room／Food／Library／Study progress
 - 全手机回归：[phone-smoke-test.mjs](./phone-smoke-test.mjs)
 - 扩充事件回归：[adcc-scenario-test.mjs](./adcc-scenario-test.mjs)
 - 政府来电专项回归：[government-call-test.mjs](./government-call-test.mjs)
+- 全链接模拟浏览器路由回归：[link-routing-test.mjs](./link-routing-test.mjs)
 - ADCC v14 全量扩充回归：[adcc-expansion-test.mjs](./adcc-expansion-test.mjs)
 
 ---

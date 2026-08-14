@@ -382,7 +382,7 @@ assert(await evaluate('document.querySelector("#homeTodoList .home-todo-item:fir
 
 await click('#appDock [data-open-app="messages"]');
 await click('[data-action="open-thread"][data-id="thread-parcel"]');
-await click('[data-action="message-open-link"]');
+await click('[data-action="open-simulated-url"][data-url*="parcel-update.example"]');
 await wait(180);
 const parcelPageText = await evaluate('document.querySelector("#appContent").textContent');
 const parcelPageState = await evaluate('window.ScamBusterPhone?.getState?.().browserPage || "unavailable"');
@@ -505,7 +505,7 @@ assert(await evaluate('document.querySelector(".opening-sheet") !== null'), 'A r
 await click('[data-action="start-day"]');
 await click('#appGrid [data-open-app="mail"]');
 await click('[data-action="open-mail"][data-id="mail-research"]');
-await click('[data-action="research-open-link"]');
+await click('[data-action="open-simulated-url"][data-url*="research-onboarding.example"]');
 await click('[data-action="research-submit-simulated"]');
 await click('[data-action="research-buy-vouchers"]');
 assert(await evaluate('JSON.parse(localStorage.getItem("polyu_simulator_phone_v1")).moneyLost === 800'), 'Research voucher payment was not recorded as a loss');
@@ -513,7 +513,7 @@ await click('#systemHome');
 await click('#appGrid [data-open-app="mail"]');
 await click('[data-action="mail-tab"][data-value="other"]');
 await click('[data-action="open-mail"][data-id="mail-event-fee"]');
-await click('[data-action="event-open-payment"]');
+await click('[data-action="open-simulated-url"][data-url*="student-event-payment.example"]');
   await click('[data-action="event-pay-fake"]');
   assert(await evaluate('JSON.parse(localStorage.getItem("polyu_simulator_phone_v1")).moneyLost === 980'), 'Fake event FPS payment was not recorded as a loss');
   assert(await evaluate('JSON.parse(localStorage.getItem("polyu_simulator_phone_v1")).taskState.event.status === "pending"'), 'Fake event payment incorrectly completed official registration');

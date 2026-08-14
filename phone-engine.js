@@ -241,6 +241,8 @@
         saved.phoneView = ['recents', 'keypad'].includes(saved.phoneView) ? saved.phoneView : 'recents';
         saved.dialNumber = String(saved.dialNumber || '').slice(0, 24);
         saved.contactsQuery = String(saved.contactsQuery || '').slice(0, 60);
+        saved.browserUrl = String(saved.browserUrl || '').slice(0, 500);
+        saved.browserUrlPage = String(saved.browserUrlPage || '').slice(0, 80);
         saved.investigationQueries = Array.isArray(saved.investigationQueries) ? saved.investigationQueries.slice(-12) : [];
         saved.callLog = Array.isArray(saved.callLog) ? saved.callLog.map((call) => ({ ...call, name: '未知号码' })) : defaults.callLog;
         defaults.callLog.forEach((defaultCall) => {
@@ -491,6 +493,25 @@
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#039;');
+  }
+
+  function linkedSimulatedText(value) {
+    const text = String(value == null ? '' : value);
+    const pattern = /https?:\/\/[^\s<>"'`]+/gi;
+    let html = '';
+    let cursor = 0;
+    for (const match of text.matchAll(pattern)) {
+      let url = match[0];
+      let trailing = '';
+      while (/[),.;!?，。；！？”’》】）]$/.test(url)) {
+        trailing = url.slice(-1) + trailing;
+        url = url.slice(0, -1);
+      }
+      html += esc(text.slice(cursor, match.index));
+      html += `<button class="inline-simulated-link" type="button" data-action="open-simulated-url" data-url="${esc(url)}">${esc(url)}</button>${esc(trailing)}`;
+      cursor = match.index + match[0].length;
+    }
+    return html + esc(text.slice(cursor));
   }
 
   function localeCode() {
@@ -1258,11 +1279,11 @@
       <div class="conversation-shell">
       <div class="conversation" id="messageConversation">
         <div class="conversation-date">${esc(ui('今天'))} · ${esc(thread.number)}</div>
-        ${thread.items.map((item) => `<div class="bubble ${item.from === 'mine' ? 'mine' : ''}">${esc(item.text)}<small>${esc(formatStoredTime(item.time))}</small></div>`).join('')}
+        ${thread.items.map((item) => `<div class="bubble ${item.from === 'mine' ? 'mine' : ''}">${linkedSimulatedText(item.text)}<small>${esc(formatStoredTime(item.time))}</small></div>`).join('')}
         ${pending ? `<div class="bubble typing-bubble" aria-label="${esc(ui('正在输入…'))}"><i></i><i></i><i></i></div>` : ''}
         ${key === 'parcel' ? `
           <div class="message-actions">
-            <button class="primary-action" type="button" data-action="message-open-link">${esc(ui('打开短信里的页面'))}</button>
+            <button class="primary-action" type="button" data-action="open-simulated-url" data-url="https://parcel-update.example/update?id=HKP8234">${esc(ui('打开短信里的页面'))}</button>
             <button class="secondary-action" type="button" data-action="message-copy-tracking">${esc(ui('保存短信运单号'))}</button>
             <button class="secondary-action" type="button" data-action="message-search-domain">${esc(ui('自己搜索这个域名'))}</button>
           </div>` : ''}
@@ -1474,11 +1495,11 @@
             <button class="outlook-sender-more" type="button" data-action="mail-message-menu" data-id="${mail.id}" aria-label="${esc(ui('更多邮件操作'))}" aria-haspopup="dialog">${MAIL_ICONS.moreVertical}</button>
           </div>
           ${mailTranslationStatus(mail, copy.translated)}
-          <div class="outlook-message-body" lang="${esc(copy.language)}"><p>${esc(copy.body)}</p></div>
+          <div class="outlook-message-body" lang="${esc(copy.language)}"><p>${linkedSimulatedText(copy.body)}</p>${mail.linkUrl ? `<button class="inline-simulated-link outlook-body-link" type="button" data-action="open-simulated-url" data-url="${esc(mail.linkUrl)}">${esc(mail.linkUrl)}</button>` : ''}</div>
           ${mail.tracking ? `<div class="outlook-tracking"><span>${esc(ui('运单号'))}</span><strong>${esc(mail.tracking)}</strong></div>` : ''}
           <div class="outlook-message-actions action-row"><span class="outlook-simulation-label">${esc(localized('邮件操作', 'Message action'))}</span>${mailActions(mail)}</div>
           ${replies.length || replyPending ? `<section class="outlook-reply-thread" aria-label="${esc(ui('回复'))}">
-            ${replies.map((reply) => `<article class="outlook-reply-item ${reply.from === 'mine' ? 'mine' : ''}"><header><strong>${esc(reply.from === 'mine' ? localized('你', 'You') : mail.from)}</strong><time>${esc(formatStoredTime(reply.time))}</time></header><p>${esc(reply.text)}</p></article>`).join('')}
+            ${replies.map((reply) => `<article class="outlook-reply-item ${reply.from === 'mine' ? 'mine' : ''}"><header><strong>${esc(reply.from === 'mine' ? localized('你', 'You') : mail.from)}</strong><time>${esc(formatStoredTime(reply.time))}</time></header><p>${linkedSimulatedText(reply.text)}</p></article>`).join('')}
             ${replyPending ? `<div class="outlook-reply-wait"><i></i><i></i><i></i><span>${esc(ui('正在输入…'))}</span></div>` : ''}
           </section>` : ''}
           ${composerOpen ? `<form class="outlook-inline-composer" id="mailReplyForm" data-mail="${esc(mail.id)}">
@@ -1503,10 +1524,10 @@
 
   function mailActions(mail) {
     if (mail.tracking) return `<button class="primary-action" type="button" data-action="mail-save-tracking">${esc(ui('保存完整运单号'))}</button>`;
-    if (mail.kind === 'research') return `<button class="primary-action" type="button" data-action="research-open-link">${esc(ui('打开 onboarding form'))}</button>`;
-    if (mail.kind === 'career') return `<button class="primary-action" type="button" data-action="career-open-workspace">${esc(ui('打开项目工作台'))}</button>`;
-    if (mail.kind === 'event-payment') return `<button class="primary-action" type="button" data-action="event-open-payment">${esc(ui('查看付款页面'))}</button>`;
-    if (mail.kind === 'market-payment') return `<button class="primary-action" type="button" data-action="market-open-protection">Open secure payment</button>`;
+    if (mail.kind === 'research') return `<button class="primary-action" type="button" data-action="open-simulated-url" data-url="${esc(mail.linkUrl)}">${esc(ui('打开 onboarding form'))}</button>`;
+    if (mail.kind === 'career') return `<button class="primary-action" type="button" data-action="open-simulated-url" data-url="${esc(mail.linkUrl)}">${esc(ui('打开项目工作台'))}</button>`;
+    if (mail.kind === 'event-payment') return `<button class="primary-action" type="button" data-action="open-simulated-url" data-url="${esc(mail.linkUrl)}">${esc(ui('查看付款页面'))}</button>`;
+    if (mail.kind === 'market-payment') return `<button class="primary-action" type="button" data-action="open-simulated-url" data-url="${esc(mail.linkUrl)}">Open secure payment</button>`;
     return `<button class="secondary-action" type="button" data-action="open-contacts">${esc(ui('查看相关联系人'))}</button>`;
   }
 
@@ -1723,8 +1744,77 @@
       </section>`, 'more');
   }
 
+  function simulatedUrlRoute(rawUrl) {
+    let parsed;
+    try {
+      parsed = new URL(String(rawUrl || '').trim());
+    } catch {
+      return null;
+    }
+    if (!['http:', 'https:'].includes(parsed.protocol)) return null;
+    const host = parsed.hostname.toLowerCase().replace(/^www\./, '');
+    const path = parsed.pathname.toLowerCase();
+    let page = 'generic-url';
+    let service = '';
+    if (host === 'parcel-update.example') page = 'fake-post';
+    else if (host === 'ha-go-account.example') page = 'health-cancel';
+    else if (host === 'marketplace-protection.example') page = 'market-protection';
+    else if (host === 'meta-invest-pro.example') page = 'investment-platform';
+    else if (host === 'northbridge-projects.example') page = 'career-workspace';
+    else if (host === 'apex-recruit-contract.example') page = 'jobloan-contract';
+    else if (host === 'research-onboarding.example') page = 'research-onboarding';
+    else if (host === 'student-event-payment.example') page = 'event-payment';
+    else if (host === 'claim-assistance.example' || host === 'case-recovery-centre.example') page = 'recovery-portal';
+    else if (host === 'chow-legal-associates.example') page = 'recovery-lawyer';
+    else if (host === 'secure-case-assist.example') page = 'recovery-investigator';
+    else if (host === 'secure-case-review.example') page = 'government-case-review';
+    else if (host === 'wsd-ebill-check.example') { page = 'service-fake'; service = 'water'; }
+    else if (host === 'gov-eticket-view.example') { page = 'service-fake'; service = 'ticket'; }
+    else if (host === 'empf-profile-update.example') { page = 'service-fake'; service = 'mpf'; }
+    else if (host === 'polyu.edu.hk') page = path.includes('staff') ? 'staff-directory' : (path.includes('event') ? 'event-official' : 'polyu-official');
+    else if (host === 'hongkongpost.hk') page = 'post-official';
+    else if (host === 'gov.hk') page = 'government-services';
+    else if (host === 'immd.gov.hk') page = 'government-directory';
+    else if (host === 'adcc.gov.hk') page = 'adcc-advice';
+    else if (host === 'cyberdefender.hk') page = 'scameter';
+    else if (host === 'sfc.hk') page = 'investment-official';
+    else if (host === 'mpfa.org.hk') page = 'mpf-official';
+    else if (host === 'censtatd.gov.hk') page = 'census-official';
+    return { raw: String(rawUrl).trim(), parsed, page, service };
+  }
+
+  function openSimulatedUrl(rawUrl) {
+    const route = simulatedUrlRoute(rawUrl);
+    if (!route) {
+      showToast(localized('这个链接格式无法打开', 'This link format cannot be opened'));
+      return;
+    }
+    state.browserUrl = route.raw;
+    state.browserUrlPage = route.page;
+    state.browserPage = route.page;
+    state.browserQuery = route.parsed.hostname;
+    if (route.service) {
+      state.activeService = route.service;
+      state.taskState.officialServices.steps[`${route.service}Opened`] = true;
+    }
+    if (route.page === 'recovery-portal') state.taskState.recovery.steps.portalOpened = true;
+    saveState();
+    openApp('browser');
+  }
+
+  function renderBrowserUrlBar() {
+    if (!state.browserUrl || state.browserUrlPage !== state.browserPage || state.currentApp !== 'browser') return;
+    const first = els.appContent.firstElementChild;
+    if (!first) return;
+    first.insertAdjacentHTML('beforebegin', `<div class="simulated-browser-address"><span aria-hidden="true">◉</span><b>${esc(state.browserUrl)}</b></div>`);
+  }
+
   function renderBrowser() {
-    if (state.browserPage !== 'home') return renderBrowserPage(state.browserPage);
+    if (state.browserPage !== 'home') {
+      renderBrowserPage(state.browserPage);
+      renderBrowserUrlBar();
+      return;
+    }
     els.appContent.innerHTML = `
       <form class="browser-search" id="browserSearchForm">
         <input id="browserQuery" type="search" value="${esc(state.browserQuery)}" placeholder="${esc(ui('搜索网址、号码或机构'))}" autocomplete="off">
@@ -1933,6 +2023,22 @@
 
   function renderBrowserPage(page) {
     if (renderExtendedBrowserPage(page)) return;
+    if (page === 'generic-url') {
+      const route = simulatedUrlRoute(state.browserUrl);
+      const host = route?.parsed.hostname || localized('无法识别的网址', 'Unknown address');
+      const path = route ? `${route.parsed.pathname}${route.parsed.search}${route.parsed.hash}` : '';
+      els.appContent.innerHTML = `
+        <div class="app-pad">
+          <article class="browser-card generic-simulated-site">
+            <span class="browser-domain">${esc(host)}</span>
+            <h2>${esc(host)}</h2>
+            <p>${esc(localized('这个网址已在模拟浏览器中打开。当前场景没有为此页面设置更多互动内容。', 'This address is open in the simulated browser. No additional interaction is defined for this page in the current scenario.'))}</p>
+            ${path && path !== '/' ? `<div class="generic-url-path"><span>${esc(localized('页面路径', 'Page path'))}</span><strong>${esc(path)}</strong></div>` : ''}
+            <div class="action-row"><button class="secondary-action" type="button" data-action="browser-home">${esc(ui('返回搜索'))}</button></div>
+          </article>
+        </div>`;
+      return;
+    }
     if (page === 'contacts-search') {
       state.browserPage = 'home';
       saveState();
@@ -2057,6 +2163,7 @@
 
   function renderBank() {
     const market = state.taskState.market;
+    const friend = state.taskState.friend;
     const pendingMarket = state.transactions.find((item) => item.id === 'market-pending-credit');
     els.appContent.innerHTML = `
       <section class="bank-summary"><span>${esc(ui('可用余额'))}</span><strong>${esc(formatHKD(state.balance))}</strong></section>
@@ -2065,6 +2172,7 @@
         <button class="secondary-action" type="button" data-action="bank-help">${esc(ui('联系银行'))}</button>
       </div>
       ${pendingMarket && !market.steps.officialOrderChecked ? `<div class="bank-card"><strong>Cheque deposit · Pending</strong><p>Book entry: ${esc(formatHKD(pendingMarket.amount))}<br>Available amount: HK$0.00</p><div class="action-row"><button class="primary-action" type="button" data-action="market-release-item">Leave calculator at lobby</button><button class="secondary-action" type="button" data-action="market-check-settlement">Ask bank about settlement</button></div></div>` : ''}
+      ${friend.steps.shopOrderMatched && !friend.steps.paid ? `<div class="bank-card"><strong>Blue Peak Printing · BP-8147</strong><p>${esc(localized('Design Group 蓝色海报印刷 · 商户账单', 'Design Group blue poster · Merchant invoice'))}<br>${esc(localized('收款商户：BLUE PEAK PRINTING LTD', 'Merchant: BLUE PEAK PRINTING LTD'))}</p><div class="fake-fee"><span>${esc(localized('待付金额', 'Amount due'))}</span><strong>${esc(formatHKD(760))}</strong></div><div class="action-row"><button class="primary-action" type="button" data-action="friend-pay-merchant">${esc(localized('支付此商户账单', 'Pay this merchant invoice'))}</button></div></div>` : ''}
       <div class="bank-card"><span class="section-label">${esc(ui('交易记录'))}</span>${state.transactions.map((item) => `<div class="transaction-row"><div><strong>${esc(item.title)}</strong><span>${esc(formatStoredTime(item.time))}${item.pending ? ' · Pending' : ''}</span></div><div class="transaction-amount">${item.amount < 0 ? '−' : '+'}${esc(formatHKD(Math.abs(item.amount)))}</div></div>`).join('')}</div>`;
   }
 
@@ -2196,10 +2304,21 @@
     const contact = state.contacts.find((item) => item.id === contactId);
     if (!contact) return;
     if (callSession) { resumeCall(); showToast('先结束当前通话，再拨打另一个号码'); return; }
-    const scenario = contactId === 'contact-hall' ? 'hall' : (contactId === 'contact-immigration' ? 'government-official' : 'department');
+    const scenarioByContact = {
+      'contact-hall': 'hall',
+      'contact-immigration': 'government-official',
+      'contact-department': 'department',
+      'contact-mandy': 'mandy-original',
+      'contact-printshop': 'printshop'
+    };
+    const scenario = scenarioByContact[contactId] || 'department';
     startCallSession(scenario, contact.number, contactId);
-    const logItem = state.callLog.find((item) => item.number === contact.number);
-    if (logItem) Object.assign(logItem, { direction: '正在拨号', unread: false });
+    let logItem = state.callLog.find((item) => item.number === contact.number);
+    if (logItem) Object.assign(logItem, { direction: '正在拨号', unread: false, time: formatTime(state.time) });
+    else {
+      logItem = { id: `call-out-${contactId}`, name: '未知号码', number: contact.number, time: formatTime(state.time), direction: '正在拨号', unread: false };
+      state.callLog.unshift(logItem);
+    }
     addHistory('official-call-started', `拨打 ${contact.number}`);
     saveState();
     renderCallDialling(ui('拨号'), ui('正在拨打这个号码'));
@@ -2244,6 +2363,8 @@
       addHistory('government-unknown-call', '回拨另一通陌生来电');
       advanceTime(2);
     } else {
+      if (callSession.scenario === 'mandy-original') state.taskState.friend.steps.originalNumberCalled = true;
+      if (callSession.scenario === 'printshop') state.taskState.friend.steps.shopCalled = true;
       advanceTime(1);
     }
     const node = getCallNode(callSession.scenario, 'intro');
@@ -2320,6 +2441,35 @@
         handoff: { reply: '「同事會着深色外套，拎住案件編號IM-26-0814-73嘅收據。你將HK$5,000現金或者金粒交畀佢，唔使同大堂講案件內容。」', quick: [] },
         cautious: { reply: '「你可以唔答，但份文件今日照樣會轉交。到時如果系統當係你本人寄出，就由調查主任直接處理。」', quick: [] },
         fallback: { reply: '「你想問份文件、案件編號，定係點樣核對身份？你講清楚少少。」', quick: [] }
+      },
+      'mandy-original': {
+        intro: { reply: '「喂？」', quick: [] },
+        identity: { reply: '「係我，Mandy。你搵我呀？」', quick: [] },
+        result: {
+          reply: () => state.hijackedFriendVariant === 'real'
+            ? '「係我叫你幫手，唔該你特登打返我原本個號碼。張單係 Blue Peak Printing，訂單 BP-8147，藍色 poster，HK$760。你可以打返上次存低嗰個店舖電話問清楚先。」'
+            : '「我冇叫你墊錢。我個聊天帳號俾人登入咗，嗰邊講嘅印刷單唔係我落嘅。我而家通知其他同學。」',
+          quick: []
+        },
+        reference: {
+          reply: () => state.hijackedFriendVariant === 'real'
+            ? '「上次老師揀咗藍色嗰版，今次都係同一間 Blue Peak Printing。訂單 BP-8147，你可以直接問店舖。」'
+            : '「上次藍色 poster 係真，但今朝嗰段垫付訊息唔係我發。你唔好用聊天帳號入面新畀你嘅收款資料。」',
+          quick: []
+        },
+        fallback: { reply: '「你係想問今朝個聊天訊息，定係印刷單？」', quick: [] }
+      },
+      printshop: {
+        intro: { reply: '「喂，你好。請問想查咩？」', quick: [] },
+        identity: { reply: '「呢度係 Blue Peak Printing。請問你有冇訂單編號？」', quick: [] },
+        need_order: { reply: '「可以幫你查。請講訂單編號、落單人或者印刷項目。」', quick: [] },
+        result: {
+          reply: () => state.hijackedFriendVariant === 'real'
+            ? '「查到 BP-8147，Design Group 藍色 poster，未付 HK$760。聯絡人係 Mandy，電話尾號5381。商戶帳單收款名係 BLUE PEAK PRINTING LTD，唔係店員私人名。」'
+            : '「我哋今日冇 BP-8147 呢張單，亦冇 Mandy 或 Design Group 嘅 HK$760 poster 訂單。上次嗰張藍色 poster 已經結清。」',
+          quick: []
+        },
+        fallback: { reply: '「我未搵到你講嗰張單。你可以講訂單編號、落單人或者 poster 顏色。」', quick: [] }
       },
       'government-official': {
         intro: { reply: '「喂，你好。請問你想查詢咩事？」', quick: [] },
@@ -2420,6 +2570,19 @@
       if (intent === 'share_case') return 'result';
       return 'fallback';
     }
+    if (scenario === 'mandy-original') {
+      if (intent === 'ask_identity') return 'identity';
+      if (intent === 'ask_reference') return 'reference';
+      if (intent === 'ask_purpose' || intent === 'describe_request' || intent === 'ask_order') return 'result';
+      return 'fallback';
+    }
+    if (scenario === 'printshop') {
+      if (intent === 'ask_identity') return 'identity';
+      if (intent === 'share_order') return 'result';
+      if (intent === 'ask_order' || intent === 'describe_request' || intent === 'ask_reference') return current === 'need_order' ? 'result' : 'need_order';
+      if (intent === 'ask_fee' && current === 'result') return 'result';
+      return 'fallback';
+    }
     return current;
   }
 
@@ -2469,6 +2632,14 @@
       if (has('编号', '編號', 'reference', '捐款号', '捐款號')) return 'ask_reference';
       if (has('取消', '扣款', '捐款', 'debit', 'donation')) return 'describe_request';
     }
+    if (callSession?.scenario === 'mandy-original') {
+      if (has('今朝', '聊天', '訊息', '信息', '垫付', '墊付', '印刷', 'poster', '760', 'bp-8147')) return 'ask_purpose';
+      if (has('上次', '蓝色', '藍色', '共同', 'reference')) return 'ask_reference';
+    }
+    if (callSession?.scenario === 'printshop') {
+      if (has('bp-8147', '8147') || (digits.includes('8147'))) return 'share_order';
+      if (has('订单', '訂單', 'mandy', 'design group', '蓝色', '藍色', 'poster', '印刷')) return 'ask_order';
+    }
     if (callSession?.scenario === 'department' && has('借钱', '借錢', '借款', '垫付', '墊付', '供应商', '供應商', 'fps', '960', 'whatsapp', '报销', '報銷')) return 'ask_borrow';
     if (callSession?.scenario === 'orientation' && has('现金', '現金', '大堂', '同事收', '来收', '嚟收', 'collector')) return 'offer_cash';
     if (has('阿杰', 'ah kit', 'ajie')) return 'guess_name';
@@ -2484,7 +2655,7 @@
     if (has('不提供', '不透露', '唔提供', '私隐', '隱私', 'privacy')) return 'refuse_disclosure';
     if (has('核对', '核實', '查一下', '查证', '先问', '先問', '稍后', '稍後')) return 'hold_research';
     if (has('结束', '結束', '挂了', '收线', 'bye')) return 'end_call';
-    if (callSession.scenario === 'orientation' || callSession.scenario === 'government' || callSession.scenario === 'government-official') return 'unknown';
+    if (callSession.scenario === 'orientation' || callSession.scenario === 'government' || callSession.scenario === 'government-official' || callSession.scenario === 'mandy-original' || callSession.scenario === 'printshop') return 'unknown';
     return 'describe_request';
   }
 
@@ -2529,6 +2700,30 @@
         state.taskState.government.steps.resolved = true;
         state.taskState.government.status = 'done';
         addHistory('government-call-resolved', '从政府网站取得另一号码并查询来电中的案件编号');
+      }
+      if (callSession.scenario === 'mandy-original') {
+        const steps = state.taskState.friend.steps;
+        steps.originalNumberCalled = true;
+        if (state.hijackedFriendVariant === 'real') {
+          steps.mandyConfirmed = true;
+          addHistory('friend-original-confirmed', '从已保存的原号码联系Mandy并取得订单编号BP-8147');
+        } else {
+          steps.resolved = true;
+          state.taskState.friend.status = 'done';
+          addHistory('friend-account-hijacked', '从已保存的原号码联系Mandy；本人否认垫付款请求');
+        }
+      }
+      if (callSession.scenario === 'printshop') {
+        const steps = state.taskState.friend.steps;
+        steps.shopCalled = true;
+        steps.shopOrderMatched = state.hijackedFriendVariant === 'real';
+        if (steps.shopOrderMatched) {
+          addHistory('friend-shop-order-matched', '向以前保存的印刷店号码查询BP-8147，订单项目、金额及Mandy原号码一致');
+        } else {
+          steps.resolved = true;
+          state.taskState.friend.status = 'done';
+          addHistory('friend-shop-order-mismatch', '印刷店表示没有BP-8147或Mandy的HK$760新订单');
+        }
       }
     }
     advanceTime(1);
@@ -2751,36 +2946,9 @@
   function callContact(contactId) {
     const contact = state.contacts.find((item) => item.id === contactId);
     if (!contact) return;
-    if (contactId === 'contact-hall') {
-      startOfficialCall(contactId);
-      return;
-    }
-    if (contactId === 'contact-department' || contactId === 'contact-immigration') {
+    if (['contact-hall', 'contact-department', 'contact-immigration', 'contact-mandy', 'contact-printshop'].includes(contactId)) {
       if (contactId === 'contact-immigration') state.taskState.government.steps.officialNumberCalled = true;
       startOfficialCall(contactId);
-      return;
-    }
-    if (contactId === 'contact-mandy') {
-      const steps = state.taskState.friend.steps;
-      steps.originalNumberCalled = true;
-      steps.resolved = true;
-      state.taskState.friend.status = 'done';
-      advanceTime(4);
-      if (state.hijackedFriendVariant === 'hijacked') {
-        addEvidence('friend-original-number', '从Mandy原号码确认聊天账号已被盗用');
-        addHistory('friend-verified', '没有在原聊天账号继续猜身份，而是从已保存号码联系本人');
-        showDialog('Mandy', '“我个聊天账号俾人登入咗！我冇叫你帮我转钱，唔好理嗰边，我而家通知其他人。”', [
-          { label: '记下结果', action: 'close-overlay', kind: 'primary-action' }
-        ]);
-      } else {
-        addEvidence('friend-original-number', '从Mandy原号码确认印刷垫付款确由本人提出');
-        addHistory('friend-verified', '从已保存号码确认请求来自本人，并进一步核对收款安排');
-        showDialog('Mandy', '“係我呀，多谢你打嚟确认。印刷店可以等，我叫佢哋直接出正式单俾我，唔使你转去个人户口。”', [
-          { label: '记下结果', action: 'close-overlay', kind: 'primary-action' }
-        ]);
-      }
-      saveState();
-      playSound('success');
       return;
     }
     if (contactId === 'contact-ajie') {
@@ -2924,9 +3092,61 @@
     if (state.hijackedFriendVariant === 'hijacked') state.moneyLost += 760;
     advanceTime(3);
     if (state.hijackedFriendVariant === 'hijacked') triggerRecoveryScam();
+    else settleFriendAdvance(false);
     saveState();
     showToast('模拟转账已提交');
     renderMessageThread('friend');
+  }
+
+  function settleFriendAdvance(verifiedMerchant) {
+    const steps = state.taskState.friend.steps;
+    if (steps.repaid || state.hijackedFriendVariant !== 'real') return;
+    advanceTime(18);
+    steps.repaid = true;
+    state.balance += 760;
+    state.transactions.unshift({ title: 'FPS IN · MANDY', time: `今天 ${formatTime(state.time)}`, amount: 760 });
+    state.messages.friend.items.push({
+      from: 'them',
+      time: formatTime(state.time),
+      text: verifiedMerchant
+        ? '啱啱散会，见到你经店铺正式单付咗HK$760。我已经转返俾你，多谢你帮手。'
+        : '我啱啱散会，HK$760已经转返俾你，多谢你帮手。'
+    });
+    state.notifications.unshift({
+      id: `n-friend-repaid-${Date.now()}`,
+      app: 'bank',
+      title: 'Mandy',
+      body: 'FPS 转入 HK$760.00',
+      time: formatTime(state.time),
+      unread: true,
+      target: 'thread-friend'
+    });
+    addHistory(verifiedMerchant ? 'friend-verified-help-complete' : 'friend-direct-help-complete', verifiedMerchant
+      ? '核对本人和店铺订单后向商户垫付HK$760；Mandy随后归还垫款'
+      : '未完成店铺核对便垫付HK$760；这次请求恰好来自本人，Mandy随后归还垫款');
+  }
+
+  function payVerifiedFriendInvoice() {
+    const steps = state.taskState.friend.steps;
+    if (steps.paid) return showToast('这笔模拟转账已经处理');
+    if (state.hijackedFriendVariant !== 'real' || !steps.originalNumberCalled || !steps.mandyConfirmed || !steps.shopOrderMatched) {
+      showToast('当前没有可支付的商户账单');
+      return;
+    }
+    steps.paid = true;
+    steps.merchantInvoicePaid = true;
+    steps.resolved = true;
+    state.taskState.friend.status = 'done';
+    state.balance -= 760;
+    state.transactions.unshift({ title: 'BLUE PEAK PRINTING LTD', time: `今天 ${formatTime(state.time)}`, amount: -760 });
+    addHistory('friend-merchant-invoice-paid', '通过银行向Blue Peak Printing商户账单BP-8147支付HK$760');
+    advanceTime(3);
+    settleFriendAdvance(true);
+    saveState();
+    renderBank();
+    renderHome();
+    playSound('success');
+    showToast('商户账单已支付');
   }
 
   function renderCareerWorkspace() {
@@ -3430,11 +3650,20 @@
         ? '客服把你转给律师，律师再转给调查员；角色变多、文件变完整，并没有产生独立核实。'
         : '损失后出现了自称协助追款的人；掌握旧案资料仍不等于身份可信。')
       : '今天没有触发失款后的二次联络。';
-    const friendOutcome = state.taskState.friend.steps.originalNumberCalled
-      ? '你离开原聊天账号，从已保存号码联系Mandy；历史对话和熟悉语气没有被当成身份证明。'
-      : (state.taskState.friend.steps.paid
-        ? '你根据聊天账号里的旧记录和熟悉语气完成了垫付款，但没有从原号码核实。'
-        : (state.taskState.friend.steps.messageRead ? '你看过Mandy账号提出的垫付请求，暂时没有把它当成必须立刻完成的任务。' : '你今天没有打开Mandy的聊天。'));
+    const friendSteps = state.taskState.friend.steps;
+    const friendOutcome = friendSteps.merchantInvoicePaid && friendSteps.repaid
+      ? '你从旧号码联系Mandy，再向以前保存的印刷店核对订单编号、项目、金额和收款商户；你替朋友支付了真实商户账单，Mandy随后归还垫款。'
+      : (friendSteps.paid && state.hijackedFriendVariant === 'hijacked'
+        ? '你根据聊天账号里的旧记录和熟悉语气完成了垫付款；真正的Mandy及印刷店都没有这项请求。'
+        : (friendSteps.paid && friendSteps.repaid
+          ? '这次垫付请求确实来自Mandy，她随后归还了款项；不过你付款前没有完成本人和店铺订单的双重核对。'
+          : (friendSteps.shopCalled && !friendSteps.shopOrderMatched
+            ? '你联系了以前保存的印刷店号码；店铺找不到聊天中所说的新订单。'
+            : (friendSteps.mandyConfirmed
+              ? '你从旧号码确认请求确实来自Mandy，并取得订单编号；是否继续联系店铺和帮助付款由你决定。'
+              : (friendSteps.originalNumberCalled
+                ? '你离开原聊天账号，从已保存号码联系Mandy；本人否认垫付款请求。'
+                : (friendSteps.messageRead ? '你看过Mandy账号提出的垫付请求，暂时没有把它当成必须立刻完成的任务。' : '你今天没有打开Mandy的聊天。'))))));
     const governmentOutcome = state.taskState.government.steps.resolved
       ? '你从政府网站另行取得查询号码，并用来电者提供的案件编号查询；两通电话的画面都只显示未知号码。'
       : (state.taskState.government.steps.valuablesHandedOver
@@ -3700,6 +3929,7 @@
       case 'recovery-check-official': state.browserPage = 'adcc-advice'; saveState(); openApp('browser'); break;
       case 'recovery-save-official': state.taskState.recovery.steps.officialAdviceChecked = true; state.taskState.recovery.status = 'done'; addEvidence('recovery-official', '从官方防骗资讯确认追款机构不会要求转账、银行密码或保证金'); saveState(); showToast('查询结果已保存'); break;
       case 'friend-pay': payFriendRequest(); break;
+      case 'friend-pay-merchant': payVerifiedFriendInvoice(); break;
       case 'friend-call-original': callContact('contact-mandy'); break;
       case 'event-open-payment':
         state.browserPage = 'event-payment'; state.browserQuery = ''; saveState(); openApp('browser'); break;
@@ -3785,8 +4015,9 @@
       case 'government-confirm-transfer': completeGovernmentDeposit(); break;
       case 'government-confirm-valuables': completeGovernmentValuables(); break;
       case 'resume-call': resumeCall(); break;
-      case 'open-browser-page': state.browserPage = target.dataset.page; saveState(); renderBrowser(); break;
-      case 'browser-home': state.browserPage = 'home'; saveState(); renderBrowser(); break;
+      case 'open-browser-page': state.browserUrl = ''; state.browserUrlPage = ''; state.browserPage = target.dataset.page; saveState(); renderBrowser(); break;
+      case 'open-simulated-url': openSimulatedUrl(target.dataset.url || ''); break;
+      case 'browser-home': state.browserUrl = ''; state.browserUrlPage = ''; state.browserPage = 'home'; saveState(); renderBrowser(); break;
       case 'open-mail-app': state.browserPage = 'home'; saveState(); openApp('mail', 'mail-parcel'); break;
       case 'save-official-tracking':
         addEvidence('official-tracking', '从自行打开的邮政入口确认送达机构收发点');
@@ -3919,6 +4150,8 @@
         const input = $('browserQuery');
         const query = input ? input.value.trim().slice(0, 80) : '';
         state.browserQuery = query;
+        state.browserUrl = '';
+        state.browserUrlPage = '';
         state.browserPage = 'home';
         if (query) {
           state.investigationQueries = [...state.investigationQueries.filter((item) => item.query !== query), { query, time: formatTime(state.time) }].slice(-12);

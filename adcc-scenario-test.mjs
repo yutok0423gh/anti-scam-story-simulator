@@ -44,6 +44,18 @@ async function click(selector) {
   await wait(100);
 }
 
+async function callReply(text) {
+  const submitted = await evaluate(`(() => {
+    const input = document.querySelector('#callReplyInput');
+    if (!input || !input.form) return false;
+    input.value = ${JSON.stringify(text)};
+    input.form.requestSubmit();
+    return true;
+  })()`);
+  if (!submitted) throw new Error('Call reply input missing');
+  await wait(150);
+}
+
 async function capture(name) {
   if (!screenshotDir) return;
   mkdirSync(screenshotDir, { recursive: true });
@@ -97,7 +109,7 @@ await click('#systemHome');
 await evaluate('window.__adccErrors=[]; window.addEventListener("error", event => window.__adccErrors.push(event.error?.stack || event.message))');
 await click('#appGrid [data-open-app="mail"]');
 await click('[data-action="open-mail"][data-id="mail-career"]');
-await click('[data-action="career-open-workspace"]');
+await click('[data-action="open-simulated-url"][data-url*="northbridge-projects.example"]');
 await click('[data-action="career-submit-profile"]');
 await click('[data-action="career-pay-trial"]');
 assert(await evaluate('document.body.textContent.includes("HK$2,400")'), 'Trust-building escalation did not appear');
@@ -129,6 +141,15 @@ assert(state.moneyLost === 2700, 'Secondary recovery loss was not recorded');
 assert(state.privacyExposure >= 3, 'Scenario data exposure was not recorded');
 
 await click('#systemHome');
+await command('Page.navigate', { url: `${base}/phone-prototype.html?adcc-friend=${Date.now()}` });
+await wait(500);
+await evaluate(`(() => {
+  const saved = JSON.parse(localStorage.getItem('polyu_simulator_phone_v1'));
+  saved.hijackedFriendVariant = 'real';
+  localStorage.setItem('polyu_simulator_phone_v1', JSON.stringify(saved));
+})()`);
+await command('Page.reload');
+await wait(500);
 await click('#appDock [data-open-app="messages"]');
 await click('[data-action="open-thread"][data-id="thread-friend"]');
 await capture('friend-account-request');
@@ -136,8 +157,65 @@ assert(await evaluate('document.querySelector("[data-action=friend-call-original
 await click('#systemHome');
 await click('#appDock [data-open-app="contacts"]');
 await click('[data-action="call-contact"][data-id="contact-mandy"]');
+await wait(1650);
+assert(await evaluate('document.body.textContent.includes("未知号码")'), 'Saved friend call is labelled differently from other calls');
+await callReply('我想问今朝聊天账号的印刷垫付');
+await capture('friend-real-original-call');
+await click('[data-action="end-call"]');
+await click('[data-action="call-contact"][data-id="contact-printshop"]');
+await wait(1650);
+assert(await evaluate('document.body.textContent.includes("未知号码")'), 'Saved shop call is labelled differently from other calls');
+await callReply('我想查BP-8147蓝色poster订单');
+await capture('friend-real-shop-call');
+await click('[data-action="end-call"]');
 state = await evaluate('JSON.parse(localStorage.getItem("polyu_simulator_phone_v1"))');
 assert(state.taskState.friend.steps.originalNumberCalled, 'Independent call to the friend was not recorded');
-assert(state.evidence.some((item) => item.id === 'friend-original-number'), 'Friend verification evidence was not recorded');
+assert(state.taskState.friend.steps.mandyConfirmed, 'Real friend did not confirm the request through the saved number');
+assert(state.taskState.friend.steps.shopOrderMatched, 'Independent shop order did not match');
+await click('#systemHome');
+await click('#appDock [data-open-app="bank"]');
+assert(await evaluate('document.body.textContent.includes("BP-8147")'), 'Verified merchant invoice did not appear in the bank');
+await capture('friend-real-merchant-invoice');
+await click('[data-action="friend-pay-merchant"]');
+state = await evaluate('JSON.parse(localStorage.getItem("polyu_simulator_phone_v1"))');
+assert(state.taskState.friend.steps.merchantInvoicePaid, 'Verified merchant invoice was not paid');
+assert(state.taskState.friend.steps.repaid, 'Real friend did not repay the advance');
+assert(state.moneyLost === 2700, 'Helping a verified real friend was incorrectly counted as scam loss');
+assert(state.transactions.some((item) => item.title === 'BLUE PEAK PRINTING LTD' && item.amount === -760), 'Merchant payment transaction missing');
+assert(state.transactions.some((item) => item.title === 'FPS IN · MANDY' && item.amount === 760), 'Friend repayment transaction missing');
+
+await evaluate(`(() => {
+  const saved = JSON.parse(localStorage.getItem('polyu_simulator_phone_v1'));
+  saved.hijackedFriendVariant = 'hijacked';
+  saved.taskState.friend = {
+    status: 'pending',
+    steps: {
+      messageRead: true, requestSeen: true, originalNumberCalled: false,
+      mandyConfirmed: false, shopCalled: false, shopOrderMatched: false,
+      merchantInvoicePaid: false, repaid: false, paid: false, resolved: false
+    }
+  };
+  saved.transactions = saved.transactions.filter(item => !['BLUE PEAK PRINTING LTD', 'FPS IN · MANDY'].includes(item.title));
+  saved.balance = 6840;
+  localStorage.setItem('polyu_simulator_phone_v1', JSON.stringify(saved));
+})()`);
+await command('Page.reload');
+await wait(500);
+await click('#appDock [data-open-app="contacts"]');
+await click('[data-action="call-contact"][data-id="contact-mandy"]');
+await wait(1650);
+await callReply('我想问今朝聊天账号的印刷垫付');
+await click('[data-action="end-call"]');
+await click('[data-action="call-contact"][data-id="contact-printshop"]');
+await wait(1650);
+await callReply('我想查BP-8147蓝色poster订单');
+await click('[data-action="end-call"]');
+state = await evaluate('JSON.parse(localStorage.getItem("polyu_simulator_phone_v1"))');
+assert(state.taskState.friend.steps.resolved, 'Hijacked friend route did not resolve after two independent calls');
+assert(!state.taskState.friend.steps.mandyConfirmed, 'Hijacked account was incorrectly confirmed as the real friend');
+assert(!state.taskState.friend.steps.shopOrderMatched, 'Non-existent shop order was incorrectly matched');
+await click('#systemHome');
+await click('#appDock [data-open-app="bank"]');
+assert(await evaluate('document.querySelector("[data-action=friend-pay-merchant]") === null'), 'A merchant invoice appeared for the hijacked-account route');
 socket.close();
 console.log('ADCC scenario regression passed');
