@@ -525,7 +525,7 @@
     setText('simulationPill', ui('教学模拟 · 不使用真实账户'));
     setText('lockBriefLabel', english ? 'Today' : '今天');
     setText('lockBriefTitle', ui('两件事需要处理'));
-    setText('unlockLabel', english ? 'Swipe up to open' : '向上轻扫以打开');
+    setText('unlockLabel', english ? 'Tap to open' : '点按进入');
     setText('todayLabel', english ? 'TODAY' : 'TODAY');
     setText('todayTitle', ui('今日待办'));
     setText('homeTitle', ui('模拟器'));
@@ -1021,6 +1021,8 @@
     if (!unlockGesture.active || event.pointerId !== unlockGesture.pointerId) return;
     const pointerId = unlockGesture.pointerId;
     const now = event.timeStamp || performance.now();
+    const tapDistance = Math.hypot(event.clientX - unlockGesture.startX, event.clientY - unlockGesture.startY);
+    const tapped = !cancelled && !unlockGesture.direction && tapDistance <= 10;
     const freshVelocity = now - unlockGesture.lastTime <= 100 ? unlockGesture.velocity : 0;
     const succeeded = !cancelled && unlockGesture.direction === 'up' && (
       unlockGesture.distance >= unlockThreshold() ||
@@ -1032,7 +1034,7 @@
       try { els.unlockButton.releasePointerCapture(pointerId); } catch {}
     }
     event.preventDefault();
-    if (succeeded) finishUnlockGesture();
+    if (succeeded || tapped) finishUnlockGesture();
     else returnUnlockGesture();
   }
 
@@ -3864,7 +3866,9 @@
       if (unlockGesture.active && !unlockGesture.finishing) returnUnlockGesture();
     });
     els.unlockButton.addEventListener('click', (event) => {
-      if (event.detail === 0) unlock();
+      if (state.unlocked || unlockGesture.finishing) return;
+      if (unlockGesture.direction || unlockGesture.distance > 10) return;
+      unlock();
     });
     els.soundToggle.addEventListener('click', (event) => {
       event.stopPropagation();

@@ -101,7 +101,7 @@ await command('Page.enable');
 await command('Emulation.setDeviceMetricsOverride', { width: viewportWidth, height: viewportHeight, deviceScaleFactor: 1, mobile: viewportWidth <= 500 });
 await command('Page.navigate', { url: `${pageBase}/?preview=lock` });
 await wait(350);
-assert(await evaluate('document.querySelector("#unlockButton").textContent.includes("向上轻扫")'), 'iOS-style lock-screen affordance did not render');
+assert(await evaluate('document.querySelector("#unlockButton").textContent.includes("点按进入")'), 'Clickable lock-screen affordance did not render');
 await capture('simulator-ios-lock');
 
 let unlockPoint = await elementCenter('#unlockButton');
@@ -497,7 +497,11 @@ assert(await evaluate('document.querySelector(".review-overlay") !== null'), 'Da
 assert(await evaluate('document.querySelector(".review-overlay").textContent.includes("没有报名也不算任务失败")'), 'Review did not treat declining the event as a valid choice');
 
 await click('[data-action="reset-day"]');
-await click('#unlockButton');
+unlockPoint = await elementCenter('#unlockButton');
+await touchStart(unlockPoint);
+await touchEnd();
+await wait(420);
+assert(await evaluate('document.querySelector(".opening-sheet") !== null'), 'A real touch tap did not unlock the phone');
 await click('[data-action="start-day"]');
 await click('#appGrid [data-open-app="mail"]');
 await click('[data-action="open-mail"][data-id="mail-research"]');
@@ -518,7 +522,7 @@ await click('[data-action="event-open-payment"]');
 console.log(JSON.stringify({
   result: 'PASS',
   apps: ['phone', 'messages', 'mail', 'polyu', 'browser', 'contacts', 'bank', 'tasks', 'settings'],
-  flow: 'real swipe unlock and elastic return, opening brief, desktop to-do, free-form SMS and mail replies, sound control, language and region settings, PolyULife views, parcel verification, unknown caller, professor impersonation, event fee cross-check, day review'
+  flow: 'tap or swipe unlock and elastic return, opening brief, desktop to-do, free-form SMS and mail replies, sound control, language and region settings, PolyULife views, parcel verification, unknown caller, professor impersonation, event fee cross-check, day review'
 }));
 
 socket.close();
