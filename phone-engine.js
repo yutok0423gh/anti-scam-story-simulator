@@ -4,6 +4,9 @@
   const DATA = window.SIM_DATA;
   const STORAGE_KEY = 'polyu_simulator_phone_v1';
   const REQUIRED_TASK_IDS = ['parcel', 'contact'];
+  const DAY_END_MINUTES = 17 * 60 + 30;
+  const SIMULATED_MINUTE_MS = 5000;
+  const CLOCK_TICK_MS = 1000;
   const $ = (id) => document.getElementById(id);
   const els = {};
 
@@ -203,6 +206,7 @@
   let activeMailId = null;
   const pendingReplies = new Set();
   let unlockTransitionTimer = null;
+  let clockTimer = null;
   let unlockGesture = createUnlockGesture();
 
   function createUnlockGesture() {
@@ -257,6 +261,11 @@
         saved.mailTab = ['focused', 'other'].includes(saved.mailTab) ? saved.mailTab : 'focused';
         saved.mailUnreadOnly = saved.mailUnreadOnly === true;
         saved.mailTranslations = saved.mailTranslations || {};
+        saved.time = Number.isFinite(saved.time) ? Math.max(0, Math.min(DAY_END_MINUTES, saved.time)) : defaults.time;
+        saved.clockLastRealMs = Number.isFinite(saved.clockLastRealMs) ? saved.clockLastRealMs : Date.now();
+        saved.clockRemainderMs = Number.isFinite(saved.clockRemainderMs)
+          ? Math.max(0, Math.min(SIMULATED_MINUTE_MS - 1, saved.clockRemainderMs))
+          : 0;
         saved.recoveryScamTriggered = saved.recoveryScamTriggered === true;
         saved.consequences = { ...defaults.consequences, ...(saved.consequences || {}) };
         saved.hijackedFriendVariant = ['hijacked', 'real'].includes(saved.hijackedFriendVariant) ? saved.hijackedFriendVariant : defaults.hijackedFriendVariant;
@@ -536,6 +545,37 @@
     return match ? formatTime(Number(match[1]) * 60 + Number(match[2])) : ui(value);
   }
 
+  function timelineMinutes(value) {
+    const match = /^(\d{1,2}):(\d{2})$/.exec(String(value || ''));
+    if (!match) return null;
+    return Number(match[1]) * 60 + Number(match[2]);
+  }
+
+  function itemAvailable(item) {
+    const minutes = timelineMinutes(item?.time);
+    return minutes === null || minutes <= state.time;
+  }
+
+  function threadAvailable(thread) {
+    return itemAvailable(thread?.items?.[0]);
+  }
+
+  function availableNotifications() {
+    return state.notifications.filter(itemAvailable);
+  }
+
+  function availableThreads() {
+    return Object.values(state.messages).filter(threadAvailable);
+  }
+
+  function availableMails() {
+    return state.mails.filter(itemAvailable);
+  }
+
+  function availableCalls() {
+    return state.callLog.filter(itemAvailable);
+  }
+
   function applyLocale() {
     const english = state.language === 'en';
     document.documentElement.lang = english ? 'en' : 'zh-CN';
@@ -576,10 +616,31 @@
     return String(hours).padStart(2, '0') + ':' + minute;
   }
 
-  function advanceTime(minutes) {
-    state.time = Math.min(17 * 60 + 30, state.time + minutes);
+  function refreshTimeDrivenViews() {
+    renderLock();
+    renderHome();
+    if (state.currentApp === 'phone' && !callSession) renderPhone();
+    if (state.currentApp === 'messages' && !activeThreadKey) renderMessages();
+    if (state.currentApp === 'mail' && !activeMailId) renderMail();
+  }
+
+  function setSimulationTime(nextTime, options = {}) {
+    const previousTime = state.time;
+    state.time = Math.max(0, Math.min(DAY_END_MINUTES, Math.floor(nextTime)));
     updateClock();
-    saveState();
+    if (state.time > previousTime) {
+      const arrivals = state.notifications.filter((item) => {
+        const minutes = timelineMinutes(item.time);
+        return minutes !== null && minutes > previousTime && minutes <= state.time;
+      });
+      if (options.announce !== false && arrivals.length) playSound('notification');
+    }
+    if (options.refresh !== false) refreshTimeDrivenViews();
+    if (options.persist !== false) saveState();
+  }
+
+  function advanceTime(minutes) {
+    setSimulationTime(state.time + minutes);
   }
 
   function updateClock() {
@@ -597,6 +658,31 @@
 
   function addHistory(label, detail) {
     state.history.push({ label, detail, time: formatTime(state.time) });
+  }
+
+  function clockCanRun() {
+    return state.unlocked && state.openingBriefSeen && state.time < DAY_END_MINUTES;
+  }
+
+  function syncClockFromWall(now = Date.now(), refresh = true) {
+    const previousRealMs = Number.isFinite(state.clockLastRealMs) ? state.clockLastRealMs : now;
+    const elapsedMs = Math.max(0, now - previousRealMs);
+    state.clockLastRealMs = now;
+    if (!clockCanRun()) {
+      state.clockRemainderMs = 0;
+      return false;
+    }
+    const accumulatedMs = (state.clockRemainderMs || 0) + elapsedMs;
+    const elapsedMinutes = Math.floor(accumulatedMs / SIMULATED_MINUTE_MS);
+    state.clockRemainderMs = accumulatedMs % SIMULATED_MINUTE_MS;
+    if (!elapsedMinutes) return false;
+    setSimulationTime(state.time + elapsedMinutes, { refresh });
+    return true;
+  }
+
+  function startClock() {
+    if (clockTimer) window.clearInterval(clockTimer);
+    clockTimer = window.setInterval(() => syncClockFromWall(), CLOCK_TICK_MS);
   }
 
   function once(label, callback) {
@@ -796,10 +882,12 @@
 
   function markAppRead(appId) {
     state.notifications.forEach((item) => {
-      if (item.app === appId) item.unread = false;
+      if (item.app === appId && itemAvailable(item)) item.unread = false;
     });
     if (appId === 'mail') return;
-    if (appId === 'phone') state.callLog.forEach((call) => { call.unread = false; });
+    if (appId === 'phone') state.callLog.forEach((call) => {
+      if (itemAvailable(call)) call.unread = false;
+    });
   }
 
   function taskDoneCount() {
@@ -825,10 +913,10 @@
   }
 
   function appBadge(appId) {
-    let count = state.notifications.filter((item) => item.app === appId && item.unread).length;
-    if (appId === 'messages') count = Math.max(count, Object.values(state.messages).filter((thread) => thread.unread).length);
-    if (appId === 'mail') count = Math.max(count, state.mails.filter((mail) => mail.unread).length);
-    if (appId === 'phone') count = Math.max(count, state.callLog.filter((call) => call.unread).length);
+    let count = availableNotifications().filter((item) => item.app === appId && item.unread).length;
+    if (appId === 'messages') count = Math.max(count, availableThreads().filter((thread) => thread.unread).length);
+    if (appId === 'mail') count = Math.max(count, availableMails().filter((mail) => mail.unread).length);
+    if (appId === 'phone') count = Math.max(count, availableCalls().filter((call) => call.unread).length);
     return count;
   }
 
@@ -844,7 +932,10 @@
   }
 
   function renderLock() {
-    els.lockNotifications.innerHTML = state.notifications.slice(0, 3).map((item) => {
+    const notifications = availableNotifications().slice().sort((a, b) => {
+      return (timelineMinutes(b.time) ?? -1) - (timelineMinutes(a.time) ?? -1);
+    }).slice(0, 3);
+    els.lockNotifications.innerHTML = notifications.map((item) => {
       const app = DATA.apps[item.app];
       return `
         <button class="lock-notification" type="button" data-notification="${item.id}" data-open-app="${item.app}" data-target="${item.target || ''}" style="--app-color:${app.color}">
@@ -1064,6 +1155,7 @@
     ensureAudio();
     if (withSound) playSound('unlock');
     state.unlocked = true;
+    state.clockLastRealMs = Date.now();
     saveState();
     renderHome();
     showScreen('homeScreen');
@@ -1171,7 +1263,7 @@
         </div>
         ${keypad ? renderPhoneKeypad() : `
           <div class="list-card phone-recents">
-            ${state.callLog.map((call) => `
+            ${availableCalls().map((call) => `
               <button class="list-row" type="button" data-action="call-number" data-id="${call.id}" data-number="${esc(call.number)}">
                 <span class="mini-icon" style="--row-bg:${call.unread ? '#8b2435' : '#dde3e5'};--row-color:${call.unread ? '#fff' : '#4b5963'}">?</span>
                 <span class="list-copy"><strong>${esc(ui('未知号码'))}</strong><span>${esc(ui(call.direction))} · ${esc(call.number)}</span></span>
@@ -1234,14 +1326,18 @@
   function renderMessages(target) {
     if (target) {
       const targetKey = Object.keys(state.messages).find((key) => state.messages[key].id === target);
-      if (targetKey) return renderMessageThread(targetKey);
+      if (targetKey && threadAvailable(state.messages[targetKey])) return renderMessageThread(targetKey);
     }
     activeThreadKey = null;
     els.appContent.innerHTML = `
       <div class="app-pad">
         <span class="section-label">${esc(ui('信息'))}</span>
         <div class="list-card">
-          ${Object.values(state.messages).map((thread) => {
+          ${availableThreads().sort((a, b) => {
+            const aTime = timelineMinutes(a.items[a.items.length - 1]?.time) ?? -1;
+            const bTime = timelineMinutes(b.items[b.items.length - 1]?.time) ?? -1;
+            return bTime - aTime;
+          }).map((thread) => {
             const latest = thread.items[thread.items.length - 1];
             return `
               <button class="list-row" type="button" data-action="open-thread" data-id="${thread.id}">
@@ -1256,7 +1352,7 @@
 
   function renderMessageThread(key) {
     const thread = state.messages[key];
-    if (!thread) return renderMessages();
+    if (!thread || !threadAvailable(thread)) return renderMessages();
     activeThreadKey = key;
     thread.unread = false;
     if (key === 'recovery') state.taskState.recovery.steps.messageRead = true;
@@ -1352,19 +1448,20 @@
   function renderMail(target) {
     if (target) {
       const mail = state.mails.find((item) => item.id === target);
-      if (mail) return renderMailDetail(mail);
+      if (mail && itemAvailable(mail)) return renderMailDetail(mail);
     }
     activeMailId = null;
     state.openMailComposerId = null;
     els.appTitle.textContent = appName('mail');
     els.appScreen.dataset.mailView = 'inbox';
     const activeTab = state.mailTab || 'focused';
-    const visibleMails = state.mails.filter((mail) => {
+    const timelineMails = availableMails();
+    const visibleMails = timelineMails.filter((mail) => {
       const inTab = activeTab === 'focused' ? mail.focused !== false : mail.focused === false;
       return inTab && (!state.mailUnreadOnly || mail.unread);
-    });
-    const focusedUnread = state.mails.filter((mail) => mail.focused !== false && mail.unread).length;
-    const otherUnread = state.mails.filter((mail) => mail.focused === false && mail.unread).length;
+    }).sort((a, b) => (timelineMinutes(b.time) ?? -1) - (timelineMinutes(a.time) ?? -1));
+    const focusedUnread = timelineMails.filter((mail) => mail.focused !== false && mail.unread).length;
+    const otherUnread = timelineMails.filter((mail) => mail.focused === false && mail.unread).length;
     els.appContent.innerHTML = `
       <section class="outlook-mail-shell">
         <header class="outlook-mail-header">
@@ -1463,6 +1560,7 @@
   }
 
   function renderMailDetail(mail) {
+    if (!itemAvailable(mail)) return renderMail();
     activeMailId = mail.id;
     mail.unread = false;
     if (mail.id === 'mail-parcel') state.taskState.parcel.steps.noticeRead = true;
@@ -4073,6 +4171,8 @@
       case 'reset-day': resetDay(); break;
       case 'start-day':
         state.openingBriefSeen = true;
+        state.clockLastRealMs = Date.now();
+        state.clockRemainderMs = 0;
         saveState();
         closeOverlay();
         if (state.currentApp) renderApp(state.currentApp);
@@ -4092,6 +4192,7 @@
     });
     document.addEventListener('visibilitychange', () => {
       if (document.hidden && unlockGesture.active && !unlockGesture.finishing) returnUnlockGesture();
+      syncClockFromWall();
     });
     els.unlockButton.addEventListener('lostpointercapture', () => {
       if (unlockGesture.active && !unlockGesture.finishing) returnUnlockGesture();
@@ -4229,10 +4330,14 @@
   }
 
   function init() {
-    const preview = new URLSearchParams(window.location.search).get('preview');
+    const searchParams = new URLSearchParams(window.location.search);
+    const preview = searchParams.get('preview');
     if (preview) {
       state = DATA.createInitialState();
       state.unlocked = preview !== 'lock';
+      state.openingBriefSeen = preview !== 'lock';
+      const previewTime = timelineMinutes(searchParams.get('simTime'));
+      if (previewTime !== null) state.time = Math.min(DAY_END_MINUTES, previewTime);
     }
     Object.assign(els, {
       statusTime: $('statusTime'), lockTime: $('lockTime'), phoneViewport: $('phoneViewport'), lockScreen: $('lockScreen'),
@@ -4246,6 +4351,7 @@
       systemBackLabel: $('systemBackLabel'), systemHomeLabel: $('systemHomeLabel')
     });
     bindEvents();
+    syncClockFromWall(Date.now(), false);
     renderLock();
     renderHome();
     syncSoundButton();
@@ -4257,6 +4363,7 @@
     } else {
       showScreen('lockScreen');
     }
+    startClock();
   }
 
   document.addEventListener('DOMContentLoaded', init);

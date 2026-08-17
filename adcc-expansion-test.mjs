@@ -41,7 +41,7 @@ async function waitForSelector(selector, timeout = 3000) {
   }
   throw new Error(`Timed out waiting for ${selector}`);
 }
-async function openApp(id) { await click(`[data-open-app="${id}"]`); }
+async function openApp(id) { await click(`#appGrid [data-open-app="${id}"], #appDock [data-open-app="${id}"]`); }
 async function openThread(id) { await openApp('messages'); await click(`[data-action="open-thread"][data-id="${id}"]`); }
 async function search(query) {
   if (await evaluate('Boolean(document.querySelector("#systemHome:not(.is-hidden)"))')) await click('#systemHome');
@@ -50,7 +50,7 @@ async function search(query) {
   await wait(120);
 }
 async function reset() {
-  await command('Page.navigate', { url: `${base}/phone-prototype.html?preview=home&expansion-test=${Date.now()}` });
+  await command('Page.navigate', { url: `${base}/phone-prototype.html?preview=home&simTime=10:00&expansion-test=${Date.now()}` });
   await wait(600);
   await evaluate('localStorage.clear()');
   await command('Page.reload', { ignoreCache: true });

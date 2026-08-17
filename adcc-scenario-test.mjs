@@ -70,7 +70,7 @@ function assert(value, message) {
 await command('Runtime.enable');
 await command('Page.enable');
 await command('Emulation.setDeviceMetricsOverride', { width: 393, height: 852, deviceScaleFactor: 1, mobile: true });
-await command('Page.navigate', { url: `${base}/phone-prototype.html?preview=home&adcc-test=${Date.now()}` });
+await command('Page.navigate', { url: `${base}/phone-prototype.html?preview=home&simTime=10:00&adcc-test=${Date.now()}` });
 await wait(500);
 await evaluate('localStorage.removeItem("polyu_simulator_phone_v1")');
 await command('Page.reload');

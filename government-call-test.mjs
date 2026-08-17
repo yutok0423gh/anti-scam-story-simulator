@@ -55,7 +55,7 @@ await command('Page.enable');
 await command('Emulation.setDeviceMetricsOverride', { width: 393, height: 852, deviceScaleFactor: 1, mobile: true });
 
 async function reset() {
-  await command('Page.navigate', { url: `${base}/phone-prototype.html?preview=home&government-test=${Date.now()}` });
+  await command('Page.navigate', { url: `${base}/phone-prototype.html?preview=home&simTime=10:00&government-test=${Date.now()}` });
   await wait(450);
   await evaluate('localStorage.removeItem("polyu_simulator_phone_v1")');
   await command('Page.reload');

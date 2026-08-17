@@ -80,7 +80,7 @@ async function openMailUrl(mailId, urlFragment, expectedPage) {
 await command('Runtime.enable');
 await command('Page.enable');
 await command('Emulation.setDeviceMetricsOverride', { width: 393, height: 852, deviceScaleFactor: 1, mobile: true });
-await command('Page.navigate', { url: `${base}/phone-prototype.html?preview=home&link-test=${Date.now()}` });
+await command('Page.navigate', { url: `${base}/phone-prototype.html?preview=home&simTime=10:00&link-test=${Date.now()}` });
 await wait(450);
 
 await openMessageUrl('thread-parcel', 'parcel-update.example', 'fake-post');

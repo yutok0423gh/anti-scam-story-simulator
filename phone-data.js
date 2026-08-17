@@ -59,6 +59,8 @@
       mailUnreadOnly: false,
       mailTranslations: {},
       time: 510,
+      clockLastRealMs: Date.now(),
+      clockRemainderMs: 0,
       balance: 6840,
       cardFrozen: false,
       privacyExposure: 0,

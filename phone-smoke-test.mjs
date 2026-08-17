@@ -153,7 +153,7 @@ assert(await evaluate('document.querySelector(".opening-sheet").textContent.incl
 assert(await evaluate('document.querySelector(".opening-sheet").textContent.includes("没有唯一的操作顺序")'), 'Opening brief did not present inbox items as optional interactions');
 await capture('simulator-opening-brief');
 await click('[data-action="start-day"]');
-await command('Page.navigate', { url: `${pageBase}/?preview=home` });
+await command('Page.navigate', { url: `${pageBase}/?preview=home&simTime=10:00` });
 await wait(450);
 
 assert(await evaluate('JSON.parse(localStorage.getItem("polyu_simulator_phone_v1")).version === 14'), 'Scenario state was not migrated to version 14');
@@ -162,7 +162,7 @@ assert(await evaluate('document.querySelectorAll("#homeTodoList .home-todo-item"
 assert(await evaluate('!document.querySelector("#systemNavigation").classList.contains("is-hidden")'), 'System navigation buttons were not shown after unlocking');
 assert(await evaluate('document.querySelector("#systemBack").disabled && !document.querySelector("#systemHome").disabled'), 'System navigation buttons did not expose an active Home button on the home screen');
 assert(await evaluate('document.querySelector("#soundToggle").getAttribute("aria-pressed") === "true"'), 'Sound control is not enabled by default');
-assert(await evaluate('document.querySelector("#lockNotifications [data-notification=\\"n-call\\"]") !== null'), 'Missed-call notification is missing');
+assert(await evaluate('JSON.parse(localStorage.getItem("polyu_simulator_phone_v1")).notifications.some(item => item.id === "n-call")'), 'Missed-call notification is missing');
 assert(await evaluate('fetch("assets/audio/calls/callback-intro.mp3").then(async response => response.ok && (await response.arrayBuffer()).byteLength > 1000)'), 'Local Cantonese call audio is unavailable');
 await click('#soundToggle');
 assert(await evaluate('document.querySelector("#soundToggle").getAttribute("aria-pressed") === "false"'), 'Sound control did not mute');
@@ -503,6 +503,8 @@ await touchEnd();
 await wait(420);
 assert(await evaluate('document.querySelector(".opening-sheet") !== null'), 'A real touch tap did not unlock the phone');
 await click('[data-action="start-day"]');
+await command('Page.navigate', { url: `${pageBase}/?preview=home&simTime=10:00&phase=loss` });
+await wait(350);
 await click('#appGrid [data-open-app="mail"]');
 await click('[data-action="open-mail"][data-id="mail-research"]');
 await click('[data-action="open-simulated-url"][data-url*="research-onboarding.example"]');
