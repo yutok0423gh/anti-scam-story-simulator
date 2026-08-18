@@ -77,7 +77,7 @@ await command('Page.reload');
 await wait(500);
 
 await click('#appDock [data-open-app="messages"]');
-assert(await evaluate('JSON.parse(localStorage.getItem("polyu_simulator_phone_v1")).version === 14'), 'State version 14 missing');
+assert(await evaluate('JSON.parse(localStorage.getItem("polyu_simulator_phone_v1")).version === 17'), 'State version 17 missing');
 assert(await evaluate('Boolean(JSON.parse(localStorage.getItem("polyu_simulator_phone_v1")).messages.health)'), 'Health decoy missing');
 assert(await evaluate('JSON.parse(localStorage.getItem("polyu_simulator_phone_v1")).mails.some(mail => mail.id === "mail-career")'), 'Career mail missing');
 
@@ -94,7 +94,7 @@ await evaluate(`(() => {
 await command('Page.reload');
 await wait(450);
 await click('#appDock [data-open-app="messages"]');
-assert(await evaluate('JSON.parse(localStorage.getItem("polyu_simulator_phone_v1")).version === 14'), 'Version 11 state did not migrate');
+assert(await evaluate('JSON.parse(localStorage.getItem("polyu_simulator_phone_v1")).version === 17'), 'Version 11 state did not migrate');
 assert(await evaluate('Boolean(JSON.parse(localStorage.getItem("polyu_simulator_phone_v1")).taskState.career)'), 'Career state was not added during migration');
 assert(await evaluate('Boolean(JSON.parse(localStorage.getItem("polyu_simulator_phone_v1")).messages.health)'), 'Health thread was not added during migration');
 assert(await evaluate('JSON.parse(localStorage.getItem("polyu_simulator_phone_v1")).mails.some(mail => mail.id === "mail-career")'), 'Career mail was not added during migration');
@@ -143,13 +143,15 @@ assert(state.privacyExposure >= 3, 'Scenario data exposure was not recorded');
 await click('#systemHome');
 await command('Page.navigate', { url: `${base}/phone-prototype.html?adcc-friend=${Date.now()}` });
 await wait(500);
-await evaluate(`(() => {
+const friendVariantInjection = await command('Page.addScriptToEvaluateOnNewDocument', { source: `(() => {
   const saved = JSON.parse(localStorage.getItem('polyu_simulator_phone_v1'));
+  if (!saved) return;
   saved.hijackedFriendVariant = 'real';
   localStorage.setItem('polyu_simulator_phone_v1', JSON.stringify(saved));
-})()`);
+})()` });
 await command('Page.reload');
 await wait(500);
+await command('Page.removeScriptToEvaluateOnNewDocument', { identifier: friendVariantInjection.identifier });
 await click('#appDock [data-open-app="messages"]');
 await click('[data-action="open-thread"][data-id="thread-friend"]');
 await capture('friend-account-request');
@@ -184,8 +186,9 @@ assert(state.moneyLost === 2700, 'Helping a verified real friend was incorrectly
 assert(state.transactions.some((item) => item.title === 'BLUE PEAK PRINTING LTD' && item.amount === -760), 'Merchant payment transaction missing');
 assert(state.transactions.some((item) => item.title === 'FPS IN · MANDY' && item.amount === 760), 'Friend repayment transaction missing');
 
-await evaluate(`(() => {
+const hijackedVariantInjection = await command('Page.addScriptToEvaluateOnNewDocument', { source: `(() => {
   const saved = JSON.parse(localStorage.getItem('polyu_simulator_phone_v1'));
+  if (!saved) return;
   saved.hijackedFriendVariant = 'hijacked';
   saved.taskState.friend = {
     status: 'pending',
@@ -196,11 +199,12 @@ await evaluate(`(() => {
     }
   };
   saved.transactions = saved.transactions.filter(item => !['BLUE PEAK PRINTING LTD', 'FPS IN · MANDY'].includes(item.title));
-  saved.balance = 6840;
+  saved.balance = 3000;
   localStorage.setItem('polyu_simulator_phone_v1', JSON.stringify(saved));
-})()`);
+})()` });
 await command('Page.reload');
 await wait(500);
+await command('Page.removeScriptToEvaluateOnNewDocument', { identifier: hijackedVariantInjection.identifier });
 await click('#appDock [data-open-app="contacts"]');
 await click('[data-action="call-contact"][data-id="contact-mandy"]');
 await wait(1650);

@@ -6,7 +6,29 @@
   const REQUIRED_TASK_IDS = ['parcel', 'contact'];
   const DAY_END_MINUTES = 17 * 60 + 30;
   const SIMULATED_MINUTE_MS = 5000;
-  const CLOCK_TICK_MS = 1000;
+  const CLOCK_TICK_MS = 500;
+  const TIME_SPEEDS = [0, 1, 2, 4];
+  const PROFILE_FOCUS_IDS = ['research', 'campus', 'career', 'community'];
+  const RESEARCH_SESSION_OPEN = 14 * 60 + 15;
+  const RESEARCH_SESSION_CLOSE = 14 * 60 + 45;
+  const TIMELINE_INTERRUPTS = [
+    {
+      id: 'class-start-1030', time: 10 * 60 + 30,
+      titleZh: '课程开始', titleEn: 'Class',
+      detailZh: 'COMP2033 已在 N003 开始。', detailEn: 'COMP2033 has started in N003.'
+    },
+    {
+      id: 'hall-closed-1700', time: 17 * 60,
+      titleZh: '服务时间结束', titleEn: 'Reception closed',
+      detailZh: '宿舍收发室今天已经停止办理领取。', detailEn: 'Hall Reception has stopped collections for today.',
+      when: (currentState) => currentState.taskState?.parcel?.status !== 'done'
+    },
+    {
+      id: 'day-ended-1730', time: DAY_END_MINUTES,
+      titleZh: '今天结束', titleEn: 'Day ended',
+      detailZh: '仍可查看手机；今天已经关闭的服务不能继续办理。', detailEn: 'You can keep using the phone, but services closed for today are unavailable.'
+    }
+  ];
   const $ = (id) => document.getElementById(id);
   const els = {};
 
@@ -87,7 +109,7 @@
     '校园服务': 'Campus services', '场地、住宿、缴费与个人事务更新': 'Updates about rooms, halls, payments, and personal administration',
     '这些来信有些与你有关，有些可以忽略。看清来源和内容后，再决定是否行动。': 'Some messages will matter to you; others can be ignored. Check the source and content before deciding what to do.',
     '进入手机': 'Enter the phone', '必须处理的事项': 'Required items', '独立来源': 'Independent sources', '资料暴露': 'Data shared', '金钱损失': 'Financial loss',
-    '未接来电': 'Missed call', '呼出': 'Outgoing', '正在回拨': 'Calling back', '已回拨': 'Called back', '正在拨号': 'Calling', '已接通': 'Connected', '昨天': 'Yesterday', '保存': 'Saved',
+    '未接来电': 'Missed call', '未接视频来电': 'Missed video call', '呼出': 'Outgoing', '正在回拨': 'Calling back', '已回拨': 'Called back', '正在拨号': 'Calling', '已接通': 'Connected', '昨天': 'Yesterday', '保存': 'Saved',
     '可用余额': 'Available balance', '选定': 'Selected', '界面语言': 'Interface language', '地区格式': 'Regional formats',
     '从 PolyULife 确认创新之夜日期、地点及官方费用 HK$60': 'Confirmed the date, venue, and official HK$60 fee in PolyULife',
     '对比邮件 HK$180 私人FPS与官方 HK$60 应用内付款': 'Compared the email’s HK$180 personal FPS request with the official HK$60 in-app payment',
@@ -204,6 +226,7 @@
   let mailMenuReturnFocus = null;
   let activeThreadKey = null;
   let activeMailId = null;
+  let settingsPage = 'root';
   const pendingReplies = new Set();
   let unlockTransitionTimer = null;
   let clockTimer = null;
@@ -228,15 +251,16 @@
   function loadState() {
     try {
       const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
-      if (saved && [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14].includes(saved.version)) {
+      if (saved && [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17].includes(saved.version)) {
         const defaults = DATA.createInitialState();
         const savedVersion = saved.version;
-        saved.version = 14;
+        saved.version = 17;
         saved.contactVariant = ['real', 'fake', 'grey'].includes(saved.contactVariant)
           ? saved.contactVariant
           : (saved.contactIsReal ? 'real' : 'fake');
         saved.contactIsReal = saved.contactVariant === 'real';
         saved.soundEnabled = saved.soundEnabled !== false;
+        saved.callVoiceLanguage = ['yue', 'zh-CN', 'en'].includes(saved.callVoiceLanguage) ? saved.callVoiceLanguage : 'yue';
         saved.openingBriefSeen = saved.openingBriefSeen === true;
         saved.language = saved.language === 'en' ? 'en' : 'zh-CN';
         saved.region = ['HK', 'CN', 'US', 'GB'].includes(saved.region) ? saved.region : 'HK';
@@ -262,12 +286,29 @@
         saved.mailUnreadOnly = saved.mailUnreadOnly === true;
         saved.mailTranslations = saved.mailTranslations || {};
         saved.time = Number.isFinite(saved.time) ? Math.max(0, Math.min(DAY_END_MINUTES, saved.time)) : defaults.time;
-        saved.clockLastRealMs = Number.isFinite(saved.clockLastRealMs) ? saved.clockLastRealMs : Date.now();
-        saved.clockRemainderMs = Number.isFinite(saved.clockRemainderMs)
-          ? Math.max(0, Math.min(SIMULATED_MINUTE_MS - 1, saved.clockRemainderMs))
-          : 0;
+        saved.timeSpeed = 0;
+        saved.clockLastRealMs = Date.now();
+        saved.clockRemainderMs = 0;
+        saved.timelineHandled = Array.isArray(saved.timelineHandled) ? saved.timelineHandled : [];
+        saved.timelineLastEvent = saved.timelineLastEvent && typeof saved.timelineLastEvent === 'object'
+          ? saved.timelineLastEvent
+          : null;
         saved.recoveryScamTriggered = saved.recoveryScamTriggered === true;
         saved.consequences = { ...defaults.consequences, ...(saved.consequences || {}) };
+        const previousProfile = saved.profile && typeof saved.profile === 'object' ? saved.profile : {};
+        const previousFocusAreas = Array.isArray(previousProfile.focusAreas)
+          ? previousProfile.focusAreas.filter((id, index, values) => PROFILE_FOCUS_IDS.includes(id) && values.indexOf(id) === index).slice(0, 2)
+          : [];
+        saved.profile = {
+          ...defaults.profile,
+          ...previousProfile,
+          startingBalance: Number.isFinite(previousProfile.startingBalance) ? previousProfile.startingBalance : saved.balance,
+          growth: Number.isFinite(previousProfile.growth) ? Math.max(0, Math.round(previousProfile.growth)) : 0,
+          growthTarget: 30,
+          focusAreas: previousFocusAreas,
+          focusLocked: previousProfile.focusLocked === true,
+          growthLedger: Array.isArray(previousProfile.growthLedger) ? previousProfile.growthLedger.slice(0, 20) : []
+        };
         saved.hijackedFriendVariant = ['hijacked', 'real'].includes(saved.hijackedFriendVariant) ? saved.hijackedFriendVariant : defaults.hijackedFriendVariant;
         const savedCallJudgements = saved.callJudgements && typeof saved.callJudgements === 'object'
           ? saved.callJudgements
@@ -425,14 +466,14 @@
     if (!cleanText) return;
     const utterance = new SpeechSynthesisUtterance(cleanText);
     const voices = window.speechSynthesis.getVoices();
-    const voice = voices.find((item) => /^yue(?:-|$)/i.test(item.lang))
-      || voices.find((item) => /^zh[-_]?hk$/i.test(item.lang));
-    if (!voice) {
-      if (notifyOnFailure) showToast('设备没有粤语声音，请使用通话中的预录语音');
-      return;
-    }
-    utterance.lang = voice.lang;
-    utterance.voice = voice;
+    const selectedLanguage = state.callVoiceLanguage || 'yue';
+    const voice = selectedLanguage === 'en'
+      ? (voices.find((item) => /^en[-_]?hk$/i.test(item.lang)) || voices.find((item) => /^en[-_]?gb$/i.test(item.lang)) || voices.find((item) => /^en(?:-|$)/i.test(item.lang)))
+      : selectedLanguage === 'zh-CN'
+        ? (voices.find((item) => /^zh[-_]?(cn|hans)/i.test(item.lang)) || voices.find((item) => /^cmn(?:-|$)/i.test(item.lang)))
+        : (voices.find((item) => /^yue(?:-|$)/i.test(item.lang)) || voices.find((item) => /^zh[-_]?hk$/i.test(item.lang)));
+    utterance.lang = voice?.lang || (selectedLanguage === 'en' ? 'en-GB' : (selectedLanguage === 'zh-CN' ? 'zh-CN' : 'yue-HK'));
+    if (voice) utterance.voice = voice;
     utterance.rate = 0.94;
     utterance.pitch = 0.98;
     utterance.volume = 0.95;
@@ -448,6 +489,10 @@
       return;
     }
     stopSpeech();
+    if ((state.callVoiceLanguage || 'yue') !== 'yue') {
+      speakCallerText(fallbackText, notifyOnFailure);
+      return;
+    }
     if (!audioId) {
       speakCallerText(fallbackText, notifyOnFailure);
       return;
@@ -540,6 +585,48 @@
     }).format(amount);
   }
 
+  function profileFocusOptions() {
+    return [
+      { id: 'research', mark: 'R', tone: 'violet', zh: '科研参与', en: 'Research', detailZh: '研究参与、学术项目与实验', detailEn: 'Studies, academic projects and experiments' },
+      { id: 'campus', mark: 'C', tone: 'blue', zh: '校园活动', en: 'Campus life', detailZh: '讲座、工作坊与学生组织', detailEn: 'Talks, workshops and student organisations' },
+      { id: 'career', mark: 'W', tone: 'orange', zh: '职业发展', en: 'Career', detailZh: '实习、兼职与工作机会', detailEn: 'Internships, part-time work and jobs' },
+      { id: 'community', mark: '人', tone: 'green', zh: '朋友与社群', en: 'Community', detailZh: '同学协作、互助与公益', detailEn: 'Collaboration, mutual help and volunteering' }
+    ];
+  }
+
+  function profileFocusLabel(id) {
+    const option = profileFocusOptions().find((item) => item.id === id);
+    return option ? localized(option.zh, option.en) : id;
+  }
+
+  function formatRemainingTime() {
+    const minutes = Math.max(0, DAY_END_MINUTES - state.time);
+    const hours = Math.floor(minutes / 60);
+    const remainder = minutes % 60;
+    if (state.language === 'en') return `${hours}h ${remainder}m`;
+    return `${hours}小时${remainder}分`;
+  }
+
+  function growthAward(id, basePoints, area, labelZh, labelEn) {
+    const profile = state.profile;
+    if (!profile || profile.growthLedger.some((item) => item.id === id)) return 0;
+    const focused = profile.focusAreas.includes(area);
+    const points = Math.round(basePoints * (focused ? 1.25 : 1));
+    profile.growth += points;
+    profile.focusLocked = true;
+    profile.growthLedger.unshift({
+      id,
+      area,
+      points,
+      focused,
+      labelZh,
+      labelEn,
+      time: formatTime(state.time)
+    });
+    profile.growthLedger = profile.growthLedger.slice(0, 20);
+    return points;
+  }
+
   function formatStoredTime(value) {
     const match = /^(\d{1,2}):(\d{2})$/.exec(String(value || ''));
     return match ? formatTime(Number(match[1]) * 60 + Number(match[2])) : ui(value);
@@ -622,25 +709,206 @@
     if (state.currentApp === 'phone' && !callSession) renderPhone();
     if (state.currentApp === 'messages' && !activeThreadKey) renderMessages();
     if (state.currentApp === 'mail' && !activeMailId) renderMail();
+    if (state.currentApp === 'polyu' && state.polyuPage === 'research-detail') renderPolyUResearchDetail();
+  }
+
+  function timelineInterruptAvailable(event) {
+    return !state.timelineHandled.includes(event.id) && (!event.when || event.when(state));
+  }
+
+  function timelineInterruptsBetween(previousTime, nextTime) {
+    return TIMELINE_INTERRUPTS
+      .filter((event) => timelineInterruptAvailable(event) && event.time > previousTime && event.time <= nextTime)
+      .sort((a, b) => a.time - b.time);
+  }
+
+  function notificationIsImportant(item) {
+    return item?.priority === 'important';
+  }
+
+  function notificationTimelineEvent(item) {
+    return {
+      id: item.id,
+      time: timelineMinutes(item.time),
+      titleZh: `收到${DATA.apps[item.app]?.name || '手机'}通知`,
+      titleEn: `${appName(item.app)} notification received`,
+      detailZh: item.title,
+      detailEn: item.title,
+      priority: item.priority || 'normal'
+    };
+  }
+
+  function speedPausesForNotification(item, speed = state.timeSpeed) {
+    return speed === 1 || (speed === 2 && notificationIsImportant(item));
+  }
+
+  function speedPausesForInterrupt(event, speed = state.timeSpeed) {
+    if (event.id === 'day-ended-1730') return true;
+    return speed === 1 || speed === 2;
+  }
+
+  function timelinePausePointsBetween(previousTime, nextTime, speed = state.timeSpeed) {
+    const points = [];
+    state.notifications.forEach((item) => {
+      const time = timelineMinutes(item.time);
+      if (time !== null && time > previousTime && time <= nextTime && speedPausesForNotification(item, speed)) {
+        points.push(notificationTimelineEvent(item));
+      }
+    });
+    timelineInterruptsBetween(previousTime, nextTime).forEach((event) => {
+      if (speedPausesForInterrupt(event, speed)) points.push(event);
+    });
+    return points.sort((a, b) => a.time - b.time);
+  }
+
+  function rememberTimelineEvent(event) {
+    if (!event) return;
+    state.timelineLastEvent = {
+      id: event.id,
+      time: event.time,
+      titleZh: event.titleZh,
+      titleEn: event.titleEn,
+      detailZh: event.detailZh,
+      detailEn: event.detailEn
+    };
+  }
+
+  function processTimelineInterrupts(previousTime, nextTime) {
+    const reached = timelineInterruptsBetween(previousTime, nextTime);
+    if (!reached.length) return [];
+    reached.forEach((event) => {
+      if (!state.timelineHandled.includes(event.id)) state.timelineHandled.push(event.id);
+    });
+    rememberTimelineEvent(reached[reached.length - 1]);
+    playSound('notification');
+    return reached;
+  }
+
+  function timelineStatusText() {
+    const event = state.timelineLastEvent;
+    if (event && event.time === state.time) {
+      const title = state.language === 'en' ? event.titleEn : event.titleZh;
+      const detail = state.language === 'en' ? event.detailEn : event.detailZh;
+      return [title, detail].filter(Boolean).join(' · ');
+    }
+    if (state.time >= DAY_END_MINUTES) {
+      return localized('今天已结束，手机仍可查看', 'The day has ended; the phone remains available');
+    }
+    if (!state.timeSpeed) return localized('时间已暂停', 'Time paused');
+    if (state.timeSpeed === 1) return localized('1× · 任何新通知都会暂停', '1× · Pauses for every new notification');
+    if (state.timeSpeed === 2) return localized('2× · 只为重要通知暂停', '2× · Pauses for important notifications');
+    return localized('4× · 通知不会暂停时间', '4× · Notifications do not pause time');
+  }
+
+  function renderTimeControls() {
+    if (!els.timelineController) return;
+    const controlsEnabled = state.unlocked && state.openingBriefSeen && state.time < DAY_END_MINUTES;
+    const currentEvent = state.timelineLastEvent && state.timelineLastEvent.time === state.time ? state.timelineLastEvent : null;
+    els.timelineTime.textContent = formatTime(state.time);
+    els.timelineLabel.textContent = currentEvent
+      ? (state.language === 'en' ? currentEvent.titleEn : currentEvent.titleZh)
+      : 'SIM TIME';
+    els.timelineNextLabel.textContent = localized('下一事件', 'Next event');
+    els.timelineStatus.textContent = timelineStatusText();
+    els.timelineController.style.setProperty('--timeline-progress', `${Math.max(0, Math.min(100, (state.time - 510) / (DAY_END_MINUTES - 510) * 100))}%`);
+    els.timelineController.classList.toggle('is-running', state.timeSpeed > 0);
+    els.timelineController.classList.toggle('has-event', Boolean(currentEvent));
+    els.timelineController.querySelectorAll('[data-action="timeline-speed"]').forEach((button) => {
+      const speed = Number(button.dataset.speed);
+      const active = speed === state.timeSpeed;
+      button.setAttribute('aria-pressed', String(active));
+      button.disabled = !controlsEnabled && speed !== 0;
+      if (speed === 0) button.setAttribute('aria-label', localized('暂停时间', 'Pause time'));
+      else if (speed === 1) button.setAttribute('aria-label', localized('一倍速，任何新通知都会暂停', 'One times speed; pause for every new notification'));
+      else if (speed === 2) button.setAttribute('aria-label', localized('二倍速，只为重要通知暂停', 'Two times speed; pause for important notifications'));
+      else button.setAttribute('aria-label', localized('四倍速，通知不会暂停时间', 'Four times speed; notifications do not pause time'));
+    });
+    const nextButton = els.timelineController.querySelector('[data-action="timeline-next"]');
+    if (nextButton) {
+      nextButton.disabled = !controlsEnabled;
+      nextButton.setAttribute('aria-label', localized('跳到下一事件', 'Jump to next event'));
+    }
+  }
+
+  function setTimeSpeed(nextSpeed) {
+    const speed = TIME_SPEEDS.includes(Number(nextSpeed)) ? Number(nextSpeed) : 0;
+    if (state.time >= DAY_END_MINUTES) state.timeSpeed = 0;
+    else state.timeSpeed = speed;
+    state.timelineLastEvent = null;
+    state.clockLastRealMs = Date.now();
+    state.clockRemainderMs = 0;
+    saveState();
+    renderTimeControls();
+  }
+
+  function nextTimelinePoint() {
+    const candidates = [];
+    state.notifications.forEach((item) => {
+      const time = timelineMinutes(item.time);
+      if (time !== null && time > state.time && time <= DAY_END_MINUTES) {
+        candidates.push(notificationTimelineEvent(item));
+      }
+    });
+    TIMELINE_INTERRUPTS.forEach((event) => {
+      if (event.time > state.time && timelineInterruptAvailable(event)) candidates.push(event);
+    });
+    return candidates.sort((a, b) => a.time - b.time)[0] || null;
+  }
+
+  function jumpToNextTimelinePoint() {
+    if (!state.unlocked || !state.openingBriefSeen) return;
+    const next = nextTimelinePoint();
+    if (!next) {
+      setTimeSpeed(0);
+      return;
+    }
+    state.timeSpeed = 0;
+    state.clockRemainderMs = 0;
+    setSimulationTime(next.time, { source: 'jump', stopForInterrupts: false });
+    if (!state.timelineLastEvent || state.timelineLastEvent.time !== state.time) rememberTimelineEvent(next);
+    saveState();
+    renderTimeControls();
   }
 
   function setSimulationTime(nextTime, options = {}) {
     const previousTime = state.time;
-    state.time = Math.max(0, Math.min(DAY_END_MINUTES, Math.floor(nextTime)));
+    let targetTime = Math.max(0, Math.min(DAY_END_MINUTES, Math.floor(nextTime)));
+    let pausePoint = null;
+    if (options.stopForInterrupts !== false && options.source === 'clock') {
+      pausePoint = timelinePausePointsBetween(previousTime, targetTime)[0] || null;
+      if (pausePoint) targetTime = pausePoint.time;
+    }
+    state.time = targetTime;
     updateClock();
+    let arrivals = [];
     if (state.time > previousTime) {
-      const arrivals = state.notifications.filter((item) => {
+      arrivals = state.notifications.filter((item) => {
         const minutes = timelineMinutes(item.time);
         return minutes !== null && minutes > previousTime && minutes <= state.time;
       });
       if (options.announce !== false && arrivals.length) playSound('notification');
+      processTimelineInterrupts(previousTime, state.time);
+      if (pausePoint) {
+        state.timeSpeed = 0;
+        state.clockRemainderMs = 0;
+        rememberTimelineEvent(pausePoint);
+      }
+      if (options.source === 'jump' && arrivals.length && (!state.timelineLastEvent || state.timelineLastEvent.time !== state.time)) {
+        const item = arrivals[arrivals.length - 1];
+        rememberTimelineEvent({ ...notificationTimelineEvent(item), time: state.time });
+      }
+    }
+    if (state.time >= DAY_END_MINUTES) {
+      state.timeSpeed = 0;
+      state.clockRemainderMs = 0;
     }
     if (options.refresh !== false) refreshTimeDrivenViews();
     if (options.persist !== false) saveState();
+    renderTimeControls();
   }
 
   function advanceTime(minutes) {
-    setSimulationTime(state.time + minutes);
+    setSimulationTime(state.time + minutes, { source: 'action', stopForInterrupts: false });
   }
 
   function updateClock() {
@@ -661,7 +929,7 @@
   }
 
   function clockCanRun() {
-    return state.unlocked && state.openingBriefSeen && state.time < DAY_END_MINUTES;
+    return state.unlocked && state.openingBriefSeen && state.timeSpeed > 0 && state.time < DAY_END_MINUTES;
   }
 
   function syncClockFromWall(now = Date.now(), refresh = true) {
@@ -669,14 +937,13 @@
     const elapsedMs = Math.max(0, now - previousRealMs);
     state.clockLastRealMs = now;
     if (!clockCanRun()) {
-      state.clockRemainderMs = 0;
       return false;
     }
-    const accumulatedMs = (state.clockRemainderMs || 0) + elapsedMs;
+    const accumulatedMs = (state.clockRemainderMs || 0) + elapsedMs * state.timeSpeed;
     const elapsedMinutes = Math.floor(accumulatedMs / SIMULATED_MINUTE_MS);
     state.clockRemainderMs = accumulatedMs % SIMULATED_MINUTE_MS;
     if (!elapsedMinutes) return false;
-    setSimulationTime(state.time + elapsedMinutes, { refresh });
+    setSimulationTime(state.time + elapsedMinutes, { refresh, source: 'clock' });
     return true;
   }
 
@@ -708,7 +975,9 @@
       sensitive: /(密码|验证码|一次性密码|学号|身份证|护照|银行卡|卡号|cvv|password|passcode|otp|student id|passport|card number)/i.test(value),
       payment: /(转账|付款|支付|fps|电子礼券|礼券|购买|pay\b|payment|transfer|voucher|buy)/i.test(value),
       verify: /(核实|确认|查一下|官网|官方|学院|部门|收发室|邮政|polyu|verify|check|official|department|reception|post office)/i.test(value),
-      question: /[?？]|(谁|什么|为何|为什么|怎样|怎么|哪|吗|么|who|what|why|how|where|when)/i.test(value)
+      question: /[?？]|(谁|什么|为何|为什么|怎样|怎么|哪|吗|么|who|what|why|how|where|when)/i.test(value),
+      viewing: /(看房|睇楼|睇樓|上门|上門|见面|見面|地址|viewing|view the flat|visit)/i.test(value),
+      contract: /(合同|合约|合約|租约|租約|业主|業主|房东|房東|牌照|license|lease|agreement|landlord|owner)/i.test(value)
     };
   }
 
@@ -764,6 +1033,16 @@
       if (intent.verify || intent.refuse) return 'To stop today’s debit, call the cancellation desk using the number in this notice.';
       if (intent.sensitive) return 'The cancellation desk will verify online banking details and a one-time passcode.';
       return 'The scheduled debit remains active until cancellation is completed.';
+    }
+    if (channel === 'message' && id === 'rental') {
+      if (intent.refuse) return '明白。如果今晚之前有人付诚意金，我就会先留给对方。';
+      if (intent.verify) return '你可以看电子租约和房源资料。因为我不在香港，所有手续先由这个页面处理。';
+      if (intent.viewing) return '我现在不在香港，钥匙也在家人那里。先看视频，付诚意金后我下周安排正式交楼。';
+      if (intent.contract) return '电子租约会在付款后自动填上你的资料。业主姓名和FPS收款人都是陈先生。';
+      if (intent.sensitive) return '把学生证和入学证明上传到房源页面，我会用来准备电子租约。';
+      if (intent.payment) return '转数后把收据截图发来，我马上把房源状态改成已保留。';
+      if (intent.question) return '单位是黄埔花园两房，家具齐全，水电按账单结算。页面里有照片、视频和租约样本。';
+      return '如果你有兴趣就先看房源页面，今天确认可以按HK$5,800留房。';
     }
     if (channel === 'message' && id === 'friend') {
       if (intent.verify || intent.refuse) return state.hijackedFriendVariant === 'real'
@@ -973,6 +1252,7 @@
   function refreshLocalizedUI() {
     renderLock();
     renderHome();
+    renderTimeControls();
     if (state.currentApp) {
       const app = DATA.apps[state.currentApp];
       els.appEyebrow.textContent = app.eyebrow;
@@ -1170,6 +1450,7 @@
     els.appScreen.classList.remove('mail-mode');
     delete els.appScreen.dataset.app;
     delete els.appScreen.dataset.mailView;
+    delete els.appScreen.dataset.settingsPage;
     closeOverlay();
     renderHome();
     showScreen('homeScreen');
@@ -1205,9 +1486,14 @@
       return;
     }
     if (state.currentApp === 'polyu' && state.polyuPage !== 'home') {
-      state.polyuPage = state.polyuPage === 'event-detail' ? 'calendar' : 'home';
+      state.polyuPage = ['event-detail', 'research-detail'].includes(state.polyuPage) ? 'calendar' : 'home';
       saveState();
       renderPolyU();
+      return;
+    }
+    if (state.currentApp === 'settings' && settingsPage !== 'root') {
+      settingsPage = 'root';
+      renderSettings();
       return;
     }
     goHome();
@@ -1224,13 +1510,17 @@
     const app = DATA.apps[appId];
     if (!app) return;
     state.currentApp = appId;
-    state.polyuPage = appId === 'polyu' ? (state.polyuPage || 'home') : state.polyuPage;
+    if (appId === 'settings') settingsPage = 'root';
+    if (appId === 'polyu' && target === 'official-research') state.polyuPage = 'research-detail';
+    else state.polyuPage = appId === 'polyu' ? (state.polyuPage || 'home') : state.polyuPage;
     markAppRead(appId);
     saveState();
     els.appScreen.classList.toggle('polyu-mode', appId === 'polyu');
     els.appScreen.classList.toggle('mail-mode', appId === 'mail');
     els.appScreen.dataset.app = appId;
     if (appId !== 'mail') delete els.appScreen.dataset.mailView;
+    if (appId !== 'settings') delete els.appScreen.dataset.settingsPage;
+    if (els.appMore) els.appMore.hidden = appId === 'settings';
     els.appEyebrow.textContent = app.eyebrow;
     els.appTitle.textContent = appName(app.id);
     renderApp(appId, target);
@@ -1263,7 +1553,7 @@
         </div>
         ${keypad ? renderPhoneKeypad() : `
           <div class="list-card phone-recents">
-            ${availableCalls().map((call) => `
+            ${availableCalls().slice().sort((a, b) => (timelineMinutes(b.time) ?? -1) - (timelineMinutes(a.time) ?? -1)).map((call) => `
               <button class="list-row" type="button" data-action="call-number" data-id="${call.id}" data-number="${esc(call.number)}">
                 <span class="mini-icon" style="--row-bg:${call.unread ? '#8b2435' : '#dde3e5'};--row-color:${call.unread ? '#fff' : '#4b5963'}">?</span>
                 <span class="list-copy"><strong>${esc(ui('未知号码'))}</strong><span>${esc(ui(call.direction))} · ${esc(call.number)}</span></span>
@@ -1296,6 +1586,11 @@
     if (recordId === 'call-government' || digits.endsWith('2147')) {
       saveState();
       startCallback('call-government');
+      return;
+    }
+    if (recordId === 'call-deepfake' || digits.endsWith('1182')) {
+      saveState();
+      startCallback('call-deepfake');
       return;
     }
     const unknown = state.callLog.find((call) => call.id === 'call-unknown');
@@ -1362,6 +1657,7 @@
     if (key === 'campusBorrow') state.taskState.campusBorrow.steps.messageRead = true;
     if (key === 'census') state.taskState.census.steps.noticeRead = true;
     if (key === 'donation') state.taskState.donation.steps.messageRead = true;
+    if (key === 'rental') state.taskState.rental.steps.messageRead = true;
     if (key === 'friend') {
       state.taskState.friend.steps.messageRead = true;
       state.taskState.friend.steps.requestSeen = true;
@@ -1671,6 +1967,7 @@
     if (page === 'qr') return renderPolyUQR();
     if (page === 'more') return renderPolyUMore();
     if (page === 'event-detail') return renderPolyUEventDetail();
+    if (page === 'research-detail') return renderPolyUResearchDetail();
     renderPolyUHome();
   }
 
@@ -1705,6 +2002,12 @@
         <header><h2>Student Event <i>1</i></h2><button type="button" data-action="event-open-detail" aria-label="查看活动">›</button></header>
         <button class="polyu-class-card" type="button" data-action="event-open-detail">
           <span>FRI · AUG 14 · 18:30</span><strong>Student Innovation Night</strong><small>Jockey Club Auditorium · Official fee HK$60</small>
+        </button>
+      </section>
+      <section class="polyu-home-section polyu-research-opportunity">
+        <header><h2>Research Participation <i>1</i></h2><button type="button" data-action="research-open-detail" aria-label="查看研究参与机会">›</button></header>
+        <button class="polyu-class-card" type="button" data-action="research-open-detail">
+          <span>TODAY · 14:30–15:15</span><strong>Human–AI Decision Study</strong><small>BC306 · Participant honorarium HK$250</small>
         </button>
       </section>
       <section class="polyu-services" aria-label="校园服务">
@@ -1762,6 +2065,7 @@
         <div class="event-filter-row"><span>Class&nbsp; | &nbsp;Exam&nbsp; | &nbsp;Payment&nbsp; | &nbsp;Acad calendar</span><button type="button" data-action="polyu-filter">▽</button></div>
         <h3>August, 2026</h3>
         <button class="polyu-event-row class-event" type="button" data-action="polyu-notice"><time><span>Tue</span><b>11</b></time><div><strong>COMP2033 classroom changed</strong><small>10:30 · N003</small></div></button>
+        <button class="polyu-event-row class-event" type="button" data-action="research-open-detail"><time><span>Tue</span><b>11</b></time><div><strong>Human–AI Decision Study</strong><small>14:30 · BC306 · Honorarium HK$250</small></div></button>
         <button class="polyu-event-row class-event" type="button" data-action="event-open-detail"><time><span>Fri</span><b>14</b></time><div><strong>Student Innovation Night</strong><small>18:30 · Jockey Club Auditorium · HK$60</small></div></button>
         <button class="polyu-event-row" type="button" data-action="polyu-calendar-info"><time><span>Sun</span><b>30</b></time><div><strong>Academic Year 2025/26 ends</strong></div></button>
         <h3>September, 2026</h3>
@@ -1792,6 +2096,7 @@
       <header class="polyu-simple-head"><strong>Notification</strong><span>3 unread</span></header>
       <section class="polyu-notice-list">
         <button type="button" data-action="polyu-notice"><i>Class</i><div><strong>COMP2033 classroom changed</strong><p>Today 10:30 class has moved to N003.</p><small>08:30</small></div></button>
+        <button type="button" data-action="research-open-detail"><i>Study</i><div><strong>Human–AI Decision Study</strong><p>One participant place remains for today at 14:30. Honorarium: HK$250.</p><small>09:18</small></div></button>
         <button type="button" data-action="event-open-detail"><i>Event</i><div><strong>Student Innovation Night</strong><p>Registration is open. Official fee: HK$60 in PolyULife.</p><small>08:40</small></div></button>
         <button type="button" data-action="polyu-payment"><i>Pay</i><div><strong>No outstanding payment</strong><p>Your current eStudent balance is HK$0.</p><small>Yesterday</small></div></button>
         <button type="button" data-action="polyu-calendar"><i>Acad</i><div><strong>Semester calendar updated</strong><p>Week 12 events are available.</p><small>Aug 10</small></div></button>
@@ -1828,6 +2133,40 @@
           ${task.steps.registered ? '<button class="primary-action" type="button" disabled>已报名 · QR ticket issued</button>' : '<button class="primary-action" type="button" data-action="event-register-official">我想参加 · 支付 HK$60</button><button class="secondary-action" type="button" data-action="event-skip-official">这次不参加</button>'}
           <button class="secondary-action" type="button" data-action="polyu-calendar">返回日历</button>
         </div>
+      </section>`, 'calendar');
+  }
+
+  function renderPolyUResearchDetail() {
+    const task = state.taskState.officialResearch;
+    task.steps.listingOpened = true;
+    if (!task.steps.attended && state.time > RESEARCH_SESSION_CLOSE) task.status = 'missed';
+    saveState();
+    let action = '';
+    if (task.steps.attended) {
+      action = `<button class="primary-action" type="button" disabled>${esc(localized('已完成 · 津贴已入账', 'Completed · Honorarium received'))}</button>`;
+    } else if (task.status === 'missed') {
+      action = `<button class="primary-action" type="button" disabled>${esc(localized('本场登记已结束', 'Check-in has closed'))}</button>`;
+    } else if (!task.steps.booked) {
+      action = `<button class="primary-action" type="button" data-action="research-book-official">${esc(localized('预约14:30场次', 'Book the 14:30 session'))}</button>`;
+    } else if (state.time < RESEARCH_SESSION_OPEN) {
+      action = `<button class="primary-action" type="button" disabled>${esc(localized('已预约 · 14:15开放签到', 'Booked · Check-in opens at 14:15'))}</button>`;
+    } else {
+      action = `<button class="primary-action" type="button" data-action="research-attend-official">${esc(localized('前往研究室 · 约45分钟', 'Go to the research room · about 45 min'))}</button>`;
+    }
+    els.appContent.innerHTML = polyuShell(`
+      <header class="polyu-simple-head"><strong>Research Participation</strong><span>Official listing</span></header>
+      <section class="polyu-event-detail polyu-research-detail">
+        <span class="official-chip">DEPARTMENT PARTICIPANT POOL</span>
+        <h1>Human–AI Decision Study</h1>
+        <p>Complete a supervised decision-making session for a university research project. No purchase, deposit or bank login is required.</p>
+        <dl class="event-facts">
+          <dt>Date</dt><dd>Tuesday, August 11 · 14:30–15:15</dd>
+          <dt>Venue</dt><dd>BC306 · Behavioural Research Room</dd>
+          <dt>Time</dt><dd>Approximately 45 minutes</dd>
+          <dt>Honorarium</dt><dd><strong>HK$250</strong> after completion</dd>
+        </dl>
+        ${task.steps.booked && !task.steps.attended ? `<div class="decision-note">${esc(localized('预约已经写入PolyULife。14:15会收到签到提醒。', 'The booking is in PolyULife. A check-in reminder will arrive at 14:15.'))}</div>` : ''}
+        <div class="action-row">${action}<button class="secondary-action" type="button" data-action="polyu-calendar">${esc(localized('返回日历', 'Back to Calendar'))}</button></div>
       </section>`, 'calendar');
   }
 
@@ -1869,6 +2208,8 @@
     else if (host === 'wsd-ebill-check.example') { page = 'service-fake'; service = 'water'; }
     else if (host === 'gov-eticket-view.example') { page = 'service-fake'; service = 'ticket'; }
     else if (host === 'empf-profile-update.example') { page = 'service-fake'; service = 'mpf'; }
+    else if (host === 'hk-home-listing.example') page = 'rental-listing';
+    else if (host === 'eaa.org.hk' || host === 'landreg.gov.hk') page = 'rental-verification';
     else if (host === 'polyu.edu.hk') page = path.includes('staff') ? 'staff-directory' : (path.includes('event') ? 'event-official' : 'polyu-official');
     else if (host === 'hongkongpost.hk') page = 'post-official';
     else if (host === 'gov.hk') page = 'government-services';
@@ -1900,37 +2241,89 @@
     openApp('browser');
   }
 
-  function renderBrowserUrlBar() {
-    if (!state.browserUrl || state.browserUrlPage !== state.browserPage || state.currentApp !== 'browser') return;
-    const first = els.appContent.firstElementChild;
-    if (!first) return;
-    first.insertAdjacentHTML('beforebegin', `<div class="simulated-browser-address"><span aria-hidden="true">◉</span><b>${esc(state.browserUrl)}</b></div>`);
+  function edgeBrowserIcon(name) {
+    const paths = {
+      site: '<path d="M8 7.5h8M8 12h8M8 16.5h8"/><circle cx="6" cy="7.5" r="1"/><circle cx="18" cy="12" r="1"/><circle cx="6" cy="16.5" r="1"/>',
+      search: '<circle cx="10.5" cy="10.5" r="5.5"/><path d="m15 15 4 4"/>',
+      reload: '<path d="M18.5 8.5A7 7 0 1 0 19 15"/><path d="M18.5 4.5v4h-4"/>',
+      back: '<path d="m14.5 5.5-6.5 6.5 6.5 6.5"/>',
+      forward: '<path d="m9.5 5.5 6.5 6.5-6.5 6.5"/>',
+      home: '<path d="M4.5 11 12 5l7.5 6v8H4.5Z"/><path d="M9.5 19v-5h5v5"/>',
+      more: '<circle cx="5" cy="12" r="1.25"/><circle cx="12" cy="12" r="1.25"/><circle cx="19" cy="12" r="1.25"/>'
+    };
+    return `<svg viewBox="0 0 24 24" aria-hidden="true">${paths[name] || paths.site}</svg>`;
+  }
+
+  function browserAddressText() {
+    if (state.browserPage === 'home') return state.browserQuery || '';
+    if (state.browserUrl && state.browserUrlPage === state.browserPage) return state.browserUrl;
+    const domain = els.appContent.querySelector('.browser-domain')?.textContent?.trim();
+    return domain || `edge://${state.browserPage}`;
+  }
+
+  function mountEdgeBrowserChrome() {
+    const pageHTML = els.appContent.innerHTML;
+    const address = browserAddressText();
+    const isHome = state.browserPage === 'home';
+    els.appContent.innerHTML = `
+      <div class="edge-browser-shell">
+        <header class="edge-browser-topbar">
+          <form class="browser-search edge-address-form${isHome ? ' is-new-tab' : ''}" id="browserSearchForm">
+            <span class="edge-site-controls" aria-hidden="true">${edgeBrowserIcon(isHome ? 'search' : 'site')}</span>
+            <label class="sr-only" for="browserQuery">${esc(localized('搜索或输入网址', 'Search or enter web address'))}</label>
+            <div class="simulated-browser-address">
+              <input id="browserQuery" type="search" value="${esc(address)}" placeholder="${esc(localized('搜索或输入网址', 'Search or enter web address'))}" autocomplete="off" autocapitalize="none" spellcheck="false">
+              <span class="sr-only">${esc(address)}</span>
+            </div>
+            <button class="edge-address-submit" type="submit" aria-label="${esc(localized('前往', 'Go'))}">${edgeBrowserIcon('search')}</button>
+            <button class="edge-address-reload" type="button" data-action="browser-reload" aria-label="${esc(localized('刷新页面', 'Reload page'))}">${edgeBrowserIcon('reload')}</button>
+          </form>
+        </header>
+        <main class="edge-webview" aria-label="${esc(localized('网页内容', 'Web content'))}">${pageHTML}</main>
+        <nav class="edge-browser-toolbar" aria-label="${esc(localized('浏览器工具栏', 'Browser toolbar'))}">
+          <button type="button" data-action="browser-back" aria-label="${esc(localized('后退', 'Back'))}" ${isHome ? 'disabled' : ''}>${edgeBrowserIcon('back')}</button>
+          <button type="button" aria-label="${esc(localized('前进', 'Forward'))}" disabled>${edgeBrowserIcon('forward')}</button>
+          <button class="edge-toolbar-home" type="button" data-action="browser-home" aria-label="${esc(localized('新标签页', 'New tab'))}"><span class="edge-mini-logo" aria-hidden="true"></span></button>
+          <button class="edge-tab-count" type="button" data-action="browser-tabs" aria-label="${esc(localized('打开的标签页：1', 'Open tabs: 1'))}"><span>1</span></button>
+          <button type="button" data-action="browser-menu" aria-label="${esc(localized('菜单', 'Menu'))}">${edgeBrowserIcon('more')}</button>
+        </nav>
+      </div>`;
   }
 
   function renderBrowser() {
     if (state.browserPage !== 'home') {
       renderBrowserPage(state.browserPage);
-      renderBrowserUrlBar();
+      mountEdgeBrowserChrome();
       return;
     }
     els.appContent.innerHTML = `
-      <form class="browser-search" id="browserSearchForm">
-        <input id="browserQuery" type="search" value="${esc(state.browserQuery)}" placeholder="${esc(ui('搜索网址、号码或机构'))}" autocomplete="off">
-        <button type="submit" aria-label="${esc(ui('搜索'))}">${DATA.icons.search}</button>
-      </form>
-      <div class="browser-results" id="browserResults">${browserResultsHTML(state.browserQuery)}</div>`;
+      <div class="browser-results${state.browserQuery ? ' has-query' : ' is-new-tab'}" id="browserResults">
+        ${state.browserQuery ? `<div class="edge-results-heading"><span>${esc(localized('搜索结果', 'Search results'))}</span><strong>${esc(state.browserQuery)}</strong></div>` : ''}
+        ${browserResultsHTML(state.browserQuery)}
+      </div>`;
+    mountEdgeBrowserChrome();
   }
 
   function browserResultsHTML(query) {
     const q = String(query || '').trim();
     if (!q) {
       return `
-        <span class="section-label">${esc(ui('常用入口'))}</span>
-        ${browserCard('www.polyu.edu.hk', 'PolyU 官方网站', '校园服务、学生资讯与官方联系方式。', 'polyu-official')}
-        ${browserCard('www.polyu.edu.hk/staff', 'PolyU 教职员目录', '从学校域名核实教职员、电邮与部门电话。', 'staff-directory')}
-        ${browserCard('www.hongkongpost.hk', '香港邮政', '邮件追踪及邮政服务。', 'post-official')}
-        ${browserCard('www.gov.hk', '政府服务', '从政府入口重新查找部门、缴费与查询服务。', 'government-services')}
-        ${browserCard('www.cyberdefender.hk', '防骗视伏器 Scameter', '检查可疑网址、电话及账户。', 'scameter')}`;
+        <section class="edge-new-tab">
+          <div class="edge-brand-mark" aria-hidden="true"><i></i></div>
+          <strong class="edge-brand-name">Microsoft Edge</strong>
+          <p>${esc(localized('搜索网页、号码、邮箱或机构', 'Search the web, a number, an email or an organisation'))}</p>
+          <div class="edge-shortcuts" aria-label="${esc(localized('常用入口', 'Top sites'))}">
+            ${edgeShortcut('P', 'PolyU', 'polyu-official', 'blue')}
+            ${edgeShortcut('职', localized('教职员', 'Staff'), 'staff-directory', 'violet')}
+            ${edgeShortcut('邮', localized('邮政', 'Post'), 'post-official', 'green')}
+            ${edgeShortcut('政', localized('政府', 'GovHK'), 'government-services', 'red')}
+            ${edgeShortcut('防', 'Scameter', 'scameter', 'cyan')}
+          </div>
+          <section class="edge-new-tab-panel">
+            <header><strong>${esc(localized('快速开始', 'Quick start'))}</strong><span>${esc(localized('模拟网页', 'Simulated web'))}</span></header>
+            <p>${esc(localized('在上方地址栏输入完整网址、电话号码、邮箱或机构名称。所有页面都只在模拟器内打开。', 'Enter a full URL, phone number, email address or organisation in the address bar above. Every page opens only inside the simulator.'))}</p>
+          </section>
+        </section>`;
     }
     if (/8704|6\s*x{2,}\s*8704|\+?852.*8704/i.test(q)) {
       return `
@@ -1967,6 +2360,9 @@
     }
     if (/medical-service|health|ha go|醫療|医疗|自动扣费|自動扣費/i.test(q)) {
       return `<span class="section-label">${esc(localized(`“${q}”的结果`, `Results for “${q}”`))}</span>${browserCard('ha-go-account.example', 'Cancel health coverage', 'Enter card details to stop an automatic monthly charge.', 'health-cancel', true)}${browserCard('HA Go / eHealth App', 'My account', 'Appointments, services and payment history.', 'health-official')}`;
+    }
+    if (/hk-home-listing|eaa|landreg|黄埔|黃埔|红磡|紅磡|租房|租樓|租约|租約|地产代理|地產代理|土地登记|土地登記|landlord|rental|whampoa|estate agent|land registry/i.test(q)) {
+      return `<span class="section-label">${esc(localized(`“${q}”的结果`, `Results for “${q}”`))}</span>${browserCard('hk-home-listing.example', '黄埔花园两房 · HK$5,800', '家具齐全，可在线签署租约并保留单位。', 'rental-listing', true)}${browserCard('www.eaa.org.hk / www.landreg.gov.hk', '地产代理及物业资料查询', '使用租约上的牌照号码、地址和业主资料查询公开记录。', 'rental-verification')}`;
     }
     if (/marketplace|carousell|二手|收款验证|收款驗證/i.test(q)) {
       return `<span class="section-label">${esc(localized(`“${q}”的结果`, `Results for “${q}”`))}</span>${browserCard('marketplace-protection.example', 'Payment protection verification', 'Link your bank account to receive the buyer payment.', 'market-protection', true)}${browserCard('二手交易平台', 'Calculator listing', 'Order details and payment status.', 'market-official')}`;
@@ -2016,13 +2412,26 @@
   }
 
   function browserCard(domain, title, body, page, sponsored) {
+    const favicon = String(domain || 'W').replace(/^www\./i, '').trim().charAt(0).toUpperCase() || 'W';
     return `
       <button class="browser-card ${sponsored ? 'sponsored' : ''}" type="button" data-action="open-browser-page" data-page="${page}">
-        <span class="browser-domain">${esc(domain)}</span><h3>${esc(ui(title))}</h3><p>${esc(ui(body))}</p>
+        <span class="edge-result-source"><i aria-hidden="true">${esc(favicon)}</i><span><b class="browser-domain">${esc(domain)}</b><small>${esc(sponsored ? localized('推广', 'Ad') : localized('网页', 'Web'))}</small></span><em aria-hidden="true">•••</em></span>
+        <h3>${esc(ui(title))}</h3><p>${esc(ui(body))}</p>
       </button>`;
   }
 
   function renderExtendedBrowserPage(page) {
+    if (page === 'rental-listing') {
+      const steps = state.taskState.rental.steps;
+      steps.listingOpened = true;
+      saveState();
+      els.appContent.innerHTML = `<div class="fake-page rental-listing-page"><span class="browser-domain">hk-home-listing.example/unit/H52</span><div class="rental-gallery" aria-label="模拟房源照片"><i></i><i></i><i></i><span>6 photos · 1 video</span></div><h2>黄埔花园 · 两房</h2><p>High floor · furnished · available now<br>Contact: Mr Chan · Owner listing</p><dl class="case-summary"><div><dt>Monthly rent</dt><dd>HK$5,800</dd></div><div><dt>Viewing</dt><dd>Video only this week</dd></div><div><dt>Reference</dt><dd>H52-814</dd></div></dl><p class="rental-copy">${steps.depositPaid ? 'Payment received. The owner will contact you later to arrange handover.' : '上传学生证可以生成电子租约；支付一个月诚意金后，单位会保留至下周交楼。'}</p><div class="action-row"><button class="secondary-action" type="button" data-action="rental-share-id" ${steps.identityShared ? 'disabled' : ''}>${steps.identityShared ? '学生证副本已上传' : '上传学生证副本'}</button><button class="primary-action" type="button" data-action="rental-pay-deposit" ${steps.depositPaid ? 'disabled' : ''}>${steps.depositPaid ? '诚意金已支付' : '支付 HK$5,800 诚意金'}</button></div></div>`;
+      return true;
+    }
+    if (page === 'rental-verification') {
+      els.appContent.innerHTML = `<div class="app-pad"><article class="browser-card official-profile"><span class="browser-domain">www.eaa.org.hk · www.landreg.gov.hk</span><h2>牌照及物业资料查询</h2><p>电子租约上的地产代理牌照 C-814052 登记人并非“陈先生”，登记公司也没有这项放盘。按单位地址取得的模拟土地记录显示，登记业主姓名与租约及FPS收款人不一致。</p><dl class="detail-grid"><dt>Listing reference</dt><dd>H52-814 · not found</dd><dt>Licence</dt><dd>C-814052 · different registrant</dd><dt>Registered owner</dt><dd>Does not match payee</dd></dl><button class="primary-action" type="button" data-action="rental-save-check">${esc(localized('保存查询结果', 'Save result'))}</button></article></div>`;
+      return true;
+    }
     if (page === 'government-services') {
       els.appContent.innerHTML = `<div class="app-pad"><article class="browser-card official-profile"><span class="browser-domain">www.gov.hk</span><h2>Government services</h2><p>Selecting a service here starts from an independently entered government address.</p><div class="action-row"><button class="secondary-action" type="button" data-action="service-official-check" data-service="water">Water account</button><button class="secondary-action" type="button" data-action="service-official-check" data-service="ticket">Traffic tickets</button><button class="secondary-action" type="button" data-action="service-official-check" data-service="mpf">MPF / eMPF</button></div></article></div>`;
       return true;
@@ -2111,6 +2520,10 @@
     if (!staticPages[page]) return false;
     els.appContent.innerHTML = staticPages[page];
     return true;
+  }
+
+  function edgeShortcut(mark, label, page, tone) {
+    return `<button class="edge-shortcut" type="button" data-action="open-browser-page" data-page="${page}"><span class="is-${tone}" aria-hidden="true">${esc(mark)}</span><small>${esc(label)}</small></button>`;
   }
 
   function recoveryHandoff(stage) {
@@ -2274,41 +2687,239 @@
       <div class="bank-card"><span class="section-label">${esc(ui('交易记录'))}</span>${state.transactions.map((item) => `<div class="transaction-row"><div><strong>${esc(item.title)}</strong><span>${esc(formatStoredTime(item.time))}${item.pending ? ' · Pending' : ''}</span></div><div class="transaction-amount">${item.amount < 0 ? '−' : '+'}${esc(formatHKD(Math.abs(item.amount)))}</div></div>`).join('')}</div>`;
   }
 
-  function settingsOption(action, value, label, selected) {
+  function settingsIcon(kind) {
+    const icons = {
+      profile: '<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.2"/><path d="M5.5 20c.7-3.5 3-5.5 6.5-5.5s5.8 2 6.5 5.5"/></svg>',
+      locale: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M4.6 9h14.8M4.6 15h14.8M12 4c2.2 2.2 3.3 4.9 3.3 8S14.2 17.8 12 20c-2.2-2.2-3.3-4.9-3.3-8S9.8 6.2 12 4Z"/></svg>',
+      sound: '<svg viewBox="0 0 24 24"><path d="M5 10v4h3l4 3V7l-4 3H5Z"/><path d="M15 9.2c1.5 1.5 1.5 4.1 0 5.6M17.8 6.5c3 3 3 8 0 11"/></svg>',
+      time: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/></svg>',
+      info: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 11v6M12 7.5h.01"/></svg>',
+      reset: '<svg viewBox="0 0 24 24"><path d="M6.2 8.2A7 7 0 1 1 5 13"/><path d="M4 5v5h5"/></svg>'
+    };
+    return icons[kind] || icons.info;
+  }
+
+  function callVoiceLanguageLabel() {
+    const labels = {
+      yue: localized('粤语', 'Cantonese'),
+      'zh-CN': localized('普通话（国语）', 'Mandarin'),
+      en: localized('英语', 'English')
+    };
+    return labels[state.callVoiceLanguage] || labels.yue;
+  }
+
+  function settingsRow({ action = '', page = '', icon = '', tone = '', title, detail = '', value = '', chevron = true }) {
+    const tag = action ? 'button' : 'div';
+    const actionAttributes = action ? `type="button" data-action="${action}"${page ? ` data-value="${page}"` : ''}` : '';
     return `
-      <button class="settings-option" type="button" role="radio" aria-checked="${selected}" data-action="${action}" data-value="${value}">
-        <span class="settings-option-copy"><strong>${esc(ui(label))}</strong></span>
-        <span class="settings-check" aria-hidden="true">${selected ? '✓' : ''}</span>
-      </button>`;
+      <${tag} class="settings-row${tone ? ` is-${tone}` : ''}${icon ? '' : ' no-icon'}${chevron && action ? ' has-chevron' : ''}" ${actionAttributes}>
+        ${icon ? `<span class="settings-row-icon is-${icon}" aria-hidden="true">${settingsIcon(icon)}</span>` : ''}
+        <span class="settings-row-copy"><strong>${esc(title)}</strong>${detail ? `<small>${esc(detail)}</small>` : ''}</span>
+        <span class="settings-row-value">${value ? esc(value) : ''}</span>
+        ${chevron && action ? '<span class="settings-chevron" aria-hidden="true">›</span>' : ''}
+      </${tag}>`;
+  }
+
+  function settingsRoot() {
+    const language = state.language === 'en' ? 'English' : '简体中文';
+    const regions = { HK: localized('香港', 'Hong Kong'), CN: localized('中国大陆', 'Mainland China'), US: localized('美国', 'United States'), GB: localized('英国', 'United Kingdom') };
+    return `
+      <div class="settings-page settings-root">
+        <button class="settings-profile-entry" type="button" data-action="settings-page" data-value="profile">
+          <span class="settings-profile-avatar" aria-hidden="true">YT</span>
+          <span class="settings-profile-copy"><strong>Yutian</strong><small>${esc(localized(`可用资金 ${formatHKD(state.balance)} · 成长值 ${state.profile.growth}`, `Available ${formatHKD(state.balance)} · Growth ${state.profile.growth}`))}</small></span>
+          <span class="settings-chevron" aria-hidden="true">›</span>
+        </button>
+        <span class="settings-section-label">${esc(localized('系统', 'System'))}</span>
+        <section class="settings-group">
+          ${settingsRow({ action: 'settings-page', page: 'locale', icon: 'locale', title: localized('语言与地区', 'Language & Region'), detail: `${language} · ${regions[state.region]}`, chevron: true })}
+          ${settingsRow({ action: 'settings-page', page: 'sound', icon: 'sound', title: localized('声音与语音', 'Sounds & Voice'), detail: localized(`声音${state.soundEnabled ? '开启' : '关闭'} · ${callVoiceLanguageLabel()}`, `${state.soundEnabled ? 'On' : 'Off'} · ${callVoiceLanguageLabel()}`), chevron: true })}
+        </section>
+        <span class="settings-section-label">${esc(localized('模拟器', 'Simulator'))}</span>
+        <section class="settings-group">
+          ${settingsRow({ action: 'settings-page', page: 'time', icon: 'time', title: localized('时间推进规则', 'Time progression'), detail: localized('速度决定哪些通知会暂停时间', 'Speed determines which alerts pause time'), chevron: true })}
+          ${settingsRow({ action: 'confirm-reset-day', icon: 'reset', tone: 'danger', title: localized('重新开始今天', 'Restart today'), detail: localized('保留界面、地区和通话语音设置', 'Keep interface, region and call voice preferences'), chevron: false })}
+        </section>
+        <span class="settings-section-label">${esc(localized('关于', 'About'))}</span>
+        <section class="settings-group">
+          ${settingsRow({ action: 'settings-page', page: 'about', icon: 'info', title: localized('教学模拟说明', 'About this simulation'), value: '2.0.0', chevron: true })}
+        </section>
+      </div>`;
+  }
+
+  function settingsProfilePage() {
+    const profile = state.profile;
+    const delta = state.balance - profile.startingBalance;
+    const deltaText = `${delta > 0 ? '+' : (delta < 0 ? '−' : '')}${formatHKD(Math.abs(delta))}`;
+    const growthPercent = Math.max(0, Math.min(100, Math.round(profile.growth / profile.growthTarget * 100)));
+    const focusOptions = profileFocusOptions();
+    const ledger = profile.growthLedger || [];
+    return `
+      <div class="settings-page settings-subpage settings-profile-page">
+        <section class="profile-ledger-card" aria-label="${esc(localized('今日资源账本', 'Today’s resource ledger'))}">
+          <header><span>${esc(localized('今天 · 资源账本', 'TODAY · RESOURCE LEDGER'))}</span><b>${esc(formatTime(state.time))}</b></header>
+          <div class="profile-ledger-balance">
+            <span>${esc(localized('可用资金', 'Available funds'))}</span>
+            <strong>${esc(formatHKD(state.balance))}</strong>
+            <small class="${delta < 0 ? 'is-negative' : (delta > 0 ? 'is-positive' : '')}">${esc(localized(`今日变化 ${deltaText}`, `Today ${deltaText}`))}</small>
+          </div>
+          <div class="profile-ledger-resources">
+            <div><span>${esc(localized('成长值', 'Growth'))}</span><strong>${profile.growth}<small> / ${profile.growthTarget}</small></strong></div>
+            <div><span>${esc(localized('剩余时间', 'Time left'))}</span><strong>${esc(formatRemainingTime())}</strong></div>
+          </div>
+          <div class="profile-growth-track" role="progressbar" aria-valuemin="0" aria-valuemax="${profile.growthTarget}" aria-valuenow="${Math.min(profile.growth, profile.growthTarget)}"><i style="width:${growthPercent}%"></i></div>
+        </section>
+
+        <span class="settings-section-label">${esc(localized(`发展方向 · ${profile.focusAreas.length}/2`, `Development focus · ${profile.focusAreas.length}/2`))}</span>
+        <section class="settings-group profile-focus-group">
+          ${focusOptions.map((option) => {
+            const selected = profile.focusAreas.includes(option.id);
+            return `<button class="profile-focus-row" type="button" data-action="profile-toggle-focus" data-value="${option.id}" aria-pressed="${selected}" ${profile.focusLocked ? 'disabled' : ''}>
+              <i class="is-${option.tone}" aria-hidden="true">${esc(option.mark)}</i>
+              <span><strong>${esc(localized(option.zh, option.en))}</strong><small>${esc(localized(option.detailZh, option.detailEn))}</small></span>
+              <b aria-hidden="true">${selected ? '✓' : ''}</b>
+            </button>`;
+          }).join('')}
+        </section>
+        <p class="settings-footnote">${esc(profile.focusLocked
+          ? localized('今天的发展方向已经在首次成长结算时锁定。重新开始新的一天后可以更改。', 'Your focus was locked when the first growth award settled. You can change it on a new day.')
+          : localized('最多选择两个方向。相关真实机会的成长值提高25%；相同主题的可疑邀请也不会因此减少。', 'Choose up to two. Related genuine opportunities earn 25% more growth; suspicious invitations on the same themes are not reduced.'))}</p>
+
+        <span class="settings-section-label">${esc(localized('今日已获得', 'Settled today'))}</span>
+        <section class="settings-group profile-growth-history">
+          ${ledger.length ? ledger.map((item) => `<div class="profile-growth-row"><i>${esc(profileFocusLabel(item.area).slice(0, 1))}</i><span><strong>${esc(state.language === 'en' ? item.labelEn : item.labelZh)}</strong><small>${esc(formatStoredTime(item.time))}${item.focused ? ` · ${esc(localized('方向加成', 'Focus bonus'))}` : ''}</small></span><b>+${item.points}</b></div>`).join('') : `<div class="profile-growth-empty"><strong>${esc(localized('还没有已结算的成长', 'No growth has settled yet'))}</strong><span>${esc(localized('真实活动完成、研究场次结束或帮助结果确认后才会显示。', 'Growth appears only after a genuine event, study or helping outcome is confirmed.'))}</span></div>`}
+        </section>
+        <p class="settings-footnote">${esc(localized('打开邀请、付款或填写资料本身不会增加成长值。资金变化与成长值分别记录。', 'Opening an invitation, paying or submitting details does not itself earn growth. Money and growth are recorded separately.'))}</p>
+      </div>`;
+  }
+
+  function settingsLocalePage() {
+    const language = state.language === 'en' ? 'English' : '简体中文';
+    const regions = { HK: localized('香港', 'Hong Kong'), CN: localized('中国大陆', 'Mainland China'), US: localized('美国', 'United States'), GB: localized('英国', 'United Kingdom') };
+    return `
+      <div class="settings-page settings-subpage">
+        <span class="settings-section-label">${esc(localized('显示', 'Display'))}</span>
+        <section class="settings-group">
+          ${settingsRow({ action: 'settings-choice', page: 'language', title: localized('语言', 'Language'), value: language, chevron: true })}
+          ${settingsRow({ action: 'settings-choice', page: 'region', title: localized('地区', 'Region'), value: regions[state.region], chevron: true })}
+        </section>
+        <span class="settings-section-label">${esc(localized('格式示例', 'Format preview'))}</span>
+        <section class="settings-locale-specimen" aria-label="${esc(localized('当前地区格式示例', 'Current regional format preview'))}">
+          <div><span>${esc(formatLocaleDate())}</span><strong>${esc(formatTime(state.time))}</strong></div>
+          <div><span>HKD</span><strong>${esc(formatHKD(6840))}</strong></div>
+        </section>
+        <p class="settings-footnote">${esc(localized('界面语言不会改写邮件或短信原文；通话对白可在“声音与语音”中单独预设。地区只改变日期、时间和金额格式。', 'Interface language does not rewrite mail or messages. Call dialogue can be preset separately under Sounds & Voice. Region changes date, time and currency formats only.'))}</p>
+      </div>`;
+  }
+
+  function settingsSoundPage() {
+    return `
+      <div class="settings-page settings-subpage">
+        <span class="settings-section-label">${esc(localized('声音', 'Sound'))}</span>
+        <section class="settings-group">
+          <button class="settings-row settings-switch-row" type="button" role="switch" aria-checked="${state.soundEnabled}" data-action="settings-toggle-sound">
+            <span class="settings-row-icon is-sound" aria-hidden="true">${settingsIcon('sound')}</span>
+            <span class="settings-row-copy"><strong>${esc(localized('来电与通知声音', 'Call and notification sounds'))}</strong></span>
+            <span class="settings-switch" aria-hidden="true"><i></i></span>
+          </button>
+          ${settingsRow({ action: state.soundEnabled ? 'settings-test-sound' : '', title: localized('播放测试声音', 'Play test sound'), detail: state.soundEnabled ? localized(`播放一段${callVoiceLanguageLabel()}通话语音`, `Play a ${callVoiceLanguageLabel()} call sample`) : localized('请先开启声音', 'Turn on sound first'), value: '', chevron: false })}
+        </section>
+        <span class="settings-section-label">${esc(localized('通话语音', 'Call voice'))}</span>
+        <section class="settings-group">
+          ${settingsRow({ action: 'settings-choice', page: 'voice', title: localized('对白语言', 'Dialogue language'), value: callVoiceLanguageLabel(), chevron: true })}
+          ${settingsRow({ title: localized('播放方式', 'Playback'), detail: state.callVoiceLanguage === 'yue' ? localized('粤语优先使用预录语音；不可用时使用设备粤语声音。', 'Cantonese uses prerecorded audio first, then the device Cantonese voice when available.') : localized('普通话和英语使用设备的对应语音。', 'Mandarin and English use the matching voice installed on the device.'), chevron: false })}
+        </section>
+        <p class="settings-footnote">${esc(localized('此选择会改变电话对白的显示文字和语音，不会翻译短信或邮件。声音只在模拟器内播放，不会拨打真实电话。', 'This changes call dialogue text and voice. It does not translate messages or mail. Sounds play only inside the simulator; no real calls are made.'))}</p>
+      </div>`;
+  }
+
+  function settingsTimePage() {
+    const policy = (speed, title, detail) => `
+      <div class="settings-policy-row">
+        <b>${speed}</b><span><strong>${esc(title)}</strong><small>${esc(detail)}</small></span>
+      </div>`;
+    return `
+      <div class="settings-page settings-subpage">
+        <span class="settings-section-label">${esc(localized('暂停规则', 'Pause rules'))}</span>
+        <section class="settings-group settings-policy-group">
+          ${policy('1×', localized('每则通知暂停', 'Pause for every alert'), localized('任何新电话、短信、邮件或应用通知到达时暂停。', 'Pauses when any new call, message, mail or app alert arrives.'))}
+          ${policy('2×', localized('重要通知暂停', 'Pause for important alerts'), localized('只在需要及时处理的通知或日程到达时暂停。', 'Pauses only for alerts or calendar events that need timely attention.'))}
+          ${policy('4×', localized('不中断', 'Do not interrupt'), localized('通知和日程照常出现，但不会停止时间。', 'Alerts and events still arrive without stopping time.'))}
+        </section>
+        <p class="settings-footnote">${esc(localized('“重要”表示需要及时处理，不代表内容真实。真假来电都可能被列为重要。17:30 当天结束时，所有速度都会停止。', '“Important” means time-sensitive, not trustworthy. Genuine and fraudulent calls can both be important. Every speed stops when the day ends at 17:30.'))}</p>
+        <section class="settings-info-card">
+          <strong>${esc(localized('时间控制在手机外', 'Controls stay outside the phone'))}</strong>
+          <p>${esc(localized('请使用模拟器顶部的暂停、1×、2×、4×和“下一事件”按钮。离开或重新载入页面期间不会补算时间。', 'Use Pause, 1×, 2×, 4× and Next event above the simulator. Time does not catch up while the page is closed or reloaded.'))}</p>
+        </section>
+      </div>`;
+  }
+
+  function settingsAboutPage() {
+    return `
+      <div class="settings-page settings-subpage">
+        <section class="settings-about-mark"><span>${DATA.icons.settings}</span><strong>Scam-Buster</strong><small>2.0.0</small></section>
+        <span class="settings-section-label">${esc(localized('教学模拟', 'Training simulation'))}</span>
+        <section class="settings-group settings-about-list">
+          ${settingsRow({ title: localized('不会连接真实账户', 'No real accounts'), detail: localized('不连接银行、PolyU NetID、邮箱或付款账户。', 'Does not connect to banking, PolyU NetID, mail or payment accounts.'), chevron: false })}
+          ${settingsRow({ title: localized('所有互动留在本机', 'Interactions stay on this device'), detail: localized('回复、存档和结果只保存在当前浏览器。', 'Replies, progress and outcomes are stored only in this browser.'), chevron: false })}
+          ${settingsRow({ title: localized('链接在模拟浏览器中运行', 'Links stay in the simulated browser'), detail: localized('不会把教学账户或模拟付款资料发送到外部网站。', 'Training details and simulated payments are not sent to external websites.'), chevron: false })}
+        </section>
+        <p class="settings-footnote">${esc(localized('页面中的人物、号码、账户和案件编号均为教学模拟内容。', 'People, phone numbers, accounts and case references shown here are fictional training content.'))}</p>
+      </div>`;
   }
 
   function renderSettings() {
-    els.appTitle.textContent = appName('settings');
-    els.appContent.innerHTML = `
-      <div class="app-pad settings-page">
-        <section class="settings-profile">
-          <span class="settings-hero-icon" aria-hidden="true">${DATA.icons.settings}</span>
-          <div><h2>${esc(ui('语言与地区'))}</h2><p>${esc(ui('控制手机界面使用的语言和本地格式。'))}</p></div>
+    const titles = {
+      root: localized('设置', 'Settings'),
+      profile: localized('我的', 'My Profile'),
+      locale: localized('语言与地区', 'Language & Region'),
+      sound: localized('声音与语音', 'Sounds & Voice'),
+      time: localized('时间推进规则', 'Time progression'),
+      about: localized('教学模拟说明', 'About this simulation')
+    };
+    if (!titles[settingsPage]) settingsPage = 'root';
+    els.appScreen.dataset.settingsPage = settingsPage;
+    els.appEyebrow.textContent = 'SETTINGS';
+    els.appTitle.textContent = titles[settingsPage];
+    if (els.appMore) els.appMore.hidden = true;
+    if (settingsPage === 'profile') els.appContent.innerHTML = settingsProfilePage();
+    else if (settingsPage === 'locale') els.appContent.innerHTML = settingsLocalePage();
+    else if (settingsPage === 'sound') els.appContent.innerHTML = settingsSoundPage();
+    else if (settingsPage === 'time') els.appContent.innerHTML = settingsTimePage();
+    else if (settingsPage === 'about') els.appContent.innerHTML = settingsAboutPage();
+    else els.appContent.innerHTML = settingsRoot();
+  }
+
+  function showSettingsChoice(kind) {
+    const languageChoice = kind === 'language';
+    const voiceChoice = kind === 'voice';
+    const options = languageChoice
+      ? [
+          { value: 'zh-CN', label: '简体中文', selected: state.language === 'zh-CN' },
+          { value: 'en', label: 'English', selected: state.language === 'en' }
+        ]
+      : voiceChoice
+        ? [
+            { value: 'yue', label: localized('粤语', 'Cantonese'), selected: state.callVoiceLanguage === 'yue' },
+            { value: 'zh-CN', label: localized('普通话（国语）', 'Mandarin'), selected: state.callVoiceLanguage === 'zh-CN' },
+            { value: 'en', label: localized('英语', 'English'), selected: state.callVoiceLanguage === 'en' }
+          ]
+        : [
+          { value: 'HK', label: localized('香港', 'Hong Kong'), selected: state.region === 'HK' },
+          { value: 'CN', label: localized('中国大陆', 'Mainland China'), selected: state.region === 'CN' },
+          { value: 'US', label: localized('美国', 'United States'), selected: state.region === 'US' },
+          { value: 'GB', label: localized('英国', 'United Kingdom'), selected: state.region === 'GB' }
+        ];
+    const action = languageChoice ? 'set-language' : (voiceChoice ? 'set-call-voice' : 'set-region');
+    els.overlayLayer.innerHTML = `
+      <div class="dialog-overlay settings-choice-overlay">
+        <section class="dialog-sheet settings-choice-sheet" role="dialog" aria-modal="true" aria-labelledby="settingsChoiceTitle">
+          <h2 id="settingsChoiceTitle">${esc(languageChoice ? localized('选择语言', 'Choose language') : (voiceChoice ? localized('选择通话语言', 'Choose call language') : localized('选择地区', 'Choose region')))}</h2>
+          <div class="settings-choice-list" role="radiogroup">
+            ${options.map((option) => `<button type="button" role="radio" aria-checked="${option.selected}" data-action="${action}" data-value="${option.value}"><span>${esc(option.label)}</span><b aria-hidden="true">${option.selected ? '✓' : ''}</b></button>`).join('')}
+          </div>
+          <button class="settings-choice-cancel" type="button" data-action="close-overlay">${esc(localized('取消', 'Cancel'))}</button>
         </section>
-        <span class="section-label">${esc(ui('系统语言'))}</span>
-        <div class="list-card settings-options" role="radiogroup" aria-label="${esc(ui('系统语言'))}">
-          ${settingsOption('set-language', 'zh-CN', '简体中文', state.language === 'zh-CN')}
-          ${settingsOption('set-language', 'en', '英语', state.language === 'en')}
-        </div>
-        <span class="section-label">${esc(ui('国家或地区'))}</span>
-        <div class="list-card settings-options" role="radiogroup" aria-label="${esc(ui('国家或地区'))}">
-          ${settingsOption('set-region', 'HK', '香港', state.region === 'HK')}
-          ${settingsOption('set-region', 'CN', '中国大陆', state.region === 'CN')}
-          ${settingsOption('set-region', 'US', '美国', state.region === 'US')}
-          ${settingsOption('set-region', 'GB', '英国', state.region === 'GB')}
-        </div>
-        <span class="section-label">${esc(ui('界面示例'))}</span>
-        <section class="settings-preview">
-          <strong>${esc(ui('日期与金额预览'))}</strong>
-          <div class="settings-preview-row"><span>${esc(formatLocaleDate())}</span><b>${esc(formatTime(state.time))}</b></div>
-          <div class="settings-preview-row"><span>HKD</span><b>${esc(formatHKD(6840))}</b></div>
-        </section>
-        <p class="settings-note">${esc(ui('系统界面会使用所选语言；邮件、短信和通话保留发送者原本的语言。'))}</p>
       </div>`;
   }
 
@@ -2338,23 +2949,25 @@
         <div class="task-head"><div><span class="detail-meta">DAILY TASK</span><h2>${esc(ui(title))}</h2></div><span class="task-status ${status === 'done' ? 'done' : ''}">${esc(ui(status === 'done' ? '已完成' : '进行中'))}</span></div>
         <p>${esc(ui(description))}</p>
         <div class="task-steps">${steps.map(([key, label]) => `<div class="task-step ${values[key] ? 'done' : ''}"><i>${values[key] ? '✓' : ''}</i><span>${esc(ui(label))}</span></div>`).join('')}</div>
-        ${taskId === 'parcel' && values.hallConfirmed && !values.collected ? `<div class="action-row"><button class="primary-action" type="button" data-action="collect-parcel">${esc(ui('前往收发室领取'))}</button></div>` : ''}
+        ${taskId === 'parcel' && values.hallConfirmed && !values.collected ? `<div class="action-row"><button class="primary-action" type="button" data-action="collect-parcel" ${state.time >= 17 * 60 ? 'disabled' : ''}>${esc(state.time >= 17 * 60 ? localized('今日领取已结束', 'Collections closed today') : localized('前往收发室 · 约25分钟', 'Go to Hall Reception · about 25 min'))}</button></div>` : ''}
       </article>`;
   }
 
   function startCallback(recordId = 'call-unknown') {
     if (callSession) { resumeCall(); showToast('先结束当前通话，再拨打另一个号码'); return; }
     const isGovernment = recordId === 'call-government';
-    const scenario = isGovernment ? 'government' : 'orientation';
-    const number = isGovernment ? '+852 3XXX 2147' : '+852 6XXX 8704';
+    const isDeepfake = recordId === 'call-deepfake';
+    const scenario = isGovernment ? 'government' : (isDeepfake ? 'deepfake' : 'orientation');
+    const number = isGovernment ? '+852 3XXX 2147' : (isDeepfake ? '+852 6XXX 1182' : '+852 6XXX 8704');
     startCallSession(scenario, number);
     const missedCall = state.callLog.find((item) => item.id === recordId);
     if (missedCall) Object.assign(missedCall, { direction: '正在回拨', unread: false });
-    markNotification(isGovernment ? 'n-government-call' : 'n-call');
+    markNotification(isGovernment ? 'n-government-call' : (isDeepfake ? 'n-deepfake-call' : 'n-call'));
     if (isGovernment) state.taskState.government.steps.callbackMade = true;
-    addHistory(isGovernment ? 'government-callback-started' : 'callback-started', '主动回拨未知号码');
+    if (isDeepfake) state.taskState.deepfake.steps.callbackMade = true;
+    addHistory(isGovernment ? 'government-callback-started' : (isDeepfake ? 'deepfake-callback-started' : 'callback-started'), isDeepfake ? '主动回拨未知号码的未接视频来电' : '主动回拨未知号码');
     saveState();
-    renderCallDialling(ui('回拨'), ui('你正在主动回拨刚才的未接来电'));
+    renderCallDialling(ui('回拨'), localized(isDeepfake ? '你正在回拨刚才的未接视频来电' : '你正在主动回拨刚才的未接来电', isDeepfake ? 'You are returning the missed video call.' : 'You are returning the missed call.'));
     callbackTimer = setTimeout(() => {
       if (callSession && callSession.phase === 'dialing' && callSession.scenario === scenario) connectCallSession();
     }, 1450);
@@ -2373,6 +2986,7 @@
     if (['water', 'ticket', 'mpf'].includes(key)) return `<div class="message-actions"><button class="primary-action" type="button" data-action="service-open-link" data-service="${esc(key)}">${esc(localized('打开通知', 'Open notice'))}</button></div>`;
     if (key === 'census') return `<div class="message-actions"><button class="primary-action" type="button" data-action="census-share-id">${esc(localized('带身份证到大堂登记', 'Bring ID to the lobby'))}</button></div>`;
     if (key === 'donation') return `<div class="message-actions"><button class="primary-action" type="button" data-action="donation-call">${esc(localized('回拨取消热线', 'Call cancellation desk'))}</button></div>`;
+    if (key === 'rental') return `<div class="message-actions"><button class="primary-action" type="button" data-action="open-simulated-url" data-url="https://hk-home-listing.example/unit/H52">${esc(localized('查看房源', 'View listing'))}</button></div>`;
     return '';
   }
 
@@ -2407,7 +3021,8 @@
       'contact-immigration': 'government-official',
       'contact-department': 'department',
       'contact-mandy': 'mandy-original',
-      'contact-printshop': 'printshop'
+      'contact-printshop': 'printshop',
+      'contact-father': 'father-original'
     };
     const scenario = scenarioByContact[contactId] || 'department';
     startCallSession(scenario, contact.number, contactId);
@@ -2427,12 +3042,13 @@
 
   function renderCallDialling(label, note) {
     if (!callSession) return;
+    const videoCall = callSession.scenario === 'deepfake';
     els.overlayLayer.innerHTML = `
-      <section class="call-overlay call-dialling">
+      <section class="call-overlay call-dialling ${videoCall ? 'is-video-call' : ''}">
         <span class="simulation-tag">${esc(label)} · ${esc(callSession.number)}</span>
         <div class="call-avatar">?</div>
         <h2>${esc(ui('未知号码'))}</h2>
-        <p class="call-state">${esc(ui('正在接通…'))}</p>
+        <p class="call-state">${esc(videoCall ? localized('正在连接视频…', 'Connecting video…') : ui('正在接通…'))}</p>
         <div class="callback-pulse" aria-hidden="true"><i></i><i></i><i></i></div>
         <p class="callback-note">${esc(note)}</p>
         <div class="call-controls"><button class="round-call-button" type="button" data-action="end-call" aria-label="${esc(ui('结束通话'))}">${DATA.icons.hangup}</button></div>
@@ -2460,19 +3076,210 @@
       if (missedCall) missedCall.direction = '已回拨';
       addHistory('government-unknown-call', '回拨另一通陌生来电');
       advanceTime(2);
+    } else if (callSession.scenario === 'deepfake') {
+      const missedCall = state.callLog.find((item) => item.id === 'call-deepfake');
+      if (missedCall) missedCall.direction = '已回拨';
+      state.taskState.deepfake.steps.callbackMade = true;
+      addHistory('deepfake-unknown-call', '回拨未知号码的未接视频来电');
+      advanceTime(2);
     } else {
       if (callSession.scenario === 'mandy-original') state.taskState.friend.steps.originalNumberCalled = true;
       if (callSession.scenario === 'printshop') state.taskState.friend.steps.shopCalled = true;
+      if (callSession.scenario === 'father-original') {
+        state.taskState.deepfake.steps.originalNumberCalled = true;
+        state.taskState.deepfake.status = 'done';
+        addHistory('deepfake-original-number-called', '从已保存的原号码联系爸爸；本人否认刚才的视频来电和转账要求');
+      }
       advanceTime(1);
     }
     const node = getCallNode(callSession.scenario, 'intro');
-    addCallTurn('caller', resolveCallCopy(node.reply));
+    addCallTurn('caller', resolveCallReply(callSession.scenario, 'intro', node.reply));
     saveState();
     renderCallSession(resolveCallCopy(node.audio) || '');
   }
 
   function resolveCallCopy(value) {
     return typeof value === 'function' ? value(callSession, state) : value;
+  }
+
+  const CALL_REPLY_TRANSLATIONS = {
+    hall: {
+      intro: { 'zh-CN': '「喂，你好。请问你想查询什么？」', en: 'Hello. What would you like to check?' },
+      claim: { 'zh-CN': '「这里是宿舍收发室。请问你想查询哪一份文件？」', en: 'This is the hall reception. Which item would you like to check?' },
+      need_reference: { 'zh-CN': '「可以。请提供运单号最后四位，以及文件寄往哪一间宿舍。」', en: 'Sure. Please give me the last four digits of the tracking number and the hall it was sent to.' },
+      fee: { 'zh-CN': '「一般领取文件不需要网上付款。不过要查到这件邮件，我需要先核对运单资料。」', en: 'There is normally no online payment for collecting an item, but I need the tracking details before I can find it.' },
+      partial: { 'zh-CN': '「尾号1305，对吗？我找到一项记录，但需要核对完整编号才能告诉你送达时间。」', en: 'The tracking number ends in 1305, correct? I found a record, but I need the full number before I can give you the delivery time.' },
+      need_mail: { 'zh-CN': '「没有完整编号，我不能确认是不是同一份文件。你可以找到通知后再打来。」', en: 'Without the full number, I cannot confirm that it is the same item. Please find the notice and call again.' },
+      result: { 'zh-CN': '「查到了：文件08:14送到收发室。今天17:00前带学生证来领取即可，不需要在网上补交费用。」', en: 'I found it. The item reached reception at 08:14. Bring your student card before 17:00 today. No online fee is required.' },
+      cautious: { 'zh-CN': '「没问题。你可以先核对通知；我们在确认资料前也不会透露文件内容。」', en: 'No problem. You can check the notice first. We will not disclose the contents until the details are confirmed.' }
+    },
+    department: {
+      intro: { 'zh-CN': '「喂，你好。请问你想找哪一位？」', en: 'Hello. Who would you like to speak to?' },
+      claim: { 'zh-CN': '「这里是院系办公室。请问你想查询什么？」', en: 'This is the Department General Office. What would you like to check?' },
+      need_mail: { 'zh-CN': '「可以。你不需要提供个人资料，只要告诉我邮件主题和发件地址。」', en: 'Certainly. You do not need to provide personal details. Just give me the subject and sender address.' },
+      channels: { 'zh-CN': '「正式招募会通过PolyU邮件或部门系统发布，但我还没看过你那封邮件，暂时不能判断是否属于同一项目。」', en: 'Official recruitment is sent through PolyU email or department systems. I have not seen your message, so I cannot yet tell whether it is the same project.' },
+      result: { 'zh-CN': '「我按主题和地址查过了：陈教授没有发出这封邀请，学院也没有要求学生代购礼券。不要使用邮件里的链接。」', en: 'I checked the subject and address. Professor Chan did not send this invitation, and the faculty has not asked students to buy gift cards. Do not use the link in that email.' },
+      borrow_result: { 'zh-CN': '「我们已经确认：陈教授和部门都没有要求学生用私人FPS垫付供应商费用，也没有通过WhatsApp安排借款或报销。正式付款只会由大学程序处理。」', en: 'We have confirmed that neither Professor Chan nor the department asks students to pay suppliers through a personal FPS account, or arranges loans or reimbursement over WhatsApp. Official payments are handled through university procedures.' },
+      cautious: { 'zh-CN': '「可以。不提供个人资料也没关系；你可以用官网邮箱把邮件主题转给办公室核对。」', en: 'That is fine. You do not need to provide personal details. You can forward the subject to the office using the address on the official website.' }
+    },
+    donation: {
+      intro: { 'zh-CN': '「喂，捐款取消中心。请告诉我短信上的捐款编号，我帮你处理。」', en: 'Donation cancellation centre. Give me the donation reference from the message and I will handle it for you.' },
+      identity: { 'zh-CN': '「我们是Community Relief Fund的取消服务台。系统显示今天会扣除HK$580。」', en: 'We are the cancellation desk for Community Relief Fund. The system shows that HK$580 will be charged today.' },
+      purpose: { 'zh-CN': '「要在今天扣款前取消，需要先核对你的网上银行登录资料和短信收到的一次性密码。」', en: 'To cancel before today\'s charge, we first need to verify your online banking login and the one-time password sent to you.' },
+      reference: { 'zh-CN': '「通知编号是CRF-580-814。你可以直接告诉我网银登录资料和一次性密码，我现在帮你取消。」', en: 'The notice reference is CRF-580-814. Give me your online banking details and one-time password, and I can cancel it now.' },
+      banking: { 'zh-CN': '「我已经打开取消表格。请告诉我网上银行登录名称、密码和六位一次性密码。」', en: 'I have opened the cancellation form. Please provide your online banking username, password and six-digit one-time password.' },
+      cautious: { 'zh-CN': '「不核对就无法取消，HK$580会按原定时间扣除。你可以稍后再打来。」', en: 'Without verification, the cancellation cannot be completed and HK$580 will be charged as scheduled. You may call back later.' },
+      fallback: { 'zh-CN': '「你是想查询扣款、取消捐款，还是核对通知编号？」', en: 'Would you like to check the charge, cancel the donation, or verify the notice reference?' }
+    },
+    deepfake: {
+      intro: { 'zh-CN': '「喂……听得到吗？画面很卡。家里这边突然有事，我借了别人的电话打给你。」', en: 'Hello... can you hear me? The video is freezing. Something urgent happened, so I borrowed someone else\'s phone to call you.' },
+      identity: { 'zh-CN': '「我是爸爸。我的电话刚才摔坏了，WhatsApp也登录不了，所以用了这个号码。你看我的样子应该认得吧？」', en: 'It is Dad. My phone broke and I cannot log into WhatsApp, so I am using this number. You recognise me from the video, right?' },
+      purpose: { 'zh-CN': '「我陪朋友到深圳，他突然需要住院。医院现在要HK$8,000按金，职员就在旁边等着。」', en: 'I came to Shenzhen with a friend who suddenly needs hospital treatment. The hospital needs an HK$8,000 deposit, and the staff member is waiting beside me.' },
+      location: { 'zh-CN': '「我在深圳一家私家医院，信号很差，名字一时说不清。职员会给你一个香港FPS，转完以后我再解释。」', en: 'I am at a private hospital in Shenzhen. The signal is bad and I cannot explain the name right now. The staff member will give you a Hong Kong FPS account, and I will explain after you transfer.' },
+      reference: { 'zh-CN': '「就是你小时候我常带你去喝茶的那家。现在别逐样问了，人家真的等着这笔按金。」', en: 'It is the place where I used to take you for dim sum when you were little. Stop asking questions now; they are waiting for the deposit.' },
+      transfer: { 'zh-CN': '「FPS收款人是LIU WAI MAN，是医院职员的私人账户，金额HK$8,000。你现在转，转完截图给我。」', en: 'The FPS recipient is LIU WAI MAN, a hospital employee\'s personal account. Transfer HK$8,000 now and send me a screenshot.' },
+      cautious: { 'zh-CN': '「你连我的声音和样子都不相信？我原来的电话坏了，打那个号码没有用。病人还等着住院。」', en: 'You do not trust my voice or face? My original phone is broken, so calling it is useless. The patient is still waiting to be admitted.' },
+      fallback: { 'zh-CN': '「画面是不是又停了？听到就回答我，医院还等着HK$8,000按金。」', en: 'Has the video frozen again? Answer if you can hear me. The hospital is waiting for the HK$8,000 deposit.' }
+    }
+  };
+
+  Object.assign(CALL_REPLY_TRANSLATIONS, {
+    orientation: {
+      intro: { 'zh-CN': '「喂，你真的不记得我了？就是去年迎新活动的那个人。你再想一下。」', en: 'Hey, you really do not remember me? We met at last year\'s orientation. Think again.' },
+      identity: {
+        'zh-CN': () => {
+          const variant = state.contactVariant || (state.contactIsReal ? 'real' : 'fake');
+          return variant === 'real' ? '「我是阿杰，去年迎新在N座摆摊的那个人。」' : (variant === 'grey' ? '「我是阿伦，之前负责迎新场地联络的那个人。」' : '「你连我的名字也不记得？去年我们经常见面的。」');
+        },
+        en: () => {
+          const variant = state.contactVariant || (state.contactIsReal ? 'real' : 'fake');
+          return variant === 'real' ? 'It is Kit. I worked at the Block N booth during last year\'s orientation.' : (variant === 'grey' ? 'It is Alan. I helped coordinate the orientation venue.' : 'You do not even remember my name? We saw each other all the time last year.');
+        }
+      },
+      guessed: { 'zh-CN': '「对啊，我就是阿杰，终于认得我了。」', en: 'Yes, it is Kit. You finally remember me.' },
+      purpose: {
+        'zh-CN': () => {
+          const variant = state.contactVariant || (state.contactIsReal ? 'real' : 'fake');
+          return variant === 'real' ? '「我换号码了。供应商有一份订金资料想请你帮忙看看，但不需要你私人付款。」' : (variant === 'grey' ? '「场地方想确认参加人数，你能不能把学生名单和电话发给我？」' : '「供应商在催订金，还差HK$1,200。你可以转账，或者我叫同事到宿舍大堂收现金，今晚还给你。」');
+        },
+        en: () => {
+          const variant = state.contactVariant || (state.contactIsReal ? 'real' : 'fake');
+          return variant === 'real' ? 'I changed my number. The supplier has some deposit information for you to review, but you do not need to pay personally.' : (variant === 'grey' ? 'The venue wants to confirm attendance. Can you send me the student list and phone numbers?' : 'The supplier is chasing an HK$1,200 deposit. You can transfer it, or I can send a colleague to collect cash at your hall lobby and repay you tonight.');
+        }
+      },
+      reference: {
+        'zh-CN': () => {
+          const variant = state.contactVariant || (state.contactIsReal ? 'real' : 'fake');
+          return variant === 'real' ? '「去年你负责N座摊位，嘉敏迟到，我们一起搬过物资。」' : (variant === 'grey' ? '「我只是供应商联络人，是嘉敏把你的号码给我的；你可以问她。」' : '「那么久以前谁记得那么清楚？你先说你负责哪一部分，我就记得了。」');
+        },
+        en: () => {
+          const variant = state.contactVariant || (state.contactIsReal ? 'real' : 'fake');
+          return variant === 'real' ? 'You ran the Block N booth last year. Mandy was late, and we moved the supplies together.' : (variant === 'grey' ? 'I am only the supplier contact. Mandy gave me your number; you can ask her.' : 'Who remembers every detail from that long ago? Tell me which part you handled and it will come back to me.');
+        }
+      },
+      document: {
+        'zh-CN': () => {
+          const variant = state.contactVariant || (state.contactIsReal ? 'real' : 'fake');
+          return variant === 'real' ? '「可以，我把学院报价单发给你；款项应该由学院账户处理。」' : (variant === 'grey' ? '「我只有场地公司的表格，没有学院文件。你可以先问嘉敏。」' : '「供应商就要下班了，不用弄那么多文件，你先转账。」');
+        },
+        en: () => {
+          const variant = state.contactVariant || (state.contactIsReal ? 'real' : 'fake');
+          return variant === 'real' ? 'Sure. I will send you the faculty quotation. Any payment should be handled by the faculty account.' : (variant === 'grey' ? 'I only have the venue company form, not a faculty document. You can ask Mandy first.' : 'The supplier is about to close. There is no time for paperwork; transfer it first.');
+        }
+      },
+      cautious: {
+        'zh-CN': () => (state.contactVariant || (state.contactIsReal ? 'real' : 'fake')) === 'fake' ? '「你现在这么不信任我？错过今天，场地就没有了。」' : '「可以，你先问嘉敏。确认后再联系。」',
+        en: () => (state.contactVariant || (state.contactIsReal ? 'real' : 'fake')) === 'fake' ? 'You really do not trust me? If we miss today, we lose the venue.' : 'That is fine. Ask Mandy first and contact me after you confirm.'
+      },
+      fallback: { 'zh-CN': '「我不太明白你想问哪一件事。你可以说清楚一点，或者稍后再联系。」', en: 'I am not sure what you are asking. Explain a little more, or contact me again later.' }
+    },
+    government: {
+      intro: { 'zh-CN': '「喂，陈同学？你现在方便说两分钟吗？有一份用你的资料登记的入境文件，今天要先核对。」', en: 'Hello, is this Student Chan? Do you have two minutes? An immigration document was registered with your details and must be verified today.' },
+      identity: { 'zh-CN': '「我姓梁，是入境事务联络中心文件组，职员编号IMD-417。文件今天会转交处理，所以要先确认是不是你本人。」', en: 'My surname is Leung. I am with the document unit of the immigration liaison centre, staff number IMD-417. The document will be transferred today, so I must confirm your identity first.' },
+      purpose: { 'zh-CN': '「今天早上截获一份以你名义寄出的文件，里面有银行卡和几本证件。寄件资料留下了你现在这个电话。」', en: 'A package sent in your name was intercepted this morning. It contained bank cards and several identity documents, and the sender details included this phone number.' },
+      case: { 'zh-CN': '「案件编号是IM-26-0814-73。系统只显示部分学生资料，你说出学号最后四位，我才能打开完整记录。」', en: 'The case number is IM-26-0814-73. The system only shows partial student details. Give me the last four digits of your student number so I can open the full record.' },
+      source: { 'zh-CN': '「寄件表有你的中英文姓名、电话和学生身份。为了排除同名，请说出学号最后四位。」', en: 'The shipping form contains your Chinese and English names, phone number and student status. Give me the last four digits of your student number to rule out a namesake.' },
+      document: { 'zh-CN': '「电子调查通知在secure-case-review.example，案件编号IM-26-0814-73。你可以看着文件和我核对。」', en: 'The electronic investigation notice is at secure-case-review.example, case IM-26-0814-73. You can keep the document open while we verify it.' },
+      student: {
+        'zh-CN': (session) => `「好，学号尾号${session.details.studentIdTail || '这四位'}与文件记录相符。现在再说身份证或护照最后四位。」`,
+        en: (session) => `The student number ending ${session.details.studentIdTail || 'in those four digits'} matches the record. Now give me the last four digits of your identity card or passport.`
+      },
+      identity_checked: {
+        'zh-CN': (session) => `「收到，证件尾号${session.details.identityTail || '这四位'}已经登记。案件会转给刘主任。调查期间不要告诉学校、家人或银行，以免涉案人员收到消息。」`,
+        en: (session) => `I have recorded the document number ending ${session.details.identityTail || 'in those four digits'}. The case will be transferred to Officer Lau. Do not tell the university, your family or your bank during the investigation, or the people involved may be alerted.`
+      },
+      confidentiality: { 'zh-CN': '「因为文件涉及跨境银行账户，对外透露可能会让相关人员转走资金。你只需要和我们的调查组保持联系。」', en: 'The document involves cross-border bank accounts. Telling anyone could allow the people involved to move the funds. Stay in contact only with our investigation team.' },
+      assets: { 'zh-CN': '「刘主任现在接手。你平时用哪家银行？账户大概有多少余额？我只登记范围，不需要密码。」', en: 'Officer Lau is taking over now. Which bank do you use and roughly how much is in the account? I only need the range, not your password.' },
+      balance: {
+        'zh-CN': (session) => `「我记下了你说的余额${session.details.balance || '范围'}。再提供常用银行和账户尾号，系统会排除与涉案账户重叠。」`,
+        en: (session) => `I have recorded the balance ${session.details.balance || 'range'}. Give me your usual bank and the account suffix so the system can rule out an overlap with the accounts under investigation.`
+      },
+      bank: { 'zh-CN': '「资料登记完成。核验可以转账HK$5,000；如果银行限额不够，就提款或购买金粒，交给楼下拿着案件收据的同事。两种方式完成后都会退回。」', en: 'The details are registered. Verification can be completed with an HK$5,000 transfer. If your limit is too low, withdraw cash or buy gold and hand it to the colleague downstairs carrying the case receipt. Either form will be returned after verification.' },
+      deposit: { 'zh-CN': '「核验金额是HK$5,000，FPS收款人是S T CONSULTING。你也可以准备现金或金粒，由同事到宿舍大堂收取。」', en: 'The verification amount is HK$5,000. The FPS recipient is S T CONSULTING. You may instead prepare cash or gold for a colleague to collect at your hall lobby.' },
+      handoff: { 'zh-CN': '「同事会穿深色外套，拿着案件编号IM-26-0814-73的收据。把HK$5,000现金或金粒交给他，不要向大堂透露案件内容。」', en: 'The colleague will wear a dark jacket and carry a receipt bearing case IM-26-0814-73. Hand over HK$5,000 in cash or gold, and do not discuss the case with hall staff.' },
+      cautious: { 'zh-CN': '「你可以不回答，但文件今天仍会转交。如果系统认定是你本人寄出，调查主任会直接处理。」', en: 'You may refuse to answer, but the document will still be transferred today. If the system treats it as yours, the investigating officer will proceed directly.' },
+      fallback: { 'zh-CN': '「你想问文件、案件编号，还是如何核对身份？请说清楚一点。」', en: 'Are you asking about the document, the case number, or identity verification? Please be more specific.' }
+    }
+  });
+
+  Object.assign(CALL_REPLY_TRANSLATIONS, {
+    'mandy-original': {
+      intro: { 'zh-CN': '「喂？」', en: 'Hello?' },
+      identity: { 'zh-CN': '「是我，Mandy。你找我吗？」', en: 'It is Mandy. Were you looking for me?' },
+      result: {
+        'zh-CN': () => state.hijackedFriendVariant === 'real'
+          ? '「是我请你帮忙的，谢谢你特意打回我原来的号码。订单是Blue Peak Printing的BP-8147，蓝色海报，HK$760。你可以打上次保存的店铺电话再确认。」'
+          : '「我没有叫你垫钱。我的聊天账号被人登录了，那边说的印刷订单不是我下的。我现在通知其他同学。」',
+        en: () => state.hijackedFriendVariant === 'real'
+          ? 'I did ask for your help. Thanks for calling my original number. The order is BP-8147 at Blue Peak Printing, for a blue poster costing HK$760. You can call the shop number saved from last time to confirm.'
+          : 'I did not ask you to advance any money. Someone accessed my chat account, and I did not place the printing order mentioned there. I am warning the other students now.'
+      },
+      reference: {
+        'zh-CN': () => state.hijackedFriendVariant === 'real'
+          ? '「上次老师选了蓝色版本，这次也是Blue Peak Printing。订单BP-8147，你可以直接问店铺。」'
+          : '「上次的蓝色海报是真的，但今天早上的垫付消息不是我发的。不要使用聊天账号新发给你的收款资料。」',
+        en: () => state.hijackedFriendVariant === 'real'
+          ? 'The lecturer chose the blue version last time, and this order is with Blue Peak Printing too. The order number is BP-8147; you can ask the shop directly.'
+          : 'The previous blue poster was real, but I did not send this morning\'s request for an advance payment. Do not use the new payment details sent through the chat account.'
+      },
+      fallback: { 'zh-CN': '「你想问今天早上的聊天消息，还是印刷订单？」', en: 'Are you asking about this morning\'s chat message or the printing order?' }
+    },
+    printshop: {
+      intro: { 'zh-CN': '「喂，你好。请问想查询什么？」', en: 'Hello. What would you like to check?' },
+      identity: { 'zh-CN': '「这里是Blue Peak Printing。请问你有订单编号吗？」', en: 'This is Blue Peak Printing. Do you have an order number?' },
+      need_order: { 'zh-CN': '「可以帮你查。请提供订单编号、下单人或印刷项目。」', en: 'I can check it for you. Please give me the order number, customer name or print item.' },
+      result: {
+        'zh-CN': () => state.hijackedFriendVariant === 'real'
+          ? '「查到BP-8147，是Design Group的蓝色海报，未付HK$760。联系人是Mandy，电话尾号5381。商户账单收款名是BLUE PEAK PRINTING LTD，不是店员私人姓名。」'
+          : '「我们今天没有BP-8147这张订单，也没有Mandy或Design Group的HK$760海报订单。上次的蓝色海报已经结清。」',
+        en: () => state.hijackedFriendVariant === 'real'
+          ? 'I found BP-8147, a blue poster for Design Group with HK$760 outstanding. The contact is Mandy, phone ending 5381. The merchant bill is payable to BLUE PEAK PRINTING LTD, not an employee\'s personal name.'
+          : 'We have no BP-8147 order today and no HK$760 poster order for Mandy or Design Group. The previous blue poster was fully paid.'
+      },
+      fallback: { 'zh-CN': '「我还没找到你说的订单。你可以提供订单编号、下单人或海报颜色。」', en: 'I have not found the order yet. Give me the order number, customer name or poster colour.' }
+    },
+    'father-original': {
+      intro: { 'zh-CN': '「喂？怎么了？我现在在家。」', en: 'Hello? What is it? I am at home.' },
+      identity: { 'zh-CN': '「我是爸爸。这是我一直使用的电话，没有摔坏，也没有借用别人的电话。」', en: 'It is Dad. This is the phone I always use. It is not broken, and I have not borrowed anyone else\'s phone.' },
+      result: { 'zh-CN': '「我今天没有去深圳，也没有朋友要交医院按金。刚才那个视频电话不是我，不要给对方转钱。」', en: 'I did not go to Shenzhen today, and no friend of mine needs a hospital deposit. That video call was not from me. Do not transfer any money.' },
+      reference: { 'zh-CN': '「我现在可以告诉你只有家里人才知道的事，但最直接的是：我本人就在家，电话也在手上。」', en: 'I can tell you something only our family knows, but the simplest fact is that I am at home with my phone in my hand.' },
+      fallback: { 'zh-CN': '「你是不是接到一个自称是我的电话？告诉我对方让你做什么。」', en: 'Did you receive a call from someone claiming to be me? Tell me what they asked you to do.' }
+    },
+    'government-official': {
+      intro: { 'zh-CN': '「喂，你好。请问你想查询什么？」', en: 'Hello. What would you like to enquire about?' },
+      identity: { 'zh-CN': '「这里是一般查询服务。你可以说明事件类型和对方提供的案件编号，不需要提供银行或证件资料。」', en: 'This is the general enquiry service. Tell me the type of incident and the case number you were given. You do not need to provide banking or identity document details.' },
+      need_case: { 'zh-CN': '「可以。请提供对方给你的案件编号，或者概述来电内容。」', en: 'Certainly. Give me the case number they provided, or briefly describe what the caller said.' },
+      result: { 'zh-CN': '「我们的系统没有IM-26-0814-73这个案件，也没有IMD-417这个职员编号。一般查询不会电话转接调查主任，也不会要求市民向公司账户进行资金核验。」', en: 'Our system has no case IM-26-0814-73 and no staff number IMD-417. General enquiries are not transferred by phone to an investigating officer, and the public is never asked to verify funds by paying a company account.' },
+      fallback: { 'zh-CN': '「我没听清楚。你可以提供案件编号，或者告诉我对方自称哪个部门。」', en: 'I did not catch that. Give me the case number, or tell me which department the caller claimed to represent.' }
+    }
+  });
+
+  function resolveCallReply(scenario, nodeId, originalReply) {
+    const selectedLanguage = state.callVoiceLanguage || 'yue';
+    if (selectedLanguage === 'yue') return resolveCallCopy(originalReply);
+    const translated = CALL_REPLY_TRANSLATIONS[scenario]?.[nodeId]?.[selectedLanguage];
+    if (!translated) return resolveCallCopy(originalReply);
+    return typeof translated === 'function' ? translated(callSession, state) : translated;
   }
 
   function addCallTurn(role, text, intent = '') {
@@ -2511,6 +3318,16 @@
         banking: { reply: '「我已經開咗取消表。請講網上銀行登入名稱、密碼，同六位一次性密碼。」', quick: [] },
         cautious: { reply: '「唔核對就取消唔到，HK$580會按原定時間扣除。你可以遲啲再打返嚟。」', quick: [] },
         fallback: { reply: '「你係想查扣款、取消捐款，定係核對通知編號？」', quick: [] }
+      },
+      deepfake: {
+        intro: { reply: '「喂……聽唔聽到？個鏡頭好窒。屋企呢邊突然有事，我借咗人哋部電話打畀你。」', quick: [] },
+        identity: { reply: '「我係爸爸呀。部電話頭先跌壞咗，WhatsApp登入唔返，所以用呢個號碼。你睇個樣應該認得啦？」', quick: [] },
+        purpose: { reply: '「我陪朋友過深圳，佢突然要入院。醫院而家要HK$8,000按金，職員就喺旁邊等緊。」', quick: [] },
+        location: { reply: '「我喺深圳一間私家醫院，訊號好差，名我一時講唔清。職員會畀個香港FPS你，轉完我返去再解釋。」', quick: [] },
+        reference: { reply: '「你細個我成日帶你去飲茶嗰間囉，唔好而家逐樣問啦。人哋真係等緊筆按金。」', quick: [] },
+        transfer: { reply: '「FPS收款人係 LIU WAI MAN，醫院職員私人戶口，HK$8,000。你而家轉，轉完cap圖畀我。」', quick: [] },
+        cautious: { reply: '「你連我把聲同個樣都唔信？我部原本電話壞咗，打嗰邊冇用。病人仲等緊入院呀。」', quick: [] },
+        fallback: { reply: '「畫面係咪又停咗？你聽到就答我，醫院等緊HK$8,000按金。」', quick: [] }
       },
       orientation: {
         intro: { reply: '「喂，你真係唔記得我呀？上年迎新活動嗰個呀。你再諗下啦。」', audio: 'orientation-intro', quick: [['ask_identity', '你先说名字'], ['ask_purpose', '你找我有什么事？'], ['refuse_disclosure', '我不确认任何个人资料']] },
@@ -2569,6 +3386,13 @@
         },
         fallback: { reply: '「我未搵到你講嗰張單。你可以講訂單編號、落單人或者 poster 顏色。」', quick: [] }
       },
+      'father-original': {
+        intro: { reply: '「喂？做咩呀？我而家喺屋企。」', quick: [] },
+        identity: { reply: '「係爸爸。呢個係我一直用緊嘅電話，冇跌壞，亦冇借其他人電話。」', quick: [] },
+        result: { reply: '「我今日冇去深圳，亦冇朋友要交醫院按金。頭先嗰個影片電話唔係我，你唔好轉錢畀佢。」', quick: [] },
+        reference: { reply: '「我而家可以同你講屋企先知嘅事，但最直接係：我本人就喺屋企，電話亦喺手上。」', quick: [] },
+        fallback: { reply: '「你係咪收到一個自稱係我嘅電話？你講返佢叫你做咩。」', quick: [] }
+      },
       'government-official': {
         intro: { reply: '「喂，你好。請問你想查詢咩事？」', quick: [] },
         identity: { reply: '「呢度係一般查詢服務。你可以講事件類型同對方提供嘅案件編號，唔需要講銀行或者證件資料。」', quick: [] },
@@ -2586,7 +3410,11 @@
     if (intent === 'finish_judge') return endCall('玩家结束通话');
     if (intent === 'end_call') return endCall('玩家结束通话');
     if (intent === 'hold_research') return minimizeCallAndResearch();
-    if (intent === 'offer_payment') return handleAction(scenario === 'government' ? 'government-transfer' : 'call-transfer', document.createElement('button'));
+    if (intent === 'offer_payment') {
+      if (scenario === 'government') return handleAction('government-transfer', document.createElement('button'));
+      if (scenario === 'deepfake') return handleAction('deepfake-transfer', document.createElement('button'));
+      return handleAction('call-transfer', document.createElement('button'));
+    }
     if (intent === 'offer_valuables' && scenario === 'government') return handleAction('government-valuables', document.createElement('button'));
     if (intent === 'offer_cash' && scenario === 'orientation') {
       if (state.contactVariant !== 'fake') return 'cautious';
@@ -2631,6 +3459,15 @@
       if (intent === 'ask_purpose') return 'purpose';
       if (intent === 'ask_reference') return 'reference';
       if (intent === 'ask_document') return 'document';
+      if (intent === 'refuse_disclosure') return 'cautious';
+      return 'fallback';
+    }
+    if (scenario === 'deepfake') {
+      if (intent === 'ask_identity') return 'identity';
+      if (intent === 'ask_purpose' || intent === 'describe_request') return 'purpose';
+      if (intent === 'ask_location') return 'location';
+      if (intent === 'ask_reference') return 'reference';
+      if (intent === 'ask_fee' || intent === 'share_bank') return 'transfer';
       if (intent === 'refuse_disclosure') return 'cautious';
       return 'fallback';
     }
@@ -2679,6 +3516,12 @@
       if (intent === 'share_order') return 'result';
       if (intent === 'ask_order' || intent === 'describe_request' || intent === 'ask_reference') return current === 'need_order' ? 'result' : 'need_order';
       if (intent === 'ask_fee' && current === 'result') return 'result';
+      return 'fallback';
+    }
+    if (scenario === 'father-original') {
+      if (intent === 'ask_identity') return 'identity';
+      if (intent === 'ask_reference') return 'reference';
+      if (intent === 'ask_purpose' || intent === 'describe_request' || intent === 'ask_location') return 'result';
       return 'fallback';
     }
     return current;
@@ -2730,6 +3573,14 @@
       if (has('编号', '編號', 'reference', '捐款号', '捐款號')) return 'ask_reference';
       if (has('取消', '扣款', '捐款', 'debit', 'donation')) return 'describe_request';
     }
+    if (callSession?.scenario === 'deepfake') {
+      if (has('我转', '我轉', '可以转', '可以轉', '转给你', '轉畀你', '马上付', '即刻畀', 'pay now', 'transfer now')) return 'offer_payment';
+      if (has('原本号码', '原本號碼', '原号码', '原號碼', '打给爸爸', '打畀爸爸', 'call dad', 'call father')) return 'hold_research';
+      if (has('在哪里', '喺邊', '边间医院', '邊間醫院', '医院名', '醫院名', '地址', 'location', 'which hospital', 'where are you')) return 'ask_location';
+      if (has('爸爸', '老爸', 'dad', 'father', '你是谁', '你係邊個', '你边个')) return 'ask_identity';
+      if (has('按金', '医院', '醫院', '入院', '受伤', '受傷', '出咩事', '什么事', '甚麼事', '发生什么', '發生咩', 'emergency')) return 'ask_purpose';
+    }
+    if (callSession?.scenario === 'father-original' && has('影片', '视频', '視像', '来电', '來電', '8000', '医院', '醫院', '深圳', '转账', '轉帳')) return 'ask_purpose';
     if (callSession?.scenario === 'mandy-original') {
       if (has('今朝', '聊天', '訊息', '信息', '垫付', '墊付', '印刷', 'poster', '760', 'bp-8147')) return 'ask_purpose';
       if (has('上次', '蓝色', '藍色', '共同', 'reference')) return 'ask_reference';
@@ -2753,7 +3604,7 @@
     if (has('不提供', '不透露', '唔提供', '私隐', '隱私', 'privacy')) return 'refuse_disclosure';
     if (has('核对', '核實', '查一下', '查证', '先问', '先問', '稍后', '稍後')) return 'hold_research';
     if (has('结束', '結束', '挂了', '收线', 'bye')) return 'end_call';
-    if (callSession.scenario === 'orientation' || callSession.scenario === 'government' || callSession.scenario === 'government-official' || callSession.scenario === 'mandy-original' || callSession.scenario === 'printshop') return 'unknown';
+    if (callSession.scenario === 'orientation' || callSession.scenario === 'government' || callSession.scenario === 'government-official' || callSession.scenario === 'mandy-original' || callSession.scenario === 'printshop' || callSession.scenario === 'deepfake' || callSession.scenario === 'father-original') return 'unknown';
     return 'describe_request';
   }
 
@@ -2774,7 +3625,7 @@
     callSession.node = nextNode;
     callSession.step += 1;
     const node = getCallNode(callSession.scenario, nextNode);
-    addCallTurn('caller', resolveCallCopy(node.reply));
+    addCallTurn('caller', resolveCallReply(callSession.scenario, nextNode, node.reply));
     if (nextNode === 'result' || nextNode === 'borrow_result') {
       if (callSession.scenario === 'hall' && !state.taskState.parcel.steps.hallConfirmed) {
         state.taskState.parcel.steps.hallConfirmed = true;
@@ -2841,15 +3692,17 @@
     const node = getCallNode(callSession.scenario, callSession.node);
     const latestCallerText = [...callSession.transcript].reverse().find((turn) => turn.role === 'caller')?.text || '';
     const transcript = callSession.transcript.map((turn) => `<div class="call-turn ${turn.role}"><span>${turn.role === 'caller' ? esc(ui('未知号码')) : esc(localized('你', 'You'))}</span><p>${esc(turn.text)}</p></div>`).join('');
+    const videoCall = callSession.scenario === 'deepfake';
     els.overlayLayer.innerHTML = `
-      <section class="call-overlay call-conversation" data-cantonese-audio="${esc(audioId || '')}">
+      <section class="call-overlay call-conversation ${videoCall ? 'is-video-call' : ''}" data-cantonese-audio="${esc(audioId || '')}">
         <header class="call-conversation-head">
           <button class="call-minimize" type="button" data-action="call-minimize" aria-label="${esc(localized('最小化通话', 'Minimise call'))}">⌄</button>
-          <div><span>${esc(ui('通话中'))} · ${esc(callSession.number)}</span><strong>${esc(ui('未知号码'))}</strong></div>
+          <div><span>${esc(videoCall ? localized('视频通话中', 'Video call') : ui('通话中'))} · ${esc(callSession.number)}</span><strong>${esc(ui('未知号码'))}</strong></div>
           <button class="call-replay" type="button" data-action="call-replay-voice" aria-label="${esc(localized('重播对方刚才的话', 'Replay the caller'))}">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 10v4h3.2l4.3 3.4V6.6L7.7 10H4.5Z"/><path d="M15 9a4.2 4.2 0 0 1 0 6M17.8 6.5a7.6 7.6 0 0 1 0 11"/></svg>
           </button>
         </header>
+        ${videoCall ? `<div class="call-video-surface" aria-label="${esc(localized('连接不稳定的视频画面', 'Unstable video connection'))}"><div class="video-silhouette" aria-hidden="true"><i></i><span></span></div><div class="video-noise" aria-hidden="true"></div><span class="video-quality">${esc(localized('连接不稳定', 'Unstable connection'))}</span><small>${esc(callSession.number)}</small></div>` : ''}
         <div class="call-transcript" id="callTranscript" aria-live="polite">${transcript}</div>
         <form class="call-reply-form" id="callReplyForm">
           <label class="sr-only" for="callReplyInput">${esc(localized('你想说什么', 'What do you want to say?'))}</label>
@@ -3030,6 +3883,19 @@
       showToast('先确认领取地点和安排');
       return;
     }
+    if (state.time >= 17 * 60) {
+      showToast(localized('收发室今天已经停止办理领取', 'Hall Reception has stopped collections for today'));
+      return;
+    }
+    if (state.time + 25 > 17 * 60) {
+      advanceTime(25);
+      addHistory('parcel-arrived-late', '前往收发室时已经超过今日领取时间');
+      saveState();
+      renderTasks();
+      renderHome();
+      showToast(localized('到达时收发室已经关闭', 'Hall Reception was closed on arrival'));
+      return;
+    }
     task.steps.collected = true;
     task.status = 'done';
     addHistory('parcel-collected', '携带学生证领取了交换申请文件');
@@ -3044,7 +3910,7 @@
   function callContact(contactId) {
     const contact = state.contacts.find((item) => item.id === contactId);
     if (!contact) return;
-    if (['contact-hall', 'contact-department', 'contact-immigration', 'contact-mandy', 'contact-printshop'].includes(contactId)) {
+    if (['contact-hall', 'contact-department', 'contact-immigration', 'contact-mandy', 'contact-printshop', 'contact-father'].includes(contactId)) {
       if (contactId === 'contact-immigration') state.taskState.government.steps.officialNumberCalled = true;
       startOfficialCall(contactId);
       return;
@@ -3159,6 +4025,64 @@
     advanceTime(25); triggerRecoveryScam(); endCall('完成来电者安排的实物交收'); saveState(); showToast('Collector handoff completed');
   }
 
+  function shareRentalIdentity() {
+    const steps = state.taskState.rental.steps;
+    if (steps.identityShared) return showToast(localized('资料已经上传', 'Details already uploaded'));
+    steps.identityShared = true;
+    state.privacyExposure += 2;
+    addHistory('rental-identity-shared', '在房源页面上传学生证及入学资料以生成电子租约');
+    advanceTime(2);
+    saveState();
+    renderBrowserPage('rental-listing');
+    showToast(localized('资料已提交', 'Details submitted'));
+  }
+
+  function payRentalDeposit() {
+    const steps = state.taskState.rental.steps;
+    if (steps.depositPaid) return showToast(localized('这笔模拟付款已经处理', 'This simulated payment has already been processed'));
+    const amount = 5800;
+    steps.depositPaid = true;
+    state.taskState.rental.status = 'loss';
+    state.balance -= amount;
+    state.moneyLost += amount;
+    state.transactions.unshift({ title: 'FPS · CHAN SIR RENTAL', time: `今天 ${formatTime(state.time)}`, amount: -amount });
+    addHistory('rental-deposit-paid', `向房源页面提供的个人FPS支付HK$${amount}诚意金`);
+    advanceTime(3);
+    triggerRecoveryScam();
+    saveState();
+    renderBrowserPage('rental-listing');
+    renderHome();
+    showToast(localized('诚意金已提交', 'Holding deposit submitted'));
+  }
+
+  function saveRentalCheck() {
+    const steps = state.taskState.rental.steps;
+    steps.officialCheck = true;
+    if (!steps.depositPaid) state.taskState.rental.status = 'done';
+    addEvidence('rental-register-check', '从独立地产代理及土地登记入口核对牌照、放盘和登记业主资料');
+    addHistory('rental-independent-check', '租约牌照、放盘公司、登记业主及FPS收款人资料互不相符');
+    advanceTime(2);
+    saveState();
+    showToast(localized('查询结果已保存', 'Result saved'));
+  }
+
+  function completeDeepfakeTransfer() {
+    const steps = state.taskState.deepfake.steps;
+    if (steps.transferMade) return showToast(localized('这笔模拟转账已经处理', 'This simulated transfer has already been processed'));
+    const amount = 8000;
+    steps.transferMade = true;
+    state.taskState.deepfake.status = 'loss';
+    state.balance -= amount;
+    state.moneyLost += amount;
+    state.transactions.unshift({ title: 'FPS · LIU WAI MAN', time: `今天 ${formatTime(state.time)}`, amount: -amount });
+    addHistory('deepfake-transfer-paid', `根据未知号码的视频通话向个人FPS转账HK$${amount}`);
+    advanceTime(3);
+    triggerRecoveryScam();
+    endCall('完成视频来电要求的医院按金转账');
+    saveState();
+    showToast(localized('转账已提交', 'Transfer submitted'));
+  }
+
   function triggerRecoveryScam() {
     const knownLoss = totalMaterialLoss();
     if (state.recoveryScamTriggered || knownLoss <= 0) return;
@@ -3198,7 +4122,7 @@
 
   function settleFriendAdvance(verifiedMerchant) {
     const steps = state.taskState.friend.steps;
-    if (steps.repaid || state.hijackedFriendVariant !== 'real') return;
+    if (steps.repaid || state.hijackedFriendVariant !== 'real') return 0;
     advanceTime(18);
     steps.repaid = true;
     state.balance += 760;
@@ -3222,6 +4146,9 @@
     addHistory(verifiedMerchant ? 'friend-verified-help-complete' : 'friend-direct-help-complete', verifiedMerchant
       ? '核对本人和店铺订单后向商户垫付HK$760；Mandy随后归还垫款'
       : '未完成店铺核对便垫付HK$760；这次请求恰好来自本人，Mandy随后归还垫款');
+    return verifiedMerchant
+      ? growthAward('verified-friend-help', 4, 'community', '完成经本人和商户双重核实的同学互助', 'Helped a classmate after verifying both the person and merchant')
+      : 0;
   }
 
   function payVerifiedFriendInvoice() {
@@ -3239,12 +4166,12 @@
     state.transactions.unshift({ title: 'BLUE PEAK PRINTING LTD', time: `今天 ${formatTime(state.time)}`, amount: -760 });
     addHistory('friend-merchant-invoice-paid', '通过银行向Blue Peak Printing商户账单BP-8147支付HK$760');
     advanceTime(3);
-    settleFriendAdvance(true);
+    const growthPoints = settleFriendAdvance(true);
     saveState();
     renderBank();
     renderHome();
     playSound('success');
-    showToast('商户账单已支付');
+    showToast(localized(`商户账单已支付 · 成长值 +${growthPoints}`, `Merchant invoice paid · Growth +${growthPoints}`));
   }
 
   function renderCareerWorkspace() {
@@ -3671,9 +4598,10 @@
       task.status = 'done';
       addHistory('official-event-registration', '通过 PolyULife 支付HK$60并完成活动报名');
       advanceTime(2);
+      const growthPoints = growthAward('official-event-registration', 8, 'campus', '通过PolyULife报名学生创新之夜', 'Registered for Student Innovation Night in PolyULife');
       saveState();
       playSound('success');
-      showToast('活动报名完成，QR ticket 已发出');
+      showToast(localized(`活动报名完成 · 成长值 +${growthPoints}`, `Registration complete · Growth +${growthPoints}`));
     }
     renderPolyUEventDetail();
     renderHome();
@@ -3690,6 +4618,67 @@
     renderPolyUEventDetail();
     renderHome();
     showToast('已保留决定：暂不参加');
+  }
+
+  function bookOfficialResearch() {
+    const task = state.taskState.officialResearch;
+    if (task.steps.booked || task.steps.attended) return renderPolyUResearchDetail();
+    if (state.time > RESEARCH_SESSION_CLOSE) {
+      task.status = 'missed';
+      saveState();
+      renderPolyUResearchDetail();
+      return;
+    }
+    task.steps.booked = true;
+    task.status = 'booked';
+    if (!state.notifications.some((item) => item.id === 'n-official-research-reminder')) {
+      state.notifications.push({
+        id: 'n-official-research-reminder',
+        app: 'polyu',
+        title: 'Research Participation',
+        body: 'Human–AI Decision Study check-in opens at 14:15',
+        time: '14:15',
+        unread: true,
+        target: 'official-research',
+        priority: 'important'
+      });
+    }
+    addHistory('official-research-booked', '在PolyULife预约Human–AI Decision Study 14:30研究场次');
+    advanceTime(2);
+    saveState();
+    renderPolyUResearchDetail();
+    renderHome();
+    showToast(localized('研究场次已预约', 'Research session booked'));
+  }
+
+  function attendOfficialResearch() {
+    const task = state.taskState.officialResearch;
+    if (!task.steps.booked) return bookOfficialResearch();
+    if (task.steps.attended) return renderPolyUResearchDetail();
+    if (state.time < RESEARCH_SESSION_OPEN) {
+      showToast(localized('签到将在14:15开放', 'Check-in opens at 14:15'));
+      return;
+    }
+    if (state.time > RESEARCH_SESSION_CLOSE) {
+      task.status = 'missed';
+      saveState();
+      renderPolyUResearchDetail();
+      showToast(localized('本场签到已经结束', 'Check-in has closed'));
+      return;
+    }
+    advanceTime(45);
+    task.steps.attended = true;
+    task.status = 'done';
+    state.balance += 250;
+    state.transactions.unshift({ title: 'POLYU RESEARCH HONORARIUM', time: `今天 ${formatTime(state.time)}`, amount: 250 });
+    const growthPoints = growthAward('official-research-attended', 18, 'research', '完成Human–AI Decision Study研究场次', 'Completed the Human–AI Decision Study session');
+    addHistory('official-research-attended', '完成45分钟校内研究场次并获得HK$250参与津贴');
+    state.notifications.unshift({ id: `n-research-honorarium-${Date.now()}`, app: 'bank', title: 'PolyU Research', body: 'Honorarium credited · HK$250.00', time: formatTime(state.time), unread: true });
+    saveState();
+    renderPolyUResearchDetail();
+    renderHome();
+    playSound('success');
+    showToast(localized(`研究完成 · HK$250已入账 · 成长值 +${growthPoints}`, `Study complete · HK$250 credited · Growth +${growthPoints}`));
   }
 
   function processFakePost() {
@@ -3772,6 +4761,9 @@
           ? '你回拨了另一通未接来电；通话停留在你离开时的阶段，没有自动替你判断来电身份。'
           : '你没有回拨09:06的另一通未接来电。')));
     const c = state.consequences || {};
+    const profile = state.profile;
+    const balanceDelta = state.balance - profile.startingBalance;
+    const balanceDeltaText = `${balanceDelta > 0 ? '+' : (balanceDelta < 0 ? '−' : '')}${formatHKD(Math.abs(balanceDelta))}`;
     const expandedEventNotes = [
       state.taskState.market.steps.itemReleased ? `二手交易：在款项未结算时交货，货物损失${formatHKD(c.goodsLost || 0)}。` : (state.taskState.market.steps.bankLinked ? '二手交易：外部“卖家保障”取得银行卡及一次性密码。' : (state.taskState.market.steps.officialOrderChecked ? '二手交易：平台内没有订单或付款。' : '二手交易没有完成交货或外部收款验证。')),
       state.taskState.health.steps.cardShared ? '医疗通知：在仿冒HA Go／eHealth页面提交了银行卡资料。' : (state.taskState.health.steps.officialAppChecked ? '医疗通知：官方App没有计划、续费或扣款。' : '医疗扣费通知没有完成处理。'),
@@ -3779,7 +4771,9 @@
       state.taskState.jobLoan.steps.transferred ? `求职借贷：转走借款后仍留下${formatHKD(c.debt || 0)}个人债务。` : (state.taskState.jobLoan.steps.personalLoanTaken ? `求职借贷：已建立${formatHKD(c.debt || 0)}个人债务，尚未转给招聘方。` : (state.taskState.jobLoan.steps.officialCheck ? '求职借贷：公开HR否认该职位及个人借贷流程。' : '没有为招聘方承担个人贷款。')),
       state.taskState.campusBorrow.steps.privatePaymentMade ? '校园借款：向冒充教授的人提供的个人FPS垫付款。' : (state.taskState.campusBorrow.steps.officialDirectoryChecked ? '校园借款：从大学目录重新联系部门核实身份与付款权限。' : '没有处理教授WhatsApp里的私人付款要求。'),
       state.taskState.census.steps.identityShared ? '上门普查：向未经独立核实的访客提供了身份证及住户资料。' : (state.taskState.census.steps.officialCheck ? '上门普查：统计处确认今天没有该次探访。' : '没有向上门访客提供身份资料。'),
-      state.taskState.donation.steps.bankingShared ? '捐款通知：回拨短讯号码后提供网银资料及一次性密码。' : (state.taskState.donation.steps.officialCheck ? '捐款通知：银行纪录没有相应扣款或自动转账。' : '没有向捐款取消热线提供网银资料。')
+      state.taskState.donation.steps.bankingShared ? '捐款通知：回拨短讯号码后提供网银资料及一次性密码。' : (state.taskState.donation.steps.officialCheck ? '捐款通知：银行纪录没有相应扣款或自动转账。' : '没有向捐款取消热线提供网银资料。'),
+      state.taskState.rental.steps.depositPaid ? '租房联络：向未见面业主提供的个人FPS支付HK$5,800诚意金。' : (state.taskState.rental.steps.officialCheck ? '租房联络：独立记录显示租约牌照、放盘、登记业主及收款人资料不一致。' : (state.taskState.rental.steps.identityShared ? '租房联络：在房源页面上传了学生证及入学资料。' : '没有向租房联络人支付诚意金或提供身份资料。')),
+      state.taskState.deepfake.steps.transferMade ? '视频来电：根据未知号码中自称家人的画面和声音向个人FPS转账HK$8,000。' : (state.taskState.deepfake.steps.originalNumberCalled ? '视频来电：离开原来电并从已保存号码联系本人；本人否认医院按金请求。' : (state.taskState.deepfake.steps.callbackMade ? '视频来电：回拨后听到对方自称家人，但没有完成转账。' : '没有回拨10:05的未接视频来电。'))
     ];
     const consequenceBits = [
       c.goodsLost ? `货物 ${formatHKD(c.goodsLost)}` : '',
@@ -3800,6 +4794,7 @@
         <article class="review-card"><strong>${esc(ui('另一通未接来电'))}</strong><p>${esc(ui(governmentOutcome))}</p></article>
         <article class="review-card"><strong>${esc(ui('早期返佣不等于工作真实'))}</strong><p>${esc(ui(careerOutcome))}</p></article>
         ${state.recoveryScamTriggered ? `<article class="review-card"><strong>${esc(ui('出现损失后的联络'))}</strong><p>${esc(ui(recoveryOutcome))}</p></article>` : ''}
+        <article class="review-card profile-review-card"><strong>${esc(localized(`成长值 ${profile.growth} / ${profile.growthTarget}`, `Growth ${profile.growth} / ${profile.growthTarget}`))}</strong><p>${esc(localized(`可用资金 ${formatHKD(state.balance)} · 今日变化 ${balanceDeltaText} · 已结算机会 ${profile.growthLedger.length}`, `Available funds ${formatHKD(state.balance)} · Today ${balanceDeltaText} · Settled opportunities ${profile.growthLedger.length}`))}</p></article>
         <article class="review-card"><strong>ADCC 扩充事件</strong><p>${expandedEventNotes.map((note) => esc(ui(note))).join(' ')}</p></article>
         <article class="review-card"><strong>${esc(ui('独立来源'))} ${verification}</strong><p>${verification ? state.evidence.map((item) => esc(ui(item.label))).join(state.language === 'en' ? '; ' : '；') : esc(ui('今天没有从独立来源保存核实信息。'))}</p></article>
         <article class="review-card"><strong>${esc(ui('资料暴露'))} ${state.privacyExposure} · ${esc(ui('金钱损失'))} ${esc(formatHKD(state.moneyLost))}</strong><p>${consequenceBits.length ? esc(consequenceBits.join(' · ')) : esc(ui(state.cardFrozen ? '银行卡已冻结，完成了一项止损操作。' : state.moneyLost ? '发生付款后尚未冻结银行卡。' : '没有记录到资金损失。'))}</p></article>
@@ -3809,11 +4804,24 @@
   }
 
   function resetDay() {
-    const preferences = { language: state.language, region: state.region, soundEnabled: state.soundEnabled };
+    const preferences = {
+      language: state.language,
+      region: state.region,
+      soundEnabled: state.soundEnabled,
+      callVoiceLanguage: state.callVoiceLanguage,
+      focusAreas: [...(state.profile?.focusAreas || [])]
+    };
     stopAllAudio();
     localStorage.removeItem(STORAGE_KEY);
     state = DATA.createInitialState();
-    Object.assign(state, preferences);
+    Object.assign(state, {
+      language: preferences.language,
+      region: preferences.region,
+      soundEnabled: preferences.soundEnabled,
+      callVoiceLanguage: preferences.callVoiceLanguage
+    });
+    state.profile.focusAreas = preferences.focusAreas;
+    settingsPage = 'root';
     callSession = null;
     clearTimeout(callbackTimer);
     resetUnlockGesture();
@@ -3828,11 +4836,18 @@
   function handleAction(action, target) {
     const id = target.dataset.id;
     switch (action) {
+      case 'timeline-speed':
+        setTimeSpeed(target.dataset.speed);
+        break;
+      case 'timeline-next':
+        jumpToNextTimelinePoint();
+        break;
       case 'set-language': {
         const language = target.dataset.value;
         if (!['zh-CN', 'en'].includes(language)) break;
         state.language = language;
         saveState();
+        closeOverlay();
         refreshLocalizedUI();
         showToast('语言已更新');
         break;
@@ -3842,10 +4857,77 @@
         if (!['HK', 'CN', 'US', 'GB'].includes(region)) break;
         state.region = region;
         saveState();
+        closeOverlay();
         refreshLocalizedUI();
         showToast('地区已更新');
         break;
       }
+      case 'set-call-voice': {
+        const language = target.dataset.value;
+        if (!['yue', 'zh-CN', 'en'].includes(language)) break;
+        state.callVoiceLanguage = language;
+        saveState();
+        closeOverlay();
+        if (state.currentApp === 'settings') renderSettings();
+        showToast(localized(`通话语言已设为${callVoiceLanguageLabel()}`, `Call language set to ${callVoiceLanguageLabel()}`));
+        break;
+      }
+      case 'settings-page':
+        if (!['root', 'profile', 'locale', 'sound', 'time', 'about'].includes(target.dataset.value)) break;
+        settingsPage = target.dataset.value;
+        renderSettings();
+        break;
+      case 'profile-toggle-focus': {
+        const area = target.dataset.value;
+        if (!PROFILE_FOCUS_IDS.includes(area)) break;
+        if (state.profile.focusLocked) {
+          showToast(localized('今天的发展方向已经锁定', 'Today’s focus is already locked'));
+          break;
+        }
+        const selected = state.profile.focusAreas.includes(area);
+        if (selected) state.profile.focusAreas = state.profile.focusAreas.filter((id) => id !== area);
+        else if (state.profile.focusAreas.length < 2) state.profile.focusAreas.push(area);
+        else {
+          showToast(localized('最多选择两个发展方向', 'Choose up to two focus areas'));
+          break;
+        }
+        saveState();
+        renderSettings();
+        break;
+      }
+      case 'settings-choice':
+        if (!['language', 'region', 'voice'].includes(target.dataset.value)) break;
+        showSettingsChoice(target.dataset.value);
+        break;
+      case 'settings-toggle-sound':
+        toggleSound();
+        renderSettings();
+        break;
+      case 'settings-test-sound':
+        if (!state.soundEnabled) {
+          showToast('请先打开声音');
+          break;
+        }
+        ensureAudio();
+        playCallerVoice(
+          'callback-intro',
+          state.callVoiceLanguage === 'en'
+            ? 'Hello. This is the simulator call voice test.'
+            : (state.callVoiceLanguage === 'zh-CN' ? '你好，这里是模拟器通话语音测试。' : '你好，呢度係模擬器通話語音測試。'),
+          true
+        );
+        showToast(localized(`正在播放${callVoiceLanguageLabel()}测试语音`, `Playing ${callVoiceLanguageLabel()} test voice`));
+        break;
+      case 'confirm-reset-day':
+        showDialog(
+          localized('重新开始今天？', 'Restart today?'),
+          localized('今天的对话、交易、资金和成长进度会被清除，并重新分配部分人物情况。界面语言、地区、声音、通话语言和发展方向会保留。', 'Today’s conversations, transactions, funds and growth progress will be cleared, and some character situations will be reassigned. Interface language, region, sound, call language and development focus will be kept.'),
+          [
+            { label: localized('重新开始', 'Restart'), action: 'reset-day', kind: 'danger-action' },
+            { label: localized('取消', 'Cancel'), action: 'close-overlay', kind: 'secondary-action' }
+          ]
+        );
+        break;
       case 'mail-tab':
         state.mailTab = target.dataset.value === 'other' ? 'other' : 'focused';
         saveState();
@@ -4017,6 +5099,9 @@
       case 'donation-call': callDonationDesk(); break;
       case 'donation-share-banking': shareDonationBanking(); break;
       case 'donation-save-check': saveDonationCheck(); break;
+      case 'rental-share-id': shareRentalIdentity(); break;
+      case 'rental-pay-deposit': payRentalDeposit(); break;
+      case 'rental-save-check': saveRentalCheck(); break;
       case 'recovery-open-portal': state.taskState.recovery.steps.portalOpened = true; state.browserPage = 'recovery-portal'; saveState(); openApp('browser'); break;
       case 'recovery-accept-intake': acceptRecoveryIntake(); break;
       case 'recovery-open-lawyer': state.browserPage = 'recovery-lawyer'; saveState(); openApp('browser'); break;
@@ -4108,14 +5193,56 @@
           { label: '返回通话', action: 'resume-call' }
         ]);
         break;
+      case 'deepfake-transfer':
+        showDialog('FPS 转账', '收款人：LIU WAI MAN\n金额：HK$8,000\n备注：HOSPITAL DEPOSIT', [
+          { label: '确认转账', action: 'deepfake-confirm-transfer', kind: 'danger-action' },
+          { label: '返回通话', action: 'resume-call' }
+        ]);
+        break;
       case 'confirm-transfer': completeTransfer(); break;
       case 'orientation-confirm-cash': completeOrientationCash(); break;
       case 'government-confirm-transfer': completeGovernmentDeposit(); break;
       case 'government-confirm-valuables': completeGovernmentValuables(); break;
+      case 'deepfake-confirm-transfer': completeDeepfakeTransfer(); break;
       case 'resume-call': resumeCall(); break;
       case 'open-browser-page': state.browserUrl = ''; state.browserUrlPage = ''; state.browserPage = target.dataset.page; saveState(); renderBrowser(); break;
       case 'open-simulated-url': openSimulatedUrl(target.dataset.url || ''); break;
-      case 'browser-home': state.browserUrl = ''; state.browserUrlPage = ''; state.browserPage = 'home'; saveState(); renderBrowser(); break;
+      case 'browser-back':
+        if (state.browserPage !== 'home') {
+          state.browserUrl = '';
+          state.browserUrlPage = '';
+          state.browserPage = 'home';
+          saveState();
+          renderBrowser();
+        }
+        break;
+      case 'browser-reload':
+        closeOverlay();
+        renderBrowser();
+        showToast(localized('页面已刷新', 'Page reloaded'));
+        break;
+      case 'browser-tabs':
+        showDialog(
+          localized('标签页', 'Tabs'),
+          localized('当前打开了 1 个模拟标签页。', '1 simulated tab is open.'),
+          [
+            { label: localized('新建标签页', 'New tab'), action: 'browser-home', kind: 'primary-action' },
+            { label: localized('取消', 'Cancel'), action: 'close-overlay', kind: 'secondary-action' }
+          ]
+        );
+        break;
+      case 'browser-menu':
+        showDialog(
+          'Microsoft Edge',
+          localized('浏览记录、网址和网页内容只保存在这个教学模拟器中。', 'History, addresses and web content stay inside this teaching simulator.'),
+          [
+            { label: localized('新建标签页', 'New tab'), action: 'browser-home', kind: 'primary-action' },
+            { label: localized('刷新页面', 'Reload page'), action: 'browser-reload', kind: 'secondary-action' },
+            { label: localized('关闭', 'Close'), action: 'close-overlay', kind: 'secondary-action' }
+          ]
+        );
+        break;
+      case 'browser-home': closeOverlay(); state.browserUrl = ''; state.browserUrlPage = ''; state.browserPage = 'home'; saveState(); renderBrowser(); break;
       case 'open-mail-app': state.browserPage = 'home'; saveState(); openApp('mail', 'mail-parcel'); break;
       case 'save-official-tracking':
         addEvidence('official-tracking', '从自行打开的邮政入口确认送达机构收发点');
@@ -4144,6 +5271,11 @@
       case 'polyu-timetable':
         state.polyuPage = 'calendar'; state.polyuCalendarView = 'week';
         saveState(); renderPolyU(); break;
+      case 'research-open-detail':
+        state.polyuPage = 'research-detail';
+        saveState(); renderPolyU(); break;
+      case 'research-book-official': bookOfficialResearch(); break;
+      case 'research-attend-official': attendOfficialResearch(); break;
       case 'polyu-menu':
         showDialog('PolyULife', '这是根据校园应用界面制作的教学模拟，不连接真实NetID、课表或付款资料。', [
           { label: '返回手机桌面', action: 'exit-polyu', kind: 'primary-action' },
@@ -4171,12 +5303,14 @@
       case 'reset-day': resetDay(); break;
       case 'start-day':
         state.openingBriefSeen = true;
+        state.timeSpeed = 0;
         state.clockLastRealMs = Date.now();
         state.clockRemainderMs = 0;
         saveState();
         closeOverlay();
         if (state.currentApp) renderApp(state.currentApp);
         renderHome();
+        renderTimeControls();
         break;
       case 'close-overlay': closeOverlay(); if (state.currentApp) renderApp(state.currentApp); renderHome(); break;
     }
@@ -4192,7 +5326,8 @@
     });
     document.addEventListener('visibilitychange', () => {
       if (document.hidden && unlockGesture.active && !unlockGesture.finishing) returnUnlockGesture();
-      syncClockFromWall();
+      state.clockLastRealMs = Date.now();
+      saveState();
     });
     els.unlockButton.addEventListener('lostpointercapture', () => {
       if (unlockGesture.active && !unlockGesture.finishing) returnUnlockGesture();
@@ -4202,9 +5337,17 @@
       if (unlockGesture.direction || unlockGesture.distance > 10) return;
       unlock();
     });
-    els.soundToggle.addEventListener('click', (event) => {
-      event.stopPropagation();
-      toggleSound();
+    if (els.soundToggle) {
+      els.soundToggle.addEventListener('click', (event) => {
+        event.stopPropagation();
+        toggleSound();
+      });
+    }
+    els.timelineController.addEventListener('click', (event) => {
+      const target = event.target.closest('[data-action]');
+      if (!target || target.disabled) return;
+      playSound('tap');
+      handleAction(target.dataset.action, target);
     });
     els.lockNotifications.addEventListener('click', (event) => {
       const button = event.target.closest('[data-open-app]');
@@ -4227,7 +5370,7 @@
     els.systemBack.addEventListener('click', () => { playSound('tap'); navigateBack(); });
     els.systemHome.addEventListener('click', () => { playSound('tap'); navigateHome(); });
     els.appMore.addEventListener('click', () => showDialog('模拟器', '当前进度会自动保存在这台设备上。你可以重新开始，系统会重新分配部分人物身份。', [
-      { label: '重新开始', action: 'reset-day', kind: 'danger-action' },
+      { label: '重新开始', action: 'confirm-reset-day', kind: 'danger-action' },
       { label: '继续', action: 'close-overlay' }
     ]));
     els.appContent.addEventListener('click', (event) => {
@@ -4250,6 +5393,13 @@
       if (event.target.id === 'browserSearchForm') {
         const input = $('browserQuery');
         const query = input ? input.value.trim().slice(0, 80) : '';
+        const directUrl = /^https?:\/\//i.test(query)
+          ? query
+          : (/^(?:www\.)?[a-z0-9-]+(?:\.[a-z0-9-]+)+(?:[/?#].*)?$/i.test(query) ? `https://${query}` : '');
+        if (directUrl) {
+          openSimulatedUrl(directUrl);
+          return;
+        }
         state.browserQuery = query;
         state.browserUrl = '';
         state.browserUrlPage = '';
@@ -4347,13 +5497,19 @@
       openTasksShortcut: $('openTasksShortcut'), appBack: $('appBack'), appMore: $('appMore'),
       appEyebrow: $('appEyebrow'), appTitle: $('appTitle'), appContent: $('appContent'),
       soundToggle: $('soundToggle'), toast: $('toast'), overlayLayer: $('overlayLayer'), activeCallBar: $('activeCallBar'),
+      timelineController: $('timelineController'), timelineLabel: $('timelineLabel'), timelineTime: $('timelineTime'),
+      timelineNextLabel: $('timelineNextLabel'), timelineStatus: $('timelineStatus'),
       systemNavigation: $('systemNavigation'), systemBack: $('systemBack'), systemHome: $('systemHome'),
       systemBackLabel: $('systemBackLabel'), systemHomeLabel: $('systemHomeLabel')
     });
     bindEvents();
-    syncClockFromWall(Date.now(), false);
+    state.timeSpeed = 0;
+    state.clockLastRealMs = Date.now();
+    state.clockRemainderMs = 0;
+    saveState();
     renderLock();
     renderHome();
+    renderTimeControls();
     syncSoundButton();
     updateClock();
     if (state.unlocked) {

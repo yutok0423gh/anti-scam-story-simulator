@@ -58,6 +58,10 @@ await command('Page.navigate', { url: `${base}/phone-prototype.html?preview=home
 await wait(450);
 
 assert(await evaluate('document.querySelector("#statusTime").textContent === "08:30"'), 'Clock did not start at 08:30');
+assert(await evaluate('Boolean(document.querySelector("#timelineController"))'), 'Timeline controller was not rendered');
+assert(await evaluate('document.querySelector("[data-action=timeline-speed][data-speed=\\"0\\"]").getAttribute("aria-pressed") === "true"'), 'Timeline did not start paused');
+await wait(5600);
+assert(await evaluate('document.querySelector("#statusTime").textContent === "08:30"'), 'Paused timeline advanced without player input');
 await click('#appDock [data-open-app="phone"]');
 assert(await evaluate('Boolean(document.querySelector("[data-id=call-unknown]"))'), '08:28 missed call was not available at the start');
 assert(await evaluate('!document.querySelector("[data-id=call-government]")'), '09:06 missed call appeared too early');
@@ -75,14 +79,19 @@ assert(await evaluate('!document.querySelector("[data-id=mail-research]")'), '08
 
 await click('#systemHome');
 await wait(5600);
-assert(await evaluate('JSON.parse(localStorage.getItem("polyu_simulator_phone_v1")).time >= 511'), 'Clock did not advance while the simulator was open');
+assert(await evaluate('document.querySelector("#statusTime").textContent === "08:30"'), 'Paused timeline advanced after app browsing');
+await click('[data-action="timeline-speed"][data-speed="1"]');
+await wait(5600);
+assert(await evaluate('JSON.parse(localStorage.getItem("polyu_simulator_phone_v1")).time >= 511'), '1x timeline did not advance while running');
+await click('[data-action="timeline-speed"][data-speed="0"]');
 
 await command('Page.addScriptToEvaluateOnNewDocument', { source: `(() => {
   const state = JSON.parse(localStorage.getItem('polyu_simulator_phone_v1'));
   if (!state) return;
   state.time = 510;
   state.clockRemainderMs = 0;
-  state.clockLastRealMs = Date.now() - 26000;
+  state.timeSpeed = 4;
+  state.clockLastRealMs = Date.now() - 60000;
   state.unlocked = true;
   state.openingBriefSeen = true;
   localStorage.setItem('polyu_simulator_phone_v1', JSON.stringify(state));
@@ -91,16 +100,64 @@ await command('Page.navigate', { url: `${base}/phone-prototype.html?time-resume=
 await wait(500);
 
 const resumedTime = await evaluate('JSON.parse(localStorage.getItem("polyu_simulator_phone_v1")).time');
-assert(resumedTime >= 515 && resumedTime <= 516, `Elapsed time resume produced ${resumedTime}, expected 08:35–08:36`);
-assert(await evaluate('Boolean(document.querySelector("#lockNotifications [data-notification=n-sms]"))'), '08:35 SMS notification did not arrive after elapsed time');
+const resumedSpeed = await evaluate('JSON.parse(localStorage.getItem("polyu_simulator_phone_v1")).timeSpeed');
+assert(resumedTime === 510, `Reload advanced offline time to ${resumedTime}`);
+assert(resumedSpeed === 0, `Reload restored unsafe time speed ${resumedSpeed}`);
+assert(await evaluate('!document.querySelector("#lockNotifications [data-notification=n-sms]")'), 'Offline time incorrectly delivered the 08:35 SMS');
 assert(await evaluate('!document.querySelector("#lockNotifications [data-notification=n-government-call]")'), '09:06 call notification arrived too early');
 
 await click('#appGrid [data-open-app="mail"]');
-assert(await evaluate('Boolean(document.querySelector("[data-id=mail-parcel]"))'), '08:32 parcel mail did not arrive');
+assert(await evaluate('!document.querySelector("[data-id=mail-parcel]")'), 'Offline time incorrectly delivered the 08:32 mail');
 assert(await evaluate('!document.querySelector("[data-id=mail-research]")'), '08:41 research mail arrived too early after resume');
 await click('#systemHome');
 await click('#appDock [data-open-app="messages"]');
-assert(await evaluate('Boolean(document.querySelector("[data-id=thread-parcel]"))'), '08:35 parcel message did not arrive');
+assert(await evaluate('!document.querySelector("[data-id=thread-parcel]")'), 'Offline time incorrectly delivered the 08:35 message');
+
+await command('Page.navigate', { url: `${base}/phone-prototype.html?preview=home&simTime=08:30&time-jump=${Date.now()}` });
+await wait(450);
+await click('[data-action="timeline-next"]');
+assert(await evaluate('document.querySelector("#statusTime").textContent === "08:32"'), 'Next-event jump did not stop at the 08:32 mail');
+assert(await evaluate('JSON.parse(localStorage.getItem("polyu_simulator_phone_v1")).timeSpeed === 0'), 'Next-event jump did not finish paused');
+await click('#appGrid [data-open-app="mail"]');
+assert(await evaluate('Boolean(document.querySelector("[data-id=mail-parcel]"))'), '08:32 parcel mail did not arrive after next-event jump');
+
+await command('Page.navigate', { url: `${base}/phone-prototype.html?preview=home&simTime=08:34&ordinary=${Date.now()}` });
+await wait(450);
+await click('[data-action="timeline-speed"][data-speed="1"]');
+await wait(5600);
+assert(await evaluate('JSON.parse(localStorage.getItem("polyu_simulator_phone_v1")).time === 515'), '1x timeline did not stop exactly at the 08:35 notification');
+assert(await evaluate('JSON.parse(localStorage.getItem("polyu_simulator_phone_v1")).timeSpeed === 0'), '1x did not pause for an ordinary notification');
+await click('#appDock [data-open-app="messages"]');
+assert(await evaluate('Boolean(document.querySelector("[data-id=thread-parcel]"))'), '08:35 parcel message did not arrive when 1x paused');
+
+await command('Page.navigate', { url: `${base}/phone-prototype.html?preview=home&simTime=08:34&ordinary-2x=${Date.now()}` });
+await wait(450);
+await click('[data-action="timeline-speed"][data-speed="2"]');
+await wait(3100);
+assert(await evaluate('JSON.parse(localStorage.getItem("polyu_simulator_phone_v1")).time >= 515'), '2x timeline did not pass the 08:35 ordinary notification');
+assert(await evaluate('JSON.parse(localStorage.getItem("polyu_simulator_phone_v1")).timeSpeed === 2'), '2x incorrectly paused for an ordinary notification');
+
+await command('Page.navigate', { url: `${base}/phone-prototype.html?preview=home&simTime=08:31&important-2x=${Date.now()}` });
+await wait(450);
+await click('[data-action="timeline-speed"][data-speed="2"]');
+await wait(3100);
+assert(await evaluate('JSON.parse(localStorage.getItem("polyu_simulator_phone_v1")).time === 512'), '2x did not stop exactly at the 08:32 important notification');
+assert(await evaluate('JSON.parse(localStorage.getItem("polyu_simulator_phone_v1")).timeSpeed === 0'), '2x did not pause for an important notification');
+assert(await evaluate('document.querySelector("#timelineStatus").textContent.includes("Hall Reception")'), 'Important notification was not identified in the timeline controller');
+
+await command('Page.navigate', { url: `${base}/phone-prototype.html?preview=home&simTime=10:29&interrupt=${Date.now()}` });
+await wait(450);
+await click('[data-action="timeline-speed"][data-speed="4"]');
+await wait(3100);
+assert(await evaluate('JSON.parse(localStorage.getItem("polyu_simulator_phone_v1")).time >= 631'), '4x timeline did not continue beyond the 10:30 important event');
+assert(await evaluate('JSON.parse(localStorage.getItem("polyu_simulator_phone_v1")).timeSpeed === 4'), '4x incorrectly paused for an important event');
+
+await command('Page.navigate', { url: `${base}/phone-prototype.html?preview=home&simTime=17:29&day-end=${Date.now()}` });
+await wait(450);
+await click('[data-action="timeline-speed"][data-speed="4"]');
+await wait(1800);
+assert(await evaluate('document.querySelector("#statusTime").textContent === "17:30"'), 'Timeline did not stop at the 17:30 day boundary');
+assert(await evaluate('JSON.parse(localStorage.getItem("polyu_simulator_phone_v1")).timeSpeed === 0'), 'Day boundary did not pause time');
 
 socket.close();
-console.log(JSON.stringify({ result: 'PASS', start: '08:30', resumed: resumedTime, checks: ['continuous clock', 'elapsed-time resume', 'scheduled mail', 'scheduled SMS', 'scheduled missed calls'] }));
+console.log(JSON.stringify({ result: 'PASS', checks: ['default pause', '1x pauses for every notification', '2x ignores ordinary notifications', '2x pauses for important notifications', '4x ignores important events', 'next-event jump', 'offline pause', 'single-day boundary'] }));

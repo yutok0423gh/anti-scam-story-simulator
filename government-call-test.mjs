@@ -132,7 +132,7 @@ await command('Page.navigate', { url: `${base}/phone-prototype.html?government-m
 await wait(450);
 await click('#appDock [data-open-app="phone"]');
 state = await evaluate('JSON.parse(localStorage.getItem("polyu_simulator_phone_v1"))');
-assert(state.version === 14, 'Version 12 state did not migrate to 14');
+assert(state.version === 17, 'Version 12 state did not migrate to 17');
 assert(Boolean(state.taskState.government), 'Government state was not added during migration');
 assert(state.callLog.some((item) => item.id === 'call-government'), 'Government missed call was not added during migration');
 assert(state.notifications.some((item) => item.id === 'n-government-call'), 'Government notification was not added during migration');

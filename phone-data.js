@@ -35,7 +35,7 @@
     const contactRoll = Math.random();
     const contactVariant = contactRoll < 0.32 ? 'real' : (contactRoll < 0.78 ? 'fake' : 'grey');
     return {
-      version: 14,
+      version: 17,
       seed: Math.random().toString(36).slice(2),
       contactVariant,
       contactIsReal: contactVariant === 'real',
@@ -44,6 +44,7 @@
       language: 'zh-CN',
       region: 'HK',
       soundEnabled: true,
+      callVoiceLanguage: 'yue',
       polyuPage: 'home',
       polyuCalendarView: 'month',
       phoneView: 'recents',
@@ -59,9 +60,20 @@
       mailUnreadOnly: false,
       mailTranslations: {},
       time: 510,
+      timeSpeed: 0,
       clockLastRealMs: Date.now(),
       clockRemainderMs: 0,
-      balance: 6840,
+      timelineHandled: [],
+      timelineLastEvent: null,
+      balance: 3000,
+      profile: {
+        startingBalance: 3000,
+        growth: 0,
+        growthTarget: 30,
+        focusAreas: [],
+        focusLocked: false,
+        growthLedger: []
+      },
       cardFrozen: false,
       privacyExposure: 0,
       moneyLost: 0,
@@ -144,6 +156,14 @@
             officialAdviceChecked: false
           }
         },
+        officialResearch: {
+          status: 'available',
+          steps: {
+            listingOpened: false,
+            booked: false,
+            attended: false
+          }
+        },
         friend: {
           status: 'pending',
           steps: {
@@ -204,19 +224,27 @@
         donation: {
           status: 'pending',
           steps: { messageRead: false, callbackMade: false, bankingShared: false, officialCheck: false }
+        },
+        rental: {
+          status: 'pending',
+          steps: { messageRead: false, listingOpened: false, identityShared: false, depositPaid: false, officialCheck: false }
+        },
+        deepfake: {
+          status: 'pending',
+          steps: { callbackMade: false, originalNumberCalled: false, transferMade: false }
         }
       },
       notifications: [
         { id: 'n-call', app: 'phone', title: '未接来电', body: '未知号码 · +852 6XXX 8704', time: '08:28', unread: true },
-        { id: 'n-polyu', app: 'polyu', title: 'PolyULife', body: '10:30课堂更换至N003', time: '08:30', unread: true },
-        { id: 'n-mail', app: 'mail', title: 'Hall Reception', body: 'Registered document ready for collection', time: '08:32', unread: true, target: 'mail-parcel' },
+      { id: 'n-polyu', app: 'polyu', title: 'PolyULife', body: '10:30课堂更换至N003', time: '08:30', unread: true, priority: 'important' },
+      { id: 'n-mail', app: 'mail', title: 'Hall Reception', body: 'Registered document ready for collection', time: '08:32', unread: true, target: 'mail-parcel', priority: 'important' },
         { id: 'n-sms', app: 'messages', title: '未知号码', body: '包裹地址资料不完整', time: '08:35', unread: true, target: 'thread-parcel' },
         { id: 'n-research', app: 'mail', title: 'Prof. C. W. Chan', body: 'Research assistant opportunity', time: '08:41', unread: true, target: 'mail-research' },
         { id: 'n-event-fee', app: 'mail', title: 'PolyU Student Event Team', body: 'Payment pending · Student Innovation Night', time: '08:45', unread: true, target: 'mail-event-fee' },
         { id: 'n-career', app: 'mail', title: 'Northbridge Talent', body: 'Alternative remote research role', time: '08:49', unread: true, target: 'mail-career' },
         { id: 'n-health', app: 'messages', title: '医疗服务通知', body: '免费试用即将转为每月自动收费', time: '08:52', unread: true, target: 'thread-health' },
         { id: 'n-friend', app: 'messages', title: 'Mandy · Design Group', body: '你得闲帮我处理一下吗？', time: '09:02', unread: true, target: 'thread-friend' },
-        { id: 'n-government-call', app: 'phone', title: '未接来电', body: '未知号码 · +852 3XXX 2147', time: '09:06', unread: true },
+      { id: 'n-government-call', app: 'phone', title: '未接来电', body: '未知号码 · +852 3XXX 2147', time: '09:06', unread: true, priority: 'important' },
         { id: 'n-market', app: 'messages', title: 'Carousell buyer', body: 'Payment sent — please check your email', time: '09:10', unread: true, target: 'thread-market' },
         { id: 'n-investment', app: 'messages', title: 'Market Insight Group', body: 'Your trial account is ready', time: '09:14', unread: true, target: 'thread-investment' },
         { id: 'n-job-loan', app: 'messages', title: 'Apex Campus Recruitment', body: 'Your e-contract has been approved', time: '09:18', unread: true, target: 'thread-job-loan' },
@@ -225,7 +253,9 @@
         { id: 'n-ticket', app: 'messages', title: 'eTrafficNotice', body: 'Electronic ticket pending', time: '09:29', unread: true, target: 'thread-ticket' },
         { id: 'n-mpf', app: 'messages', title: 'eMPF Notice', body: 'Profile update required', time: '09:32', unread: true, target: 'thread-mpf' },
         { id: 'n-census', app: 'messages', title: '访客登记', body: '人口普查人员正在大堂等候', time: '09:36', unread: true, target: 'thread-census' },
-        { id: 'n-donation', app: 'messages', title: 'Donation Confirmation', body: 'HK$580 debit scheduled today', time: '09:39', unread: true, target: 'thread-donation' }
+        { id: 'n-donation', app: 'messages', title: 'Donation Confirmation', body: 'HK$580 debit scheduled today', time: '09:39', unread: true, target: 'thread-donation' },
+        { id: 'n-rental', app: 'messages', title: '陈先生', body: '红磡两房，今日可以留单位给你', time: '09:40', unread: true, target: 'thread-rental' },
+      { id: 'n-deepfake-call', app: 'phone', title: '未接视频来电', body: '未知号码 · +852 6XXX 1182', time: '10:05', unread: true, priority: 'important' }
       ],
       messages: {
         parcel: {
@@ -339,6 +369,14 @@
             { from: 'them', time: '09:39', text: 'Your HK$580 donation to Community Relief Fund will be debited today.' },
             { from: 'them', time: '09:39', text: 'If you did not authorise it, call +852 5XXX 7310 immediately to cancel.' }
           ]
+        },
+        rental: {
+          id: 'thread-rental', sender: '陈先生', number: '+852 6XXX 2290', unread: true,
+          items: [
+            { from: 'them', time: '09:40', text: '你好，我在租房群看到你找红磡单位。黄埔花园有一套两房，月租HK$5,800，家具齐全。' },
+            { from: 'them', time: '09:40', text: '我这几天在深圳陪家人，暂时不能亲自带看。照片、短片和电子租约都在这里：https://hk-home-listing.example/unit/H52' },
+            { from: 'them', time: '09:41', text: '今天先付一个月诚意金就可以留房，正式签约时会当首月租金。FPS是业主本人陈先生。' }
+          ]
         }
       },
       mails: [
@@ -449,6 +487,7 @@
         }
       ],
       callLog: [
+        { id: 'call-deepfake', name: '未知号码', number: '+852 6XXX 1182', time: '10:05', direction: '未接视频来电', unread: true },
         { id: 'call-government', name: '未知号码', number: '+852 3XXX 2147', time: '09:06', direction: '未接来电', unread: true },
         { id: 'call-unknown', name: '未知号码', number: '+852 6XXX 8704', time: '08:28', direction: '未接来电', unread: true },
         { id: 'call-hall', name: '未知号码', number: '+852 2XXX 0000', time: '昨天', direction: '呼出', unread: false }
@@ -460,13 +499,14 @@
         { id: 'contact-department', name: 'Department General Office', initials: 'DO', number: '+852 2XXX 6200', note: '模拟号码 · 教职员及研究项目查询' },
         { id: 'contact-immigration', name: 'General Enquiries', initials: 'GE', number: '+852 2XXX 6111', note: '模拟号码 · 从政府网站取得' },
         { id: 'contact-mandy', name: 'Mandy', initials: 'MY', number: '+852 9XXX 5381', note: '模拟原号码 · Design Group同学' },
-        { id: 'contact-printshop', name: 'Blue Peak Printing', initials: 'BP', number: '+852 2XXX 7718', note: '模拟号码 · 上次蓝色海报订单保存的店铺' }
+        { id: 'contact-printshop', name: 'Blue Peak Printing', initials: 'BP', number: '+852 2XXX 7718', note: '模拟号码 · 上次蓝色海报订单保存的店铺' },
+        { id: 'contact-father', name: '爸爸', initials: '爸', number: '+852 9XXX 4412', note: '模拟原号码 · 已保存联系人' }
       ],
       transactions: [
         { id: 'market-pending-credit', title: 'CHEQUE DEPOSIT · PENDING', time: '今天 09:12', amount: 680, pending: true },
         { title: 'Campus Café', time: '今天 08:06', amount: -36 },
         { title: 'MTR', time: '昨天 19:42', amount: -12.4 },
-        { title: 'Opening balance', time: '8月25日', amount: 6888.4 }
+        { title: 'Opening balance', time: '8月25日', amount: 3048.4 }
       ],
       browserPage: 'home',
       browserQuery: '',
