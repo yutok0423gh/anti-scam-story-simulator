@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#111820">
   <meta name="application-version" content="2.0.0">
   <title>模拟器</title>
-  <link rel="stylesheet" href="phone.css?v=2.0.0-20260814d">
+  <link rel="stylesheet" href="phone.css?v=2.0.0-20260818h">
 </head>
 <body class="ios-ui">
   <main class="sim-stage" aria-label="PolyU 学生生活模拟器">
@@ -16,13 +16,28 @@
       <p id="stageTagline">完成今天的事。相信谁，由你判断。</p>
     </div>
 
+    <aside class="timeline-controller" id="timelineController" aria-label="模拟时间控制">
+      <header class="timeline-controller-head">
+        <span id="timelineLabel">SIM TIME</span>
+        <strong id="timelineTime">08:30</strong>
+      </header>
+      <div class="timeline-controls" role="group" aria-label="时间速度">
+        <button type="button" data-action="timeline-speed" data-speed="0" aria-label="暂停时间" aria-pressed="true">Ⅱ</button>
+        <button type="button" data-action="timeline-speed" data-speed="1" aria-label="一倍速" aria-pressed="false">1×</button>
+        <button type="button" data-action="timeline-speed" data-speed="2" aria-label="二倍速" aria-pressed="false">2×</button>
+        <button type="button" data-action="timeline-speed" data-speed="4" aria-label="四倍速" aria-pressed="false">4×</button>
+        <button class="timeline-next" type="button" data-action="timeline-next" aria-label="跳到下一事件">
+          <span aria-hidden="true">↠</span><b id="timelineNextLabel">下一事件</b>
+        </button>
+      </div>
+      <p id="timelineStatus" role="status" aria-live="polite">时间已暂停</p>
+    </aside>
+
     <section class="phone-shell" id="simulator">
       <div class="phone-bezel">
         <div class="phone-status" aria-label="手机状态栏">
           <span id="statusTime">08:30</span>
-          <button class="status-island sound-toggle" id="soundToggle" type="button" aria-label="关闭声音" aria-pressed="true">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 10v4h3l4 3V7L8 10H5Z"/><path class="sound-wave" d="M15 9.2c1.5 1.5 1.5 4.1 0 5.6M17.8 6.5c3 3 3 8 0 11"/></svg>
-          </button>
+          <span class="status-island" aria-hidden="true"></span>
           <span class="status-icons">
             <span class="status-signal" aria-hidden="true">
               <svg viewBox="0 0 20 14"><path d="M2 11.5h2.5V13H2zm4-3h2.5V13H6zm4-3h2.5V13H10zm4-3h2.5V13H14z"/></svg>
@@ -108,12 +123,12 @@
     </section>
 
     <aside class="stage-note" aria-hidden="true">
-      <span>08:30—17:00</span>
+      <span>08:30—17:30</span>
       <p><span id="stageNoteLine1">通知不等于事实。</span><br><span id="stageNoteLine2">从你信任的入口重新开始。</span></p>
     </aside>
   </main>
 
-  <script src="phone-data.js?v=2.0.0-20260814d"></script>
-  <script src="phone-engine.js?v=2.0.0-20260814d"></script>
+  <script src="phone-data.js?v=2.0.0-20260818h"></script>
+  <script src="phone-engine.js?v=2.0.0-20260818h"></script>
 </body>
 </html>

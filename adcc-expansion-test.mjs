@@ -55,7 +55,6 @@ async function reset() {
   await evaluate('localStorage.clear()');
   await command('Page.reload', { ignoreCache: true });
   await waitForSelector('.app-button');
-  await evaluate('document.querySelector(\'#soundToggle\').click(); document.querySelector(\'#soundToggle\').click()');
   await wait(120);
 }
 function assert(value, message) { if (!value) throw new Error(message); }
@@ -64,7 +63,7 @@ async function state() { return evaluate('JSON.parse(localStorage.getItem("polyu
 await command('Page.enable');
 await reset();
 let saved = await state();
-assert(saved.version === 14, 'Version 14 state missing');
+assert(saved.version === 17, 'Version 17 state missing');
 assert(saved.consequences && saved.taskState.investment && saved.taskState.jobLoan, 'Expansion state missing');
 assert(saved.messages.water && saved.messages.ticket && saved.messages.mpf && saved.messages.census && saved.messages.donation, 'Official-service events missing');
 assert(saved.mails.some((mail) => mail.id === 'mail-market-payment'), 'Carousell payment email missing');
@@ -72,10 +71,9 @@ assert(saved.mails.some((mail) => mail.id === 'mail-market-payment'), 'Carousell
 await evaluate(`(() => { const s=JSON.parse(localStorage.getItem('polyu_simulator_phone_v1')); s.version=13; delete s.consequences; delete s.taskState.investment; delete s.messages.water; localStorage.setItem('polyu_simulator_phone_v1',JSON.stringify(s)); })()`);
 await command('Page.navigate', { url: `${base}/phone-prototype.html?expansion-migration=${Date.now()}` });
 await waitForSelector('.app-button');
-await evaluate('document.querySelector(\'#soundToggle\').click(); document.querySelector(\'#soundToggle\').click()');
-await wait(120);
+  await wait(120);
 saved = await state();
-assert(saved.version === 14 && saved.consequences && saved.taskState.investment && saved.messages.water, 'Version 13 migration failed');
+assert(saved.version === 17 && saved.consequences && saved.taskState.investment && saved.messages.water, 'Version 13 migration failed');
 
 await reset();
 await search('Carousell calculator');
