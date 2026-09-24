@@ -54,6 +54,8 @@
     '保存完整运单号': 'Save full tracking number', '致电收发室': 'Call hall reception', '打开 onboarding form': 'Open onboarding form',
     '从官方目录查教授': 'Check the official staff directory', '查看付款页面': 'View payment page', '在 PolyULife 查活动': 'Check the event in PolyULife', '查看相关联系人': 'View related contacts',
     '已保存联系人': 'Saved contacts', '搜索联系人': 'Search contacts', '没有匹配的联系人': 'No matching contacts', '拨打': 'Call', '银行卡已冻结': 'Card frozen', '冻结银行卡': 'Freeze card', '联系银行': 'Contact bank', '交易记录': 'Transactions',
+    '我的一天': 'My Day', '项待办': 'to do', '已完成全部任务': 'All tasks complete', '今天需要领取一份交换申请相关文件。': 'Collect a document related to your exchange application today.',
+    '今天需要确认迎新筹备的联络安排。': 'Confirm the contact arrangements for orientation planning today.', '今天 · 17:00前': 'Today · before 5:00 PM', '今天处理': 'Today', '迎新筹备 · 今天处理': 'Orientation planning · Today',
     '截止时间 · 今天17:00': 'Due · Today at 5:00 PM', '宿舍收发室通知有一份挂号文件等待领取。': 'Hall reception says a registered document is ready for collection.',
     '查看收发室通知': 'Read the reception notice', '取得完整运单号': 'Get the full tracking number', '向独立渠道确认': 'Confirm through an independent channel', '前往收发室领取': 'Collect it from hall reception',
     '确认迎新活动联系人': 'Confirm orientation event contact', '中午前确认去年联系人阿杰是否能参加筹备。': 'Confirm by noon whether last year’s contact, Ah Kit, can join the preparations.',
@@ -709,6 +711,7 @@
     if (state.currentApp === 'phone' && !callSession) renderPhone();
     if (state.currentApp === 'messages' && !activeThreadKey) renderMessages();
     if (state.currentApp === 'mail' && !activeMailId) renderMail();
+    if (state.currentApp === 'tasks') renderTasks();
     if (state.currentApp === 'polyu' && state.polyuPage === 'research-detail') renderPolyUResearchDetail();
   }
 
@@ -1240,8 +1243,8 @@
     const total = REQUIRED_TASK_IDS.length;
     els.todayProgress.textContent = `${done} / ${total}`;
     els.homeTodoList.innerHTML = [
-      homeTodoItem('领取交换申请文件', '宿舍收发室 · 17:00前', state.taskState.parcel.status === 'done'),
-      homeTodoItem('核实迎新联系人', '确认“阿杰”的新号码', state.taskState.contact.status === 'done')
+      homeTodoItem('领取交换申请文件', '今天 · 17:00前', state.taskState.parcel.status === 'done'),
+      homeTodoItem('核实迎新联系人', '迎新筹备 · 今天处理', state.taskState.contact.status === 'done')
     ].join('');
     els.todayProgressBar.style.width = `${Math.round(done / total * 100)}%`;
     updateClock();
@@ -1737,7 +1740,6 @@
     return `<nav class="outlook-bottom-nav" aria-label="${esc(ui('邮箱'))}">
       <button class="active" type="button" data-action="mail-inbox">${MAIL_ICONS.mail}<span>${esc(ui('邮箱'))}</span></button>
       <button type="button" data-action="mail-calendar">${MAIL_ICONS.calendar}<span>${esc(ui('日历'))}</span></button>
-      <button type="button" data-action="mail-search">${DATA.icons.search}<span>${esc(ui('搜索'))}</span></button>
     </nav>`;
   }
 
@@ -2926,30 +2928,36 @@
   function renderTasks() {
     const parcel = state.taskState.parcel;
     const contact = state.taskState.contact;
+    const remaining = REQUIRED_TASK_IDS.length - taskDoneCount();
     els.appContent.innerHTML = `
-      <div class="app-pad">
-        <span class="section-label">${esc(ui('截止时间 · 今天17:00'))}</span>
-        ${taskPanel('parcel', '领取交换申请文件', '宿舍收发室通知有一份挂号文件等待领取。', parcel.status, [
-          ['noticeRead', '查看收发室通知'], ['trackingSaved', '取得完整运单号'], ['hallConfirmed', '向独立渠道确认'], ['collected', '前往收发室领取']
-        ], parcel.steps)}
-        ${taskPanel('contact', '确认迎新活动联系人', '中午前确认去年联系人阿杰是否能参加筹备。', contact.status, [
-          ['strangerSpoken', '回拨未接来电了解来意'], ['oldNumberCalled', '检查原有联系方式'], ['organizerChecked', '向共同联系人核对'], ['resolved', '确认今年联络方式']
-        ], contact.steps)}
-        <span class="section-label">${esc(ui('已保存的信息'))}</span>
-        <div class="list-card">
-          ${state.evidence.length ? state.evidence.map((item) => `<div class="list-row"><span class="mini-icon" style="--row-bg:#238278">✓</span><span class="list-copy"><strong>${esc(ui(item.label))}</strong><span>${esc(formatStoredTime(item.time))} · ${esc(ui('保存'))}</span></span></div>`).join('') : `<div class="empty-state"><div><strong>${esc(ui('还没有保存信息'))}</strong><span>${esc(ui('从邮件、联系人和自行打开的官方网站开始。'))}</span></div></div>`}
+      <section class="todo-day-page" aria-label="${esc(ui('我的一天'))}">
+        <header class="todo-day-hero">
+          <span class="todo-day-date">${esc(formatLocaleDate())}</span>
+          <h2>${esc(ui('我的一天'))}</h2>
+          <span class="todo-day-count">${esc(remaining ? localized(`${remaining} 项待办`, `${remaining} to do`) : ui('已完成全部任务'))}</span>
+        </header>
+        <div class="todo-day-list" role="list">
+          ${todoTaskRow('parcel', '领取交换申请文件', '今天需要领取一份交换申请相关文件。', '今天 · 17:00前', parcel.status, parcel.steps.hallConfirmed && !parcel.steps.collected)}
+          ${todoTaskRow('contact', '确认迎新活动联系人', '今天需要确认迎新筹备的联络安排。', '今天处理', contact.status)}
         </div>
-        <div class="action-row"><button class="primary-action" type="button" data-action="end-day">${esc(ui('结束今天并查看记录'))}</button><button class="secondary-action" type="button" data-action="reset-day">${esc(ui('重新开始'))}</button></div>
-      </div>`;
+        <footer class="todo-day-footer">
+          <button type="button" data-action="end-day">${esc(ui('结束今天并查看记录'))}</button>
+          <button type="button" data-action="reset-day">${esc(ui('重新开始'))}</button>
+        </footer>
+      </section>`;
   }
 
-  function taskPanel(taskId, title, description, status, steps, values) {
+  function todoTaskRow(taskId, title, description, due, status, canCollect = false) {
+    const done = status === 'done';
     return `
-      <article class="task-panel">
-        <div class="task-head"><div><span class="detail-meta">DAILY TASK</span><h2>${esc(ui(title))}</h2></div><span class="task-status ${status === 'done' ? 'done' : ''}">${esc(ui(status === 'done' ? '已完成' : '进行中'))}</span></div>
-        <p>${esc(ui(description))}</p>
-        <div class="task-steps">${steps.map(([key, label]) => `<div class="task-step ${values[key] ? 'done' : ''}"><i>${values[key] ? '✓' : ''}</i><span>${esc(ui(label))}</span></div>`).join('')}</div>
-        ${taskId === 'parcel' && values.hallConfirmed && !values.collected ? `<div class="action-row"><button class="primary-action" type="button" data-action="collect-parcel" ${state.time >= 17 * 60 ? 'disabled' : ''}>${esc(state.time >= 17 * 60 ? localized('今日领取已结束', 'Collections closed today') : localized('前往收发室 · 约25分钟', 'Go to Hall Reception · about 25 min'))}</button></div>` : ''}
+      <article class="todo-task-row ${done ? 'done' : ''}" data-task="${taskId}" role="listitem">
+        <span class="todo-task-check" aria-hidden="true">${done ? '✓' : ''}</span>
+        <div class="todo-task-content">
+          <strong>${esc(ui(title))}</strong>
+          <p>${esc(ui(description))}</p>
+          <small>${esc(done ? ui('已完成') : ui(due))}</small>
+          ${canCollect ? `<button class="todo-task-action" type="button" data-action="collect-parcel" ${state.time >= 17 * 60 ? 'disabled' : ''}>${esc(state.time >= 17 * 60 ? localized('今日领取已结束', 'Collections closed today') : localized('前往收发室 · 约25分钟', 'Go to Hall Reception · about 25 min'))}</button>` : ''}
+        </div>
       </article>`;
   }
 
@@ -5131,11 +5139,6 @@
       case 'mail-compose':
         showDialog(ui('写邮件'), localized('此情境暂时不需要主动发送邮件。你仍可通过官方目录中的地址或电话独立核实。', 'This scenario does not require an outgoing message. You can still verify independently using an address or phone number from the official directory.'), [
           { label: localized('知道了', 'Got it'), action: 'mail-close-dialog', kind: 'primary-action' }
-        ]);
-        break;
-      case 'mail-search':
-        showDialog(ui('搜索邮件'), localized('可以按发件人、主题或内容搜索；当前四封情境邮件已全部加载。', 'Search can use sender, subject, or message text. All four scenario messages are already loaded.'), [
-          { label: localized('关闭', 'Close'), action: 'mail-close-dialog', kind: 'primary-action' }
         ]);
         break;
       case 'mail-calendar':
