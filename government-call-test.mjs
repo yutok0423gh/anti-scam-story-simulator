@@ -79,6 +79,8 @@ await reply('我在汇丰，大概有6000');
 assert(await evaluate('document.querySelector(".call-transcript").textContent.includes("HK$6000")'), 'Shared balance was not reused');
 await reply('汇丰户口尾号9911');
 assert(await evaluate('document.querySelector(".call-transcript").textContent.includes("HK$5,000")'), 'Deposit request did not appear');
+await reply('可以转账吗？');
+assert(await evaluate('document.querySelector(".dialog-sheet") === null'), 'Asking about a transfer opened a payment sheet');
 await reply('我可以转账');
 assert(await evaluate('document.querySelector(".dialog-sheet").textContent.includes("S T CONSULTING")'), 'FPS transfer sheet did not open');
 await click('[data-action="government-confirm-transfer"]');
