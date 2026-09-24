@@ -460,7 +460,7 @@
   min-height: 73px;
   padding: 6px 10px max(16px, env(safe-area-inset-bottom));
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   align-items: start;
 }
 
@@ -6094,6 +6094,177 @@ input:focus-visible,
 .ios-ui .task-step.done > i {
   border-color: var(--ios-green);
   background: var(--ios-green);
+}
+
+/* A My Day list, not a walkthrough of the scenario. */
+.ios-ui .app-screen[data-app="tasks"] .app-content {
+  background: #f2f6fc;
+}
+
+.ios-ui .todo-day-page {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: #f2f6fc;
+  font-family: "Segoe UI", "Microsoft YaHei", "Noto Sans SC", system-ui, sans-serif;
+}
+
+.ios-ui .todo-day-hero {
+  min-height: 161px;
+  padding: 25px 23px 34px;
+  color: #fff;
+  background: linear-gradient(135deg, #174d96 0%, #276bc1 56%, #4d9bd5 100%);
+}
+
+.ios-ui .todo-day-date {
+  display: block;
+  color: rgba(255, 255, 255, .82);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.ios-ui .todo-day-hero h2 {
+  margin: 7px 0 8px;
+  font-size: 28px;
+  font-weight: 650;
+  letter-spacing: -.035em;
+  line-height: 1.2;
+}
+
+.ios-ui .todo-day-count {
+  color: rgba(255, 255, 255, .84);
+  font-size: 12px;
+}
+
+.ios-ui .todo-day-list {
+  position: relative;
+  margin: -13px 14px 0;
+  overflow: hidden;
+  border-radius: 13px;
+  background: #fff;
+  box-shadow: 0 8px 25px rgba(29, 67, 115, .08);
+}
+
+.ios-ui .todo-task-row {
+  min-height: 118px;
+  padding: 19px 16px;
+  display: grid;
+  grid-template-columns: 25px minmax(0, 1fr);
+  gap: 13px;
+  align-items: start;
+  color: #242b36;
+  border-bottom: 1px solid #e9edf2;
+}
+
+.ios-ui .todo-task-row:last-child {
+  border-bottom: 0;
+}
+
+.ios-ui .todo-task-check {
+  width: 22px;
+  height: 22px;
+  margin-top: 1px;
+  display: grid;
+  place-items: center;
+  border: 1.7px solid #5886c6;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.ios-ui .todo-task-row.done .todo-task-check {
+  border-color: #3476c9;
+  background: #3476c9;
+}
+
+.ios-ui .todo-task-content {
+  min-width: 0;
+}
+
+.ios-ui .todo-task-content strong {
+  display: block;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.ios-ui .todo-task-row.done .todo-task-content strong {
+  color: #738093;
+  text-decoration: line-through;
+  text-decoration-color: #a4b3c5;
+}
+
+.ios-ui .todo-task-content p {
+  margin: 6px 0 8px;
+  color: #697587;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.ios-ui .todo-task-content small {
+  color: #5876a0;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.ios-ui .todo-task-row.done .todo-task-content small {
+  color: #738093;
+}
+
+.ios-ui .todo-task-action {
+  display: block;
+  margin-top: 14px;
+  padding: 8px 12px;
+  border: 1px solid #c7d9f0;
+  border-radius: 8px;
+  color: #1e5ea9;
+  background: #eef5fd;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ios-ui .todo-task-action:disabled {
+  color: #76818d;
+  background: #f4f5f7;
+  cursor: default;
+}
+
+.ios-ui .todo-day-footer {
+  margin-top: auto;
+  padding: 26px 18px 22px;
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+}
+
+.ios-ui .todo-day-footer button {
+  min-height: 42px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.ios-ui .todo-day-footer [data-action="end-day"] {
+  width: 100%;
+  border-radius: 10px;
+  color: #215fa8;
+  background: #e3eefb;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.ios-ui .todo-day-footer [data-action="reset-day"] {
+  color: #697587;
+  font-size: 12px;
+}
+
+.ios-ui .todo-day-footer button:focus-visible,
+.ios-ui .todo-task-action:focus-visible {
+  outline: 2px solid #174d96;
+  outline-offset: 2px;
 }
 
 .ios-ui .browser-search {
