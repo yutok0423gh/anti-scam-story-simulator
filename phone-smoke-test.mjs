@@ -411,7 +411,7 @@ assert(await evaluate('document.querySelector("#appScreen").dataset.app === "mai
 await capture('simulator-live-call-research');
 await click('#activeCallBar [data-action="call-resume"]');
 assert(await evaluate('document.querySelector("#callReplyForm") !== null'), 'The minimised call did not resume with its composer');
-await evaluate(`(() => { const input = document.querySelector('#callReplyInput'); input.value = '运单尾号是1305，送到学生宿舍'; document.querySelector('#callReplyForm').requestSubmit(); })()`);
+await evaluate(`(() => { const input = document.querySelector('#callReplyInput'); input.value = '运单尾号是7305，送到学生宿舍'; document.querySelector('#callReplyForm').requestSubmit(); })()`);
 await evaluate(`(() => { const input = document.querySelector('#callReplyInput'); input.value = '完整运单号是 RR 482 917 305 HK'; document.querySelector('#callReplyForm').requestSubmit(); })()`);
 assert(await evaluate('document.querySelector(".call-turn.caller:last-child p").textContent.includes("08:14")'), 'Full tracking details did not reach the verified hall result');
 await click('[data-action="end-call"]');
@@ -508,7 +508,7 @@ await evaluate(`(() => { const input = document.querySelector('#callReplyInput')
 assert(await evaluate('document.querySelector(".call-turn.caller:last-child p").textContent.includes("Department General Office")'), 'Department identity claim was not available after the player asked');
 assert(await evaluate('!JSON.parse(localStorage.getItem("polyu_simulator_phone_v1")).taskState.research.steps.resolved'), 'A caller identity claim incorrectly resolved the research invitation');
 await evaluate(`(() => { const input = document.querySelector('#callReplyInput'); input.value = '我想核实一封研究邀请'; document.querySelector('#callReplyForm').requestSubmit(); })()`);
-await evaluate(`(() => { const input = document.querySelector('#callReplyInput'); input.value = '主题是Research Assistant，发件地址是outlook.example'; document.querySelector('#callReplyForm').requestSubmit(); })()`);
+await evaluate(`(() => { const input = document.querySelector('#callReplyInput'); input.value = '发件地址是 cw.chan.research@outlook.example'; document.querySelector('#callReplyForm').requestSubmit(); })()`);
 assert(await evaluate('document.querySelector(".call-turn.caller:last-child p").textContent.includes("冇發出呢封邀請")'), 'Department confirmation did not resolve the research invitation');
 await click('[data-action="end-call"]');
 

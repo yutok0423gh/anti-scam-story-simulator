@@ -23,7 +23,7 @@ DIALOGUE = {
     "hall-claim": (FEMALE_VOICE, "呢度係宿舍收發室。請問你想查邊份文件？"),
     "hall-need-reference": (FEMALE_VOICE, "可以。請講運單號最後四位，同埋文件送去邊間宿舍。"),
     "hall-fee": (FEMALE_VOICE, "一般領取文件唔使網上付款。不過要查到件，我要先核對運單資料。"),
-    "hall-partial": (FEMALE_VOICE, "尾號一三零五，係嗎？我搵到一項紀錄，但要再核對完整編號先可以講送達時間。"),
+    "hall-partial": (FEMALE_VOICE, "尾號七三零五，係嗎？我搵到一項紀錄，但要再核對完整編號先可以講送達時間。"),
     "hall-need-mail": (FEMALE_VOICE, "冇完整編號我未能確認係同一份文件。你可以搵返通知再打嚟。"),
     "hall-result": (FEMALE_VOICE, "查到喇：文件朝早八點十四分送到收發室。今日下晝五點前帶學生證嚟拎就得，唔需要網上補交費用。"),
     "hall-cautious": (FEMALE_VOICE, "冇問題。你可以先核對通知；我哋未確認資料前亦唔會講文件內容。"),

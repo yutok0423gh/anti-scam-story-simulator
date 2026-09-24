@@ -3094,8 +3094,9 @@
     }
     const node = getCallNode(callSession.scenario, 'intro');
     addCallTurn('caller', resolveCallReply(callSession.scenario, 'intro', node.reply));
+    callSession.lastCallerAudio = resolveCallCopy(node.audio) || '';
     saveState();
-    renderCallSession(resolveCallCopy(node.audio) || '');
+    renderCallSession(callSession.lastCallerAudio);
   }
 
   function resolveCallCopy(value) {
@@ -3108,7 +3109,8 @@
       claim: { 'zh-CN': '「这里是宿舍收发室。请问你想查询哪一份文件？」', en: 'This is the hall reception. Which item would you like to check?' },
       need_reference: { 'zh-CN': '「可以。请提供运单号最后四位，以及文件寄往哪一间宿舍。」', en: 'Sure. Please give me the last four digits of the tracking number and the hall it was sent to.' },
       fee: { 'zh-CN': '「一般领取文件不需要网上付款。不过要查到这件邮件，我需要先核对运单资料。」', en: 'There is normally no online payment for collecting an item, but I need the tracking details before I can find it.' },
-      partial: { 'zh-CN': '「尾号1305，对吗？我找到一项记录，但需要核对完整编号才能告诉你送达时间。」', en: 'The tracking number ends in 1305, correct? I found a record, but I need the full number before I can give you the delivery time.' },
+      partial: { 'zh-CN': (session) => `「尾号${session.details.trackingTail}，对吗？我找到一项记录，但需要核对完整编号才能告诉你送达时间。」`, en: (session) => `The tracking number ends in ${session.details.trackingTail}, correct? I found a record, but I need the full number before I can give you the delivery time.` },
+      reference_mismatch: { 'zh-CN': '「这个编号暂时找不到对应记录。你可以再看一遍收件通知上的运单号。」', en: 'I cannot find a matching record for that number. Please check the tracking number on your collection notice again.' },
       need_mail: { 'zh-CN': '「没有完整编号，我不能确认是不是同一份文件。你可以找到通知后再打来。」', en: 'Without the full number, I cannot confirm that it is the same item. Please find the notice and call again.' },
       result: { 'zh-CN': '「查到了：文件08:14送到收发室。今天17:00前带学生证来领取即可，不需要在网上补交费用。」', en: 'I found it. The item reached reception at 08:14. Bring your student card before 17:00 today. No online fee is required.' },
       cautious: { 'zh-CN': '「没问题。你可以先核对通知；我们在确认资料前也不会透露文件内容。」', en: 'No problem. You can check the notice first. We will not disclose the contents until the details are confirmed.' }
@@ -3117,6 +3119,7 @@
       intro: { 'zh-CN': '「喂，你好。请问你想找哪一位？」', en: 'Hello. Who would you like to speak to?' },
       claim: { 'zh-CN': '「这里是院系办公室。请问你想查询什么？」', en: 'This is the Department General Office. What would you like to check?' },
       need_mail: { 'zh-CN': '「可以。你不需要提供个人资料，只要告诉我邮件主题和发件地址。」', en: 'Certainly. You do not need to provide personal details. Just give me the subject and sender address.' },
+      mail_mismatch: { 'zh-CN': '「按你提供的资料，我暂时找不到对应的邀请。请核对邮件顶部的完整发件地址和主题。」', en: 'I cannot find that invitation from the details you gave. Please check the full sender address and subject at the top of the email.' },
       channels: { 'zh-CN': '「正式招募会通过PolyU邮件或部门系统发布，但我还没看过你那封邮件，暂时不能判断是否属于同一项目。」', en: 'Official recruitment is sent through PolyU email or department systems. I have not seen your message, so I cannot yet tell whether it is the same project.' },
       result: { 'zh-CN': '「我按主题和地址查过了：陈教授没有发出这封邀请，学院也没有要求学生代购礼券。不要使用邮件里的链接。」', en: 'I checked the subject and address. Professor Chan did not send this invitation, and the faculty has not asked students to buy gift cards. Do not use the link in that email.' },
       borrow_result: { 'zh-CN': '「我们已经确认：陈教授和部门都没有要求学生用私人FPS垫付供应商费用，也没有通过WhatsApp安排借款或报销。正式付款只会由大学程序处理。」', en: 'We have confirmed that neither Professor Chan nor the department asks students to pay suppliers through a personal FPS account, or arranges loans or reimbursement over WhatsApp. Official payments are handled through university procedures.' },
@@ -3248,6 +3251,7 @@
       intro: { 'zh-CN': '「喂，你好。请问想查询什么？」', en: 'Hello. What would you like to check?' },
       identity: { 'zh-CN': '「这里是Blue Peak Printing。请问你有订单编号吗？」', en: 'This is Blue Peak Printing. Do you have an order number?' },
       need_order: { 'zh-CN': '「可以帮你查。请提供订单编号、下单人或印刷项目。」', en: 'I can check it for you. Please give me the order number, customer name or print item.' },
+      order_mismatch: { 'zh-CN': '「这个编号暂时找不到对应的印刷订单。请再核对订单编号或下单人。」', en: 'I cannot find a printing order for that number. Please check the order number or customer name again.' },
       result: {
         'zh-CN': () => state.hijackedFriendVariant === 'real'
           ? '「查到BP-8147，是Design Group的蓝色海报，未付HK$760。联系人是Mandy，电话尾号5381。商户账单收款名是BLUE PEAK PRINTING LTD，不是店员私人姓名。」'
@@ -3269,6 +3273,7 @@
       intro: { 'zh-CN': '「喂，你好。请问你想查询什么？」', en: 'Hello. What would you like to enquire about?' },
       identity: { 'zh-CN': '「这里是一般查询服务。你可以说明事件类型和对方提供的案件编号，不需要提供银行或证件资料。」', en: 'This is the general enquiry service. Tell me the type of incident and the case number you were given. You do not need to provide banking or identity document details.' },
       need_case: { 'zh-CN': '「可以。请提供对方给你的案件编号，或者概述来电内容。」', en: 'Certainly. Give me the case number they provided, or briefly describe what the caller said.' },
+      case_mismatch: { 'zh-CN': '「我查不到你提供的编号。请再核对原来通知上的案件编号。」', en: 'I cannot find the number you gave. Please check the case number on the original notice.' },
       result: { 'zh-CN': '「我们的系统没有IM-26-0814-73这个案件，也没有IMD-417这个职员编号。一般查询不会电话转接调查主任，也不会要求市民向公司账户进行资金核验。」', en: 'Our system has no case IM-26-0814-73 and no staff number IMD-417. General enquiries are not transferred by phone to an investigating officer, and the public is never asked to verify funds by paying a company account.' },
       fallback: { 'zh-CN': '「我没听清楚。你可以提供案件编号，或者告诉我对方自称哪个部门。」', en: 'I did not catch that. Give me the case number, or tell me which department the caller claimed to represent.' }
     }
@@ -3280,6 +3285,123 @@
     const translated = CALL_REPLY_TRANSLATIONS[scenario]?.[nodeId]?.[selectedLanguage];
     if (!translated) return resolveCallCopy(originalReply);
     return typeof translated === 'function' ? translated(callSession, state) : translated;
+  }
+
+  function contextualCallCopy(yue, mandarin, english) {
+    const language = state.callVoiceLanguage || 'yue';
+    if (language === 'en') return `「${english}」`;
+    if (language === 'zh-CN') return `「${mandarin}」`;
+    return `「${yue}」`;
+  }
+
+  function contextualCallReply(intent) {
+    const scenario = callSession?.scenario || '';
+    const current = callSession?.node || 'intro';
+    const unclearCount = callSession?.transcript.filter((turn) => turn.role === 'player' && ['clarify', 'unknown'].includes(turn.intent)).length || 0;
+    const copy = (yue, mandarin, english) => contextualCallCopy(yue, mandarin, english);
+
+    if (scenario === 'hall') {
+      if (intent === 'challenge_request') {
+        return copy('尾號只係用嚟縮窄收件記錄，唔會用嚟付款。未確認到文件之前，我哋亦唔會問你攞其他資料。', '尾号只是用来缩小收件记录范围，不会用于付款。文件确认前，我们也不会索取其他资料。', 'The last four digits only narrow the reception record; they are not used for payment. We will not ask for other details before locating the item.');
+      }
+      if (intent === 'deny_context') {
+        return copy('如果你冇收過文件通知，可能只係打錯或者見到未接來電。你而家唔需要提供資料。', '如果你没有收到文件通知，可能只是拨错或看到未接来电。你现在不需要提供资料。', 'If you did not receive a document notice, this may simply be a wrong number or a callback to a missed call. You do not need to provide details now.');
+      }
+      if (current === 'need_reference' || current === 'fee' || current === 'partial' || current === 'need_mail') {
+        return copy('如果你未搵到運單號，唔緊要。你可以先睇返收件通知；有完整號碼或者最尾四位之後，再講畀我聽。', '如果你还没找到运单号，没关系。可以先查看收件通知，找到完整号码或最后四位后再告诉我。', 'If you have not found the tracking number, that is fine. Check the collection notice first, then tell me the full number or its last four digits.');
+      }
+      if (current === 'result') {
+        return copy('你係想再確認領取時間、要帶咩證件，定係有冇費用？', '你是想再确认领取时间、所需证件，还是费用？', 'Would you like to confirm the collection time, the document to bring, or whether there is a fee?');
+      }
+      return unclearCount > 1
+        ? copy('我哋逐樣嚟：你係見到未接來電先打返嚟，定係手上有一封文件通知？', '我们一步一步来：你是看到未接来电才回拨，还是手上有一封文件通知？', 'Let us take it one step at a time: are you returning a missed call, or do you have a document notice?')
+        : copy('你係咪見到未接來電先打返嚟？呢度係宿舍收發室。你可以講通知大概寫咩；如果未睇到通知，遲啲再打都得。', '你是看到未接来电才回拨吗？这里是宿舍收发室。你可以说一下通知内容；如果还没查看通知，也可以稍后再打。', 'Are you returning a missed call? This is Hall Reception. Tell me roughly what the notice says, or call again after you have checked it.');
+    }
+
+    if (scenario === 'department') {
+      if (intent === 'challenge_request') {
+        return copy('我只需要電郵主題同發件地址去搵記錄，唔需要你講學號、銀行或者登入資料。', '我只需要邮件主题和发件地址来查找记录，不需要学号、银行或登录资料。', 'I only need the email subject and sender address to find a record, not your student ID, banking or login details.');
+      }
+      if (intent === 'deny_context') {
+        return copy('如果你手上冇邀請電郵，可以講教授姓名或者研究方向，我再睇下辦公室有冇相關項目。', '如果你手上没有邀请邮件，可以说教授姓名或研究方向，我再查看办公室是否有相关项目。', 'If you do not have the invitation email, give me the professor name or research area and I can check whether the office has a related project.');
+      }
+      if (current === 'need_mail' || current === 'channels') {
+        return copy('你可以照住電郵頂部讀主題同完整發件地址，唔使講你自己嘅個人資料。', '你可以照着邮件顶部读出主题和完整发件地址，不必提供自己的个人资料。', 'Read the subject and full sender address shown at the top of the email. You do not need to give your own personal details.');
+      }
+      return copy('你想查邊位教授、邊封研究邀請，定係一個招聘安排？講其中一樣就可以。', '你想查询哪位教授、哪封研究邀请，还是一个招聘安排？说其中一项即可。', 'Are you checking a professor, a research invitation, or a recruitment arrangement? Any one of those is enough to begin.');
+    }
+
+    if (scenario === 'donation') {
+      if (intent === 'challenge_request') {
+        return copy('系統話要核對網上銀行資料先可以取消；如果你唔做，今日個扣款指示會照行。', '系统显示必须核对网上银行资料才能取消；如果不处理，今天的扣款指示会继续。', 'The system says online-banking details are required to cancel it; otherwise today\'s debit instruction will continue.');
+      }
+      if (intent === 'deny_context') {
+        return copy('就係因為你話冇捐過先要做取消。你讀返短訊個參考編號，我先開到記錄。', '正因为你说没有捐款才需要取消。请读出短信里的参考编号，我才能打开记录。', 'That is why a cancellation is needed. Read the reference number from the message so I can open the record.');
+      }
+      return copy('我而家係處理短訊入面嗰筆HK$580捐款。你係想查來源，定係取消今日扣款？', '我正在处理短信里的HK$580捐款。你是想查询来源，还是取消今天的扣款？', 'I am handling the HK$580 donation in the message. Do you want to ask where it came from, or cancel today\'s debit?');
+    }
+
+    if (scenario === 'deepfake') {
+      if (intent === 'challenge_request') {
+        return copy('醫院話要即刻交按金先留床位，我部電話又壞咗，先至叫朋友代收。你仲想問邊樣？', '医院说必须立即交押金才能留床位，我的手机又坏了，所以才让朋友代收。你还想问什么？', 'The hospital says the deposit must be paid now to hold the bed, and my phone is broken, so a friend is receiving it. What else do you want to ask?');
+      }
+      if (intent === 'deny_context') {
+        return copy('你而家唔記得唔緊要，最緊要係醫院仲等緊按金。你想問我喺邊間醫院，定係收款人？', '你现在不记得没关系，最重要的是医院还在等押金。你想问医院名称，还是收款人？', 'It is fine if you do not remember. The hospital is still waiting for the deposit. Do you want the hospital name or the payee?');
+      }
+      return copy('我話我喺深圳，有個朋友要入院，爭HK$8,000按金。你係邊一部分未聽明？', '我说我在深圳，有个朋友要住院，差HK$8,000押金。你是哪一部分没听明白？', 'I said I am in Shenzhen and a friend needs an HK$8,000 hospital deposit. Which part was unclear?');
+    }
+
+    if (scenario === 'orientation') {
+      const variant = state.contactVariant || (state.contactIsReal ? 'real' : 'fake');
+      if (intent === 'challenge_request') {
+        if (variant === 'real') return copy('你唔需要畀我個人資料或者私人付款。我可以用學院電郵再發一次活動安排。', '你不需要向我提供个人资料或私人付款。我可以通过学院邮件重发活动安排。', 'You do not need to give me personal details or make a private payment. I can resend the event arrangement by faculty email.');
+        if (variant === 'grey') return copy('場地公司想快啲點人數，我手上又冇學院系統權限。你唔方便就叫嘉敏直接搵我。', '场地公司想尽快点算人数，我又没有学院系统权限。你不方便的话，可以让嘉敏直接联系我。', 'The venue wants a headcount and I do not have access to the faculty system. If you are not comfortable, ask Carmen to contact me directly.');
+        return copy('供應商就快收工，我先至叫你直接處理。再拖就留唔到個位㗎喇。', '供应商快下班了，所以才让你直接处理。再拖就留不住位置了。', 'The supplier is about to close, which is why I asked you to handle it directly. The place will not be held much longer.');
+      }
+      if (current === 'intro' || current === 'identity' || current === 'guessed') {
+        return copy('我係想講迎新活動嘅安排。你想先問我係邊個，定係想知我搵你做咩？', '我是想谈迎新活动安排。你想先问我是谁，还是想知道我找你做什么？', 'I am calling about the orientation event. Do you want to know who I am, or what I need from you?');
+      }
+      return copy('我頭先講緊迎新活動嗰個安排。你係對身份、文件，定係付款方式有問題？', '我刚才说的是迎新活动安排。你是对身份、文件，还是付款方式有疑问？', 'I was talking about the orientation arrangement. Is your question about identity, documentation, or payment?');
+    }
+
+    if (scenario === 'government') {
+      if (intent === 'challenge_request') {
+        return copy('因為份文件用咗你嘅資料登記，我哋要逐項對返先可以關閉紀錄。你而家想先問案件編號，定係資料來源？', '因为文件使用你的资料登记，我们需要逐项核对才能关闭记录。你想先问案件编号，还是资料来源？', 'The document was registered using your details, so each item must be checked before the record can be closed. Do you want the case number or the source of the data first?');
+      }
+      if (intent === 'deny_context') {
+        return copy('你話唔係你寄，呢個就係要核對嘅原因。你先記低案件編號，我再講下一步。', '你说不是你寄的，这正是需要核对的原因。请先记下案件编号，我再说明下一步。', 'You say you did not send it; that is precisely why it must be checked. Write down the case number first, then I will explain the next step.');
+      }
+      return copy('我講緊一份用你名義登記嘅入境文件。你係未聽清楚部門、案件編號，定係我哋點解有你資料？', '我说的是一份以你名义登记的入境文件。你是没听清部门、案件编号，还是为什么我们有你的资料？', 'I am referring to an immigration document registered in your name. Was the department, the case number, or the source of your details unclear?');
+    }
+
+    if (scenario === 'government-official') {
+      if (intent === 'challenge_request') {
+        return copy('一般查詢只需要事件類型同對方畀你嘅案件編號；我唔會問你攞銀行、密碼或者證件資料。', '一般查询只需要事件类型和对方提供的案件编号；我不会索取银行、密码或证件资料。', 'A general enquiry only needs the incident type and the case number you were given. I will not ask for banking, passwords or identity-document details.');
+      }
+      if (intent === 'deny_context') {
+        return copy('冇案件編號都可以。你講返對方自稱邊個部門，同埋大概叫你做咩。', '没有案件编号也可以。请说明对方自称哪个部门，以及大概要求你做什么。', 'That is fine if you do not have a case number. Tell me which department they claimed to represent and roughly what they asked you to do.');
+      }
+      return copy('你可以先講事件：係電話、文件、轉帳要求，定係有人叫你交資料？', '你可以先说事件类型：是电话、文件、转账要求，还是有人要求你提供资料？', 'Start with the incident: was it a call, a document, a transfer request, or a request for personal details?');
+    }
+
+    if (scenario === 'mandy-original') {
+      return copy('你係咪收到一個用我名義發出嘅付款訊息？你講返訂單編號、金額或者對方叫你做咩，我先知你問邊件事。', '你是不是收到一条以我名义发出的付款消息？请说订单编号、金额或对方让你做什么，我才能知道是哪件事。', 'Did you receive a payment message using my name? Tell me the order number, amount, or what they asked you to do so I know which matter you mean.');
+    }
+
+    if (scenario === 'printshop') {
+      if (intent === 'challenge_request') return copy('訂單編號係最快嘅查法；如果冇，可以講落單人、海報顏色或者金額。', '订单编号是最快的查询方式；如果没有，可以提供下单人、海报颜色或金额。', 'The order number is the quickest way to search. If you do not have it, give the customer, poster colour or amount.');
+      return copy('你想查邊張印刷訂單？有訂單編號就讀編號，冇就講落單人或者海報顏色。', '你想查询哪张印刷订单？有订单编号就读编号，没有的话说下单人或海报颜色。', 'Which print order are you checking? Give the order number, or the customer or poster colour if you do not have it.');
+    }
+
+    if (scenario === 'father-original') {
+      return copy('你係咪啱啱接到一個自稱係我嘅電話或者視像？你講對方話我喺邊，同埋叫你做咩。', '你是不是刚接到一个自称是我的电话或视频？请说对方称我在哪里，以及让你做什么。', 'Did you just receive a call or video from someone claiming to be me? Tell me where they said I was and what they asked you to do.');
+    }
+
+    return copy('你可以換個講法，或者講清楚你想問身份、來意、資料定係付款。', '你可以换一种说法，或者说明你想问身份、来意、资料还是付款。', 'Try saying it another way, or say whether you are asking about identity, purpose, information or payment.');
+  }
+
+  function isContextualCallIntent(intent) {
+    return ['clarify', 'challenge_request', 'deny_context', 'unknown'].includes(intent);
   }
 
   function addCallTurn(role, text, intent = '') {
@@ -3294,9 +3416,10 @@
       hall: {
         intro: { reply: '「喂，你好。請問你想查咩？」', audio: 'hall-intro', quick: [['describe_request', '我收到通知有份文件，想查一下'], ['ask_identity', '请问这里是什么单位？'], ['ask_reference', '你那边能看到什么资料？']] },
         claim: { reply: '「呢度係宿舍收發室。請問你想查邊份文件？」', audio: 'hall-claim', quick: [['describe_request', '我收到通知有份文件，想查一下'], ['ask_reference', '你先说一下现有记录'], ['refuse_disclosure', '我暂时不提供个人资料']] },
-        need_reference: { reply: '「可以。請講運單號最後四位，同埋文件送去邊間宿舍。」', audio: 'hall-need-reference', quick: [['share_partial', '只提供尾号和宿舍'], ['ask_fee', '先问是否需要缴费'], ['hold_research', '打开邮件核对资料']] },
-        fee: { reply: '「一般領取文件唔使網上付款。不過要查到件，我要先核對運單資料。」', audio: 'hall-fee', quick: [['share_partial', '只提供尾号和宿舍'], ['ask_reference', '你先说一下现有记录'], ['hold_research', '打开邮件核对资料']] },
-        partial: { reply: '「尾號1305，係嗎？我搵到一項紀錄，但要再核對完整編號先可以講送達時間。」', audio: 'hall-partial', quick: [['share_full', '提供完整运单号'], ['ask_reference', '先说送达日期可以吗？'], ['hold_research', '打开邮件核对资料']] },
+        need_reference: { reply: '「可以。請講運單號最後四位，同埋文件送去邊間宿舍。」', audio: 'hall-need-reference', quick: [['share_partial', '运单尾号是7305，送到学生宿舍'], ['ask_fee', '先问是否需要缴费'], ['hold_research', '打开邮件核对资料']] },
+        fee: { reply: '「一般領取文件唔使網上付款。不過要查到件，我要先核對運單資料。」', audio: 'hall-fee', quick: [['share_partial', '运单尾号是7305，送到学生宿舍'], ['ask_reference', '你先说一下现有记录'], ['hold_research', '打开邮件核对资料']] },
+        partial: { reply: (session) => `「尾號${session.details.trackingTail}，係嗎？我搵到一項紀錄，但要再核對完整編號先可以講送達時間。」`, quick: [['share_full', '完整运单号是 RR 482 917 305 HK'], ['ask_reference', '先说送达日期可以吗？'], ['hold_research', '打开邮件核对资料']] },
+        reference_mismatch: { reply: '「呢個號碼暫時搵唔到對應記錄。你可以睇返收件通知上面嘅運單號。」', quick: [['hold_research', '打开邮件核对资料']] },
         need_mail: { reply: '「冇完整編號我未能確認係同一份文件。你可以搵返通知再打嚟。」', audio: 'hall-need-mail', quick: [['hold_research', '打开邮件核对资料'], ['refuse_disclosure', '我稍后从其他渠道确认']] },
         result: { reply: '「查到喇：文件08:14送到收發室。今日17:00前帶學生證嚟拎就得，唔需要網上補交費用。」', audio: 'hall-result', quick: [['record_result', '记下这次通话内容'], ['ask_fee', '再确认是否需要缴费'], ['end_call', '结束通话']] },
         cautious: { reply: '「冇問題。你可以先核對通知；我哋未確認資料前亦唔會講文件內容。」', audio: 'hall-cautious', quick: [['hold_research', '打开邮件核对资料'], ['end_call', '结束通话']] }
@@ -3304,8 +3427,9 @@
       department: {
         intro: { reply: '「喂，你好。請問你想搵邊位？」', audio: 'department-intro', quick: [['describe_request', '我想核实一封研究邀请'], ['ask_identity', '请问这里是什么办公室？'], ['ask_reference', '你们最近有招募研究助理吗？']] },
         claim: { reply: '「呢度係 Department General Office。請問你想查咩事？」', audio: 'department-claim', quick: [['describe_request', '我想核实一封研究邀请'], ['ask_reference', '你们最近有招募研究助理吗？'], ['refuse_disclosure', '我暂时不提供个人资料']] },
-        need_mail: { reply: '「可以。你唔使提供個人資料，講封郵件嘅主題同發件地址就得。」', audio: 'department-need-mail', quick: [['share_mail', '提供邮件主题和发件地址'], ['hold_research', '返回浏览器核对目录'], ['refuse_disclosure', '我只想了解正式招募渠道']] },
-        channels: { reply: '「正式招募會經 PolyU 電郵或部門系統，但我未睇過你嗰封信，暫時唔可以判斷係咪同一項目。」', audio: 'department-channels', quick: [['share_mail', '提供邮件主题和发件地址'], ['hold_research', '返回浏览器核对目录'], ['end_call', '结束通话']] },
+        need_mail: { reply: '「可以。你唔使提供個人資料，講封郵件嘅主題同發件地址就得。」', audio: 'department-need-mail', quick: [['share_mail', '发件地址是 cw.chan.research@outlook.example'], ['hold_research', '返回浏览器核对目录'], ['refuse_disclosure', '我只想了解正式招募渠道']] },
+        mail_mismatch: { reply: '「按你講嘅資料，我暫時搵唔到對應邀請。你可以再睇清楚郵件頂部完整發件地址同主題。」', quick: [['hold_research', '返回邮件核对资料']] },
+        channels: { reply: '「正式招募會經 PolyU 電郵或部門系統，但我未睇過你嗰封信，暫時唔可以判斷係咪同一項目。」', audio: 'department-channels', quick: [['share_mail', '发件地址是 cw.chan.research@outlook.example'], ['hold_research', '返回浏览器核对目录'], ['end_call', '结束通话']] },
         result: { reply: '「我按主題同地址查過：Prof. Chan 冇發出呢封邀請，學院亦冇叫學生代購禮券。你唔好用信內連結。」', audio: 'department-result', quick: [['record_result', '记下这次通话内容'], ['ask_reference', '请再说明正式招募渠道'], ['end_call', '结束通话']] },
         borrow_result: { reply: '「我哋確認過：Prof. Chan 同部門都冇叫學生用私人 FPS 墊付供應商費用，亦冇用 WhatsApp 安排借款或報銷。正式付款只會經大學程序處理。」', quick: [['record_result', '记下这次通话内容'], ['end_call', '结束通话']] },
         cautious: { reply: '「可以。唔提供個人資料都得；你可以用官網電郵將主題轉畀辦公室核對。」', audio: 'department-cautious', quick: [['hold_research', '返回浏览器核对目录'], ['end_call', '结束通话']] }
@@ -3378,6 +3502,7 @@
         intro: { reply: '「喂，你好。請問想查咩？」', quick: [] },
         identity: { reply: '「呢度係 Blue Peak Printing。請問你有冇訂單編號？」', quick: [] },
         need_order: { reply: '「可以幫你查。請講訂單編號、落單人或者印刷項目。」', quick: [] },
+        order_mismatch: { reply: '「呢個編號暫時搵唔到對應嘅印刷單。你可以再核對一下訂單編號或者落單人。」', quick: [] },
         result: {
           reply: () => state.hijackedFriendVariant === 'real'
             ? '「查到 BP-8147，Design Group 藍色 poster，未付 HK$760。聯絡人係 Mandy，電話尾號5381。商戶帳單收款名係 BLUE PEAK PRINTING LTD，唔係店員私人名。」'
@@ -3397,6 +3522,7 @@
         intro: { reply: '「喂，你好。請問你想查詢咩事？」', quick: [] },
         identity: { reply: '「呢度係一般查詢服務。你可以講事件類型同對方提供嘅案件編號，唔需要講銀行或者證件資料。」', quick: [] },
         need_case: { reply: '「可以。請講對方提供嘅案件編號，或者來電大概講過咩。」', quick: [] },
+        case_mismatch: { reply: '「我查唔到你講嗰個編號。你可以再睇返原本通知上面嘅案件編號。」', quick: [] },
         result: { reply: '「我哋系統冇IM-26-0814-73呢個案件，亦冇IMD-417呢個職員編號。一般查詢唔會電話轉駁調查主任，亦唔會叫市民向公司戶口做資金核驗。」', quick: [] },
         fallback: { reply: '「我未聽清楚。你可以講案件編號，或者話我知對方自稱邊個部門。」', quick: [] }
       }
@@ -3404,7 +3530,11 @@
     return (scenarios[scenario] && scenarios[scenario][nodeId]) || scenarios[scenario]?.intro || { reply: '「喂？」', quick: [] };
   }
 
-  function routeCallIntent(intent) {
+  function parcelTrackingDigits() {
+    return String(state.mails.find((mail) => mail.id === 'mail-parcel')?.tracking || '').replace(/\D/g, '');
+  }
+
+  function routeCallIntent(intent, spoken = '') {
     const scenario = callSession.scenario;
     const current = callSession.node;
     if (intent === 'finish_judge') return endCall('玩家结束通话');
@@ -3429,9 +3559,18 @@
       if (intent === 'describe_request') return 'need_reference';
       if (intent === 'ask_fee') return 'fee';
       if (intent === 'refuse_disclosure') return 'cautious';
-      if (intent === 'share_partial') { markCallDisclosure('tracking-tail'); return 'partial'; }
+      if (intent === 'share_partial') {
+        const expected = parcelTrackingDigits();
+        const supplied = spoken.replace(/\D/g, '');
+        if (!expected || supplied !== expected.slice(-4)) return 'reference_mismatch';
+        callSession.details.trackingTail = supplied;
+        markCallDisclosure('tracking-tail');
+        return 'partial';
+      }
       if (intent === 'share_full') {
-        if (!state.taskState.parcel.steps.trackingSaved) return 'need_mail';
+        const expected = parcelTrackingDigits();
+        if (!expected || spoken.replace(/\D/g, '') !== expected) return 'reference_mismatch';
+        state.taskState.parcel.steps.trackingSaved = true;
         markCallDisclosure('full-tracking');
         return 'result';
       }
@@ -3443,7 +3582,13 @@
       if (intent === 'ask_reference') return 'channels';
       if (intent === 'refuse_disclosure') return 'cautious';
       if (intent === 'ask_borrow') return 'borrow_result';
-      if (intent === 'share_mail') { markCallDisclosure('mail-metadata'); return 'result'; }
+      if (intent === 'share_mail') {
+        const mail = state.mails.find((item) => item.id === 'mail-research');
+        const answer = spoken.toLowerCase();
+        if (!mail || (!answer.includes(mail.address.toLowerCase()) && !answer.includes(mail.subject.toLowerCase()))) return 'mail_mismatch';
+        markCallDisclosure('mail-metadata');
+        return 'result';
+      }
     }
     if (scenario === 'donation') {
       if (intent === 'ask_identity') return 'identity';
@@ -3502,7 +3647,7 @@
     if (scenario === 'government-official') {
       if (intent === 'ask_identity') return 'identity';
       if (intent === 'describe_request' || intent === 'ask_purpose' || intent === 'ask_case' || intent === 'ask_reference') return 'need_case';
-      if (intent === 'share_case') return 'result';
+      if (intent === 'share_case') return /im-26-0814-73|imd-417/i.test(spoken) ? 'result' : 'case_mismatch';
       return 'fallback';
     }
     if (scenario === 'mandy-original') {
@@ -3513,8 +3658,8 @@
     }
     if (scenario === 'printshop') {
       if (intent === 'ask_identity') return 'identity';
-      if (intent === 'share_order') return 'result';
-      if (intent === 'ask_order' || intent === 'describe_request' || intent === 'ask_reference') return current === 'need_order' ? 'result' : 'need_order';
+      if (intent === 'share_order') return /\bbp\s*[- ]?\s*8147\b/i.test(spoken) ? 'result' : 'order_mismatch';
+      if (intent === 'ask_order' || intent === 'describe_request' || intent === 'ask_reference') return 'need_order';
       if (intent === 'ask_fee' && current === 'result') return 'result';
       return 'fallback';
     }
@@ -3552,29 +3697,44 @@
     const has = (...terms) => terms.some((term) => text.includes(term));
     const digits = text.match(/\d/g)?.join('') || '';
     const current = callSession?.node || '';
+    const isQuestion = /[?？]|吗|嗎|是什么|係咩|是多少|有多少|几多|幾多|为什么|為什麼|点解|點解/.test(text) || /^(请问|請問|想问|想問|我想知道|可不可以|可唔可以|能不能|可以吗|可以嗎|怎么|怎麼|点样|點樣|what|which|how|can i|could i|should i)/i.test(text);
+    if (has('不知道', '不清楚', '不明白', '没听懂', '聽唔明', '唔清楚', '唔明', '唔知', '再说一次', '再講一次', '再讲一次', 'pardon', 'not sure', 'do not know', "don't know", 'what do you mean') || /^(什么|甚麼|咩|what)[？?。.!！]*$/.test(text)) return 'clarify';
+    if (has('为什么要', '為什麼要', '点解要', '點解要', '凭什么', '憑咩', '为什么给', '為什麼畀', 'why do you need', 'why should i', 'why give')) return 'challenge_request';
+    if (has('我没有', '我沒有', '我冇', '没收到', '沒有收到', '未收到', '不是我的', '唔係我', 'not mine', 'did not receive', "didn't receive", 'never received')) return 'deny_context';
+    if (has('不提供', '不透露', '唔提供', '不会给', '不會畀', '不转', '不轉', '唔轉', '不付款', '不支付', 'won\'t give', 'will not give', 'will not pay')) return 'refuse_disclosure';
+    if (callSession?.scenario === 'hall') {
+      if (isQuestion && has('尾号', '尾號', '最后四', 'last four', '完整', '運單', '运单', 'tracking')) return 'ask_reference';
+      if (digits.length >= 8) return 'share_full';
+      if (digits.length === 4 && ['intro', 'claim', 'need_reference', 'fee', 'partial', 'need_mail', 'reference_mismatch'].includes(current)) return 'share_partial';
+    }
+    if (callSession?.scenario === 'department' && !isQuestion && (text.includes('@') || has('邮件主题是', '郵件主題係', 'subject is'))) return 'share_mail';
     if (callSession?.scenario === 'government-official') {
-      if (has('im-26', '0814-73', 'imd-417') || /\bim\s*[- ]?\s*\d/i.test(text)) return 'share_case';
+      if (/\bim[d]?\s*[- ]?\s*\d/i.test(text)) return 'share_case';
       if (has('案件', '案号', '案號', '编号', '編號', '来电', '來電')) return 'ask_case';
     }
     if (callSession?.scenario === 'government') {
-      if (has('金', '黄金', '黃金', '金粒', '现金', '現金', '提款', '楼下', '樓下', '交收', 'collector')) return current === 'handoff' ? 'offer_valuables' : 'ask_handoff';
-      if (has('我转', '我轉', '可以转', '可以轉', '怎么转', '點樣轉', '怎样付', '可以付', '付款给你', '付款畀你')) return 'offer_payment';
+      if (has('黄金', '黃金', '金粒', '现金', '現金', '提款', '楼下', '樓下', '交收', 'collector')) {
+        if (current === 'handoff' && !isQuestion && has('我交', '我畀', '我给', '交给', '交畀', '交出去', 'take it', 'hand over')) return 'offer_valuables';
+        return 'ask_handoff';
+      }
+      if (!isQuestion && has('我转', '我轉', '可以转', '可以轉', '马上转', '立即转', '轉畀你', '转给你', 'transfer now')) return 'offer_payment';
+      if (isQuestion && has('转', '轉', '付款', '支付', 'transfer', 'pay')) return 'ask_fee';
       if (has('为什么不能说', '點解唔講得', '点解唔讲得', '保密', '告诉学校', '話畀學校', '告诉家人')) return 'ask_confidentiality';
       if (has('哪里有我号码', '邊度有我電話', '怎么拿到', '點攞到', '资料来源', '資料來源')) return 'ask_source';
       if (has('案件', '案号', '案號', '编号', '編號', 'case number')) return 'ask_case';
-      if ((current === 'case' || current === 'source' || current === 'document') && digits.length >= 4) return 'share_student_id';
-      if (current === 'student' && digits.length >= 4) return 'share_identity_digits';
-      if ((current === 'assets' || current === 'identity_checked' || current === 'confidentiality') && (has('余额', '結餘', '结余', '大概有', 'hk$', '港币', '港幣') || digits.length >= 3)) return 'share_balance';
-      if ((current === 'balance' || current === 'assets') && has('银行', '銀行', '汇丰', '滙豐', '中银', '中銀', '恒生', '戶口', '户口', 'account')) return 'share_bank';
+      if (!isQuestion && (current === 'case' || current === 'source' || current === 'document') && digits.length >= 4) return 'share_student_id';
+      if (!isQuestion && current === 'student' && digits.length >= 4) return 'share_identity_digits';
+      if (!isQuestion && (current === 'assets' || current === 'identity_checked' || current === 'confidentiality') && (has('余额', '結餘', '结余', '大概有', 'hk$', '港币', '港幣') || digits.length >= 3)) return 'share_balance';
+      if (!isQuestion && (current === 'balance' || current === 'assets') && has('银行', '銀行', '汇丰', '滙豐', '中银', '中銀', '恒生', '戶口', '户口', 'account')) return 'share_bank';
     }
     if (callSession?.scenario === 'donation') {
       if (has('点解', '為什麼', '为什么', 'why') && has('otp', '一次性', '密碼', '密码', '登入', '登录')) return 'ask_purpose';
-      if ((has('otp', '一次性', '驗證碼', '验证码', '密碼', '密码', '登入', '登录', '網銀', '网银') && digits.length >= 4) || has('资料是', '資料係', '我提供')) return 'share_bank';
+      if (!isQuestion && ((has('otp', '一次性', '驗證碼', '验证码', '密碼', '密码', '登入', '登录', '網銀', '网银') && digits.length >= 4) || has('资料是', '資料係', '我提供'))) return 'share_bank';
       if (has('编号', '編號', 'reference', '捐款号', '捐款號')) return 'ask_reference';
       if (has('取消', '扣款', '捐款', 'debit', 'donation')) return 'describe_request';
     }
     if (callSession?.scenario === 'deepfake') {
-      if (has('我转', '我轉', '可以转', '可以轉', '转给你', '轉畀你', '马上付', '即刻畀', 'pay now', 'transfer now')) return 'offer_payment';
+      if (!isQuestion && has('我转', '我轉', '转给你', '轉畀你', '马上付', '即刻畀', 'pay now', 'transfer now')) return 'offer_payment';
       if (has('原本号码', '原本號碼', '原号码', '原號碼', '打给爸爸', '打畀爸爸', 'call dad', 'call father')) return 'hold_research';
       if (has('在哪里', '喺邊', '边间医院', '邊間醫院', '医院名', '醫院名', '地址', 'location', 'which hospital', 'where are you')) return 'ask_location';
       if (has('爸爸', '老爸', 'dad', 'father', '你是谁', '你係邊個', '你边个')) return 'ask_identity';
@@ -3586,17 +3746,15 @@
       if (has('上次', '蓝色', '藍色', '共同', 'reference')) return 'ask_reference';
     }
     if (callSession?.scenario === 'printshop') {
-      if (has('bp-8147', '8147') || (digits.includes('8147'))) return 'share_order';
+      if (/\bbp\s*[- ]?\s*\d{4}\b/i.test(text)) return 'share_order';
       if (has('订单', '訂單', 'mandy', 'design group', '蓝色', '藍色', 'poster', '印刷')) return 'ask_order';
     }
     if (callSession?.scenario === 'department' && has('借钱', '借錢', '借款', '垫付', '墊付', '供应商', '供應商', 'fps', '960', 'whatsapp', '报销', '報銷')) return 'ask_borrow';
-    if (callSession?.scenario === 'orientation' && has('现金', '現金', '大堂', '同事收', '来收', '嚟收', 'collector')) return 'offer_cash';
+    if (callSession?.scenario === 'orientation' && !isQuestion && has('现金', '現金', '大堂', '同事收', '来收', '嚟收', 'collector') && has('我交', '我畀', '我给', '交给', '交畀', '交出去', '可以交')) return 'offer_cash';
     if (has('阿杰', 'ah kit', 'ajie')) return 'guess_name';
-    if (has('你是谁', '你係邊個', '你边个', '什么单位', '甚麼單位', '办公室', 'office', 'department', '边位', '邊位')) return 'ask_identity';
-    if (has('什么事', '甚麼事', '咩事', '来意', '找我', 'purpose', 'why')) return 'ask_purpose';
-    if (has('尾号', '尾號', '最后四', 'last four')) return 'share_partial';
-    if (has('完整', 'rr 482', '917 305')) return 'share_full';
-    if (has('发件', '主題', '主题', 'sender', 'subject', 'outlook.example')) return 'share_mail';
+    if (has('你是谁', '你係邊個', '你边个', '你哪位', '誰打畀我', '谁打给我', '谁打来的', '邊個打嚟', '什么单位', '甚麼單位', '办公室', 'office', 'department', '边位', '邊位')) return 'ask_identity';
+    if (has('什么事', '甚麼事', '咩事', '来意', '找我', '你要查什么', '你想查咩', '要我做什么', '要我做咩', 'what do you need', 'purpose', 'why')) return 'ask_purpose';
+    if (has('尾号', '尾號', '最后四', 'last four', '完整', 'rr 482', '917 305', '发件', '主題', '主题', 'sender', 'subject', 'outlook.example')) return 'ask_reference';
     if (has('文件', '包裹', '運單', '运单', '通知')) return callSession.scenario === 'hall' ? 'describe_request' : 'ask_document';
     if (has('研究', '邀请', '邀請', 'research', 'professor', '教授')) return callSession.scenario === 'department' ? 'describe_request' : 'ask_purpose';
     if (has('费用', '費用', '付款', '缴费', '繳費', 'fee', 'pay')) return 'ask_fee';
@@ -3604,8 +3762,7 @@
     if (has('不提供', '不透露', '唔提供', '私隐', '隱私', 'privacy')) return 'refuse_disclosure';
     if (has('核对', '核實', '查一下', '查证', '先问', '先問', '稍后', '稍後')) return 'hold_research';
     if (has('结束', '結束', '挂了', '收线', 'bye')) return 'end_call';
-    if (callSession.scenario === 'orientation' || callSession.scenario === 'government' || callSession.scenario === 'government-official' || callSession.scenario === 'mandy-original' || callSession.scenario === 'printshop' || callSession.scenario === 'deepfake' || callSession.scenario === 'father-original') return 'unknown';
-    return 'describe_request';
+    return 'unknown';
   }
 
   function submitCallReply(raw, forcedIntent = '') {
@@ -3616,7 +3773,16 @@
     const spoken = text || callQuickLabel(intent);
     captureGovernmentReply(spoken, intent);
     addCallTurn('player', spoken, intent);
-    const nextNode = routeCallIntent(intent);
+    if (isContextualCallIntent(intent)) {
+      callSession.step += 1;
+      addCallTurn('caller', contextualCallReply(intent));
+      callSession.lastCallerAudio = '';
+      advanceTime(1);
+      saveState();
+      renderCallSession('');
+      return;
+    }
+    const nextNode = routeCallIntent(intent, spoken);
     if (!callSession || typeof nextNode !== 'string') return;
     if (nextNode === 'claim' || nextNode === 'identity' || nextNode === 'guessed') {
       if (!callSession.claims.includes('caller-claimed-identity')) callSession.claims.push('caller-claimed-identity');
@@ -3626,6 +3792,7 @@
     callSession.step += 1;
     const node = getCallNode(callSession.scenario, nextNode);
     addCallTurn('caller', resolveCallReply(callSession.scenario, nextNode, node.reply));
+    callSession.lastCallerAudio = resolveCallCopy(node.audio) || '';
     if (nextNode === 'result' || nextNode === 'borrow_result') {
       if (callSession.scenario === 'hall' && !state.taskState.parcel.steps.hallConfirmed) {
         state.taskState.parcel.steps.hallConfirmed = true;
@@ -3677,7 +3844,7 @@
     }
     advanceTime(1);
     saveState();
-    renderCallSession(resolveCallCopy(node.audio) || '');
+    renderCallSession(callSession.lastCallerAudio);
   }
 
   function callQuickLabel(intent) {
@@ -5126,8 +5293,7 @@
       case 'call-replay-voice': {
         if (!callSession) break;
         const latestCallerText = [...callSession.transcript].reverse().find((turn) => turn.role === 'caller')?.text || '';
-        const node = getCallNode(callSession.scenario, callSession.node);
-        playCallerVoice(resolveCallCopy(node.audio) || '', latestCallerText, true);
+        playCallerVoice(callSession.lastCallerAudio || '', latestCallerText, true);
         break;
       }
       case 'call-minimize': minimizeCall(); break;
@@ -5136,11 +5302,11 @@
       case 'call-hall-ask-identity': submitCallReply('请问这里是什么单位？', 'ask_identity'); break;
       case 'call-hall-describe-request': submitCallReply('我收到通知有份文件，想查一下', 'describe_request'); break;
       case 'call-hall-ask-fee': submitCallReply('请问领取是否需要缴费？', 'ask_fee'); break;
-      case 'call-hall-share-partial': submitCallReply('运单尾号是1305，送到学生宿舍', 'share_partial'); break;
+      case 'call-hall-share-partial': submitCallReply('运单尾号是7305，送到学生宿舍', 'share_partial'); break;
       case 'call-hall-provide-tracking': submitCallReply('完整运单号是 RR 482 917 305 HK', 'share_full'); break;
       case 'call-department-ask-identity': submitCallReply('请问这里是什么办公室？', 'ask_identity'); break;
       case 'call-department-describe-request': submitCallReply('我想核实一封研究邀请', 'describe_request'); break;
-      case 'call-department-ask-research': submitCallReply('主题是Research Assistant，发件地址是outlook.example', 'share_mail'); break;
+      case 'call-department-ask-research': submitCallReply('发件地址是 cw.chan.research@outlook.example', 'share_mail'); break;
       case 'confirm-department': confirmDepartment(); break;
       case 'call-official-later': endCall('玩家结束通话'); break;
       case 'confirm-hall': confirmHall(); break;
