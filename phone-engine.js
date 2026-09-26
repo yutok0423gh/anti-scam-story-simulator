@@ -31,6 +31,7 @@
   ];
   const $ = (id) => document.getElementById(id);
   const els = {};
+  let pendingOpeningTarget = null;
 
   const APP_NAMES = {
     'zh-CN': { phone: '电话', messages: '短信', mail: '邮件', polyu: 'PolyULife', browser: '浏览器', contacts: '联系人', bank: '银行', tasks: '任务', settings: '设置' },
@@ -304,6 +305,7 @@
         saved.profile = {
           ...defaults.profile,
           ...previousProfile,
+          name: typeof previousProfile.name === 'string' ? previousProfile.name.trim().replace(/\s+/g, ' ').slice(0, 24) : '',
           startingBalance: Number.isFinite(previousProfile.startingBalance) ? previousProfile.startingBalance : saved.balance,
           growth: Number.isFinite(previousProfile.growth) ? Math.max(0, Math.round(previousProfile.growth)) : 0,
           growthTarget: 30,
@@ -549,6 +551,15 @@
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#039;');
+  }
+
+  function playerInitials() {
+    const name = state.profile.name.trim();
+    if (!name) return '?';
+    const words = name.split(/\s+/);
+    return words.length > 1
+      ? words.slice(0, 2).map((word) => Array.from(word)[0]).join('').toUpperCase()
+      : Array.from(name).slice(0, 2).join('').toUpperCase();
   }
 
   function linkedSimulatedText(value) {
@@ -936,6 +947,12 @@
   }
 
   function syncClockFromWall(now = Date.now(), refresh = true) {
+    const callElapsed = $('callElapsedTime');
+    if (callElapsed && callSession?.connectedAtRealMs) {
+      const simulatedSeconds = Math.max(0, Math.floor((state.time - (callSession.connectedAtSimMinute ?? state.time)) * 60));
+      const seconds = simulatedSeconds + Math.max(0, Math.floor((now - callSession.connectedAtRealMs) / 1000) % 60);
+      callElapsed.textContent = `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
+    }
     const previousRealMs = Number.isFinite(state.clockLastRealMs) ? state.clockLastRealMs : now;
     const elapsedMs = Math.max(0, now - previousRealMs);
     state.clockLastRealMs = now;
@@ -1237,6 +1254,7 @@
   }
 
   function renderHome() {
+    els.openTasksShortcut.textContent = playerInitials();
     els.appGrid.innerHTML = DATA.gridApps.map(appButton).join('');
     els.appDock.innerHTML = DATA.dockApps.map(appButton).join('');
     const done = taskDoneCount();
@@ -1442,6 +1460,11 @@
     saveState();
     renderHome();
     showScreen('homeScreen');
+    if (!state.profile.name) {
+      pendingOpeningTarget = targetApp ? { app: targetApp, target } : null;
+      showOpeningNamePrompt();
+      return;
+    }
     if (targetApp) openApp(targetApp, target);
     if (!state.openingBriefSeen) showOpeningBrief();
   }
@@ -1461,6 +1484,7 @@
 
   function navigateBack() {
     if (!state.unlocked) return;
+    if (els.overlayLayer.querySelector('.opening-name-overlay')) return;
     if (els.overlayLayer.firstElementChild) {
       if (els.overlayLayer.querySelector('.outlook-mail-menu-overlay')) closeMailMessageMenu();
       else if (callSession) minimizeCall();
@@ -1494,6 +1518,10 @@
       renderPolyU();
       return;
     }
+    if (state.currentApp === 'settings' && settingsPage === 'name' && !state.profile.name) {
+      goHome();
+      return;
+    }
     if (state.currentApp === 'settings' && settingsPage !== 'root') {
       settingsPage = 'root';
       renderSettings();
@@ -1504,6 +1532,7 @@
 
   function navigateHome() {
     if (!state.unlocked) return;
+    if (els.overlayLayer.querySelector('.opening-name-overlay')) return;
     if (callSession) minimizeCall();
     goHome();
     renderActiveCallBar();
@@ -1513,7 +1542,7 @@
     const app = DATA.apps[appId];
     if (!app) return;
     state.currentApp = appId;
-    if (appId === 'settings') settingsPage = 'root';
+    if (appId === 'settings') settingsPage = state.profile.name ? 'root' : 'name';
     if (appId === 'polyu' && target === 'official-research') state.polyuPage = 'research-detail';
     else state.polyuPage = appId === 'polyu' ? (state.polyuPage || 'home') : state.polyuPage;
     markAppRead(appId);
@@ -1763,7 +1792,7 @@
     els.appContent.innerHTML = `
       <section class="outlook-mail-shell">
         <header class="outlook-mail-header">
-          <button class="outlook-account" type="button" data-action="mail-account" aria-label="${esc(ui('个人文件夹'))}">CY</button>
+          <button class="outlook-account" type="button" data-action="mail-account" aria-label="${esc(ui('个人文件夹'))}">${esc(playerInitials())}</button>
           <div><span>POLYU MAIL</span><strong>${esc(ui('收件箱'))}</strong></div>
           <button class="outlook-compose" type="button" data-action="mail-compose" aria-label="${esc(ui('写邮件'))}">${MAIL_ICONS.compose}</button>
         </header>
@@ -1977,7 +2006,7 @@
     els.appContent.innerHTML = polyuShell(`
       <header class="polyu-topbar">
         <button type="button" data-action="polyu-menu" aria-label="菜单">${POLYU_ICONS.menu}</button>
-        <strong>Hi, Yutian</strong>
+        <strong>Hi, ${esc(state.profile.name || 'Student')}</strong>
         <button type="button" data-action="polyu-search" aria-label="搜索">${POLYU_ICONS.search}</button>
       </header>
       <section class="polyu-overview">
@@ -2728,8 +2757,8 @@
     return `
       <div class="settings-page settings-root">
         <button class="settings-profile-entry" type="button" data-action="settings-page" data-value="profile">
-          <span class="settings-profile-avatar" aria-hidden="true">YT</span>
-          <span class="settings-profile-copy"><strong>Yutian</strong><small>${esc(localized(`可用资金 ${formatHKD(state.balance)} · 成长值 ${state.profile.growth}`, `Available ${formatHKD(state.balance)} · Growth ${state.profile.growth}`))}</small></span>
+          <span class="settings-profile-avatar" aria-hidden="true">${esc(playerInitials())}</span>
+          <span class="settings-profile-copy"><strong>${esc(state.profile.name)}</strong><small>${esc(localized(`可用资金 ${formatHKD(state.balance)} · 成长值 ${state.profile.growth}`, `Available ${formatHKD(state.balance)} · Growth ${state.profile.growth}`))}</small></span>
           <span class="settings-chevron" aria-hidden="true">›</span>
         </button>
         <span class="settings-section-label">${esc(localized('系统', 'System'))}</span>
@@ -2740,7 +2769,7 @@
         <span class="settings-section-label">${esc(localized('模拟器', 'Simulator'))}</span>
         <section class="settings-group">
           ${settingsRow({ action: 'settings-page', page: 'time', icon: 'time', title: localized('时间推进规则', 'Time progression'), detail: localized('速度决定哪些通知会暂停时间', 'Speed determines which alerts pause time'), chevron: true })}
-          ${settingsRow({ action: 'confirm-reset-day', icon: 'reset', tone: 'danger', title: localized('重新开始今天', 'Restart today'), detail: localized('保留界面、地区和通话语音设置', 'Keep interface, region and call voice preferences'), chevron: false })}
+          ${settingsRow({ action: 'confirm-reset-day', icon: 'reset', tone: 'danger', title: localized('重新开始今天', 'Restart today'), detail: localized('保留名字、界面、地区和通话语音设置', 'Keep name, interface, region and call voice preferences'), chevron: false })}
         </section>
         <span class="settings-section-label">${esc(localized('关于', 'About'))}</span>
         <section class="settings-group">
@@ -2758,6 +2787,9 @@
     const ledger = profile.growthLedger || [];
     return `
       <div class="settings-page settings-subpage settings-profile-page">
+        <section class="settings-group profile-name-group">
+          ${settingsRow({ action: 'settings-page', page: 'name', icon: 'profile', title: localized('显示名字', 'Display name'), value: profile.name, chevron: true })}
+        </section>
         <section class="profile-ledger-card" aria-label="${esc(localized('今日资源账本', 'Today’s resource ledger'))}">
           <header><span>${esc(localized('今天 · 资源账本', 'TODAY · RESOURCE LEDGER'))}</span><b>${esc(formatTime(state.time))}</b></header>
           <div class="profile-ledger-balance">
@@ -2792,6 +2824,21 @@
           ${ledger.length ? ledger.map((item) => `<div class="profile-growth-row"><i>${esc(profileFocusLabel(item.area).slice(0, 1))}</i><span><strong>${esc(state.language === 'en' ? item.labelEn : item.labelZh)}</strong><small>${esc(formatStoredTime(item.time))}${item.focused ? ` · ${esc(localized('方向加成', 'Focus bonus'))}` : ''}</small></span><b>+${item.points}</b></div>`).join('') : `<div class="profile-growth-empty"><strong>${esc(localized('还没有已结算的成长', 'No growth has settled yet'))}</strong><span>${esc(localized('真实活动完成、研究场次结束或帮助结果确认后才会显示。', 'Growth appears only after a genuine event, study or helping outcome is confirmed.'))}</span></div>`}
         </section>
         <p class="settings-footnote">${esc(localized('打开邀请、付款或填写资料本身不会增加成长值。资金变化与成长值分别记录。', 'Opening an invitation, paying or submitting details does not itself earn growth. Money and growth are recorded separately.'))}</p>
+      </div>`;
+  }
+
+  function settingsNamePage() {
+    const firstTime = !state.profile.name;
+    return `
+      <div class="settings-page settings-subpage settings-name-page">
+        <div class="settings-name-avatar" aria-hidden="true">${esc(playerInitials())}</div>
+        <h2>${esc(localized(firstTime ? '你希望大家怎么称呼你？' : '更改显示名字', firstTime ? 'What should we call you?' : 'Change display name'))}</h2>
+        <p>${esc(localized('这个名字会显示在模拟手机及校园应用中，只保存在当前浏览器。无需填写真实姓名。', 'This name appears on the simulated phone and campus app. It stays in this browser; you do not need to use your real name.'))}</p>
+        <form id="playerNameForm" class="settings-name-form">
+          <label for="playerNameInput">${esc(localized('显示名字', 'Display name'))}</label>
+          <input id="playerNameInput" name="playerName" type="text" autocomplete="nickname" maxlength="24" required value="${esc(state.profile.name)}" placeholder="${esc(localized('输入你想用的名字', 'Enter a name'))}">
+          <button type="submit">${esc(localized(firstTime ? '开始使用设置' : '保存名字', firstTime ? 'Continue to Settings' : 'Save name'))}</button>
+        </form>
       </div>`;
   }
 
@@ -2873,6 +2920,7 @@
   function renderSettings() {
     const titles = {
       root: localized('设置', 'Settings'),
+      name: localized('设置名字', 'Your name'),
       profile: localized('我的', 'My Profile'),
       locale: localized('语言与地区', 'Language & Region'),
       sound: localized('声音与语音', 'Sounds & Voice'),
@@ -2880,11 +2928,13 @@
       about: localized('教学模拟说明', 'About this simulation')
     };
     if (!titles[settingsPage]) settingsPage = 'root';
+    if (!state.profile.name) settingsPage = 'name';
     els.appScreen.dataset.settingsPage = settingsPage;
     els.appEyebrow.textContent = 'SETTINGS';
     els.appTitle.textContent = titles[settingsPage];
     if (els.appMore) els.appMore.hidden = true;
-    if (settingsPage === 'profile') els.appContent.innerHTML = settingsProfilePage();
+    if (settingsPage === 'name') els.appContent.innerHTML = settingsNamePage();
+    else if (settingsPage === 'profile') els.appContent.innerHTML = settingsProfilePage();
     else if (settingsPage === 'locale') els.appContent.innerHTML = settingsLocalePage();
     else if (settingsPage === 'sound') els.appContent.innerHTML = settingsSoundPage();
     else if (settingsPage === 'time') els.appContent.innerHTML = settingsTimePage();
@@ -3001,6 +3051,9 @@
   function startCallSession(scenario, number, contactId = null) {
     clearTimeout(callbackTimer);
     stopAllAudio();
+    const previous = ['hall', 'orientation'].includes(scenario)
+      ? [...state.callRecords].reverse().find((record) => record.scenario === scenario && record.number === number)
+      : null;
     callSession = {
       id: `call-session-${Date.now()}`,
       scenario,
@@ -3013,7 +3066,11 @@
       transcript: [],
       disclosed: [],
       claims: [],
-      details: {},
+      details: previous?.details ? { ...previous.details } : {},
+      returning: Boolean(previous),
+      connectedAtRealMs: null,
+      connectedAtSimMinute: null,
+      pendingNode: null,
       minimized: false,
       originApp: state.currentApp || 'phone'
     };
@@ -3068,6 +3125,7 @@
     if (!callSession) return;
     stopRingtone();
     callSession.phase = 'connected';
+    callSession.connectedAtRealMs = Date.now();
     callSession.node = 'intro';
     callSession.step = 0;
     const contact = callSession.contactId && state.contacts.find((item) => item.id === callSession.contactId);
@@ -3100,9 +3158,16 @@
       }
       advanceTime(1);
     }
+    callSession.connectedAtSimMinute = state.time;
     const node = getCallNode(callSession.scenario, 'intro');
-    addCallTurn('caller', resolveCallReply(callSession.scenario, 'intro', node.reply));
-    callSession.lastCallerAudio = resolveCallCopy(node.audio) || '';
+    const returningPilot = callSession.returning && ['hall', 'orientation'].includes(callSession.scenario);
+    const intro = returningPilot
+      ? (callSession.scenario === 'hall'
+        ? contextualCallCopy('喂，你好。頭先係咪打過嚟查文件？你搵到通知資料未？', '你好。刚才是你打来查询文件吗？找到通知资料了吗？', 'Hello. Did you call earlier about a document? Have you found the notice details?')
+        : contextualCallCopy('喂，又係我。頭先講迎新活動嗰件事，你而家方便講？', '喂，又是我。刚才说的迎新活动，你现在方便谈吗？', 'Hello again. About the orientation event we discussed earlier—can you talk now?'))
+      : resolveCallReply(callSession.scenario, 'intro', node.reply);
+    addCallTurn('caller', intro);
+    callSession.lastCallerAudio = returningPilot ? '' : (resolveCallCopy(node.audio) || '');
     saveState();
     renderCallSession(callSession.lastCallerAudio);
   }
@@ -3309,6 +3374,12 @@
     const copy = (yue, mandarin, english) => contextualCallCopy(yue, mandarin, english);
 
     if (scenario === 'hall') {
+      if (intent === 'clarify' && callSession.details.lastTopic === 'tracking') {
+        return copy('我係話要核對你手上張通知嘅運單號。你搵到之後讀畀我聽，我再查收件記錄。', '我是说需要核对你通知上的运单号。找到后读给我，我再查收件记录。', 'I meant the tracking number on your notice. Read it to me when you find it, and I can check the reception record.');
+      }
+      if (intent === 'clarify' && callSession.details.lastTopic === 'collection') {
+        return copy('我頭先講嘅係領取文件嘅時間同位置。你想我再講邊一樣？', '刚才说的是文件领取时间和地点。你想我再说明哪一项？', 'I was talking about the collection time and place. Which part would you like me to repeat?');
+      }
       if (intent === 'challenge_request') {
         return copy('尾號只係用嚟縮窄收件記錄，唔會用嚟付款。未確認到文件之前，我哋亦唔會問你攞其他資料。', '尾号只是用来缩小收件记录范围，不会用于付款。文件确认前，我们也不会索取其他资料。', 'The last four digits only narrow the reception record; they are not used for payment. We will not ask for other details before locating the item.');
       }
@@ -3361,6 +3432,15 @@
 
     if (scenario === 'orientation') {
       const variant = state.contactVariant || (state.contactIsReal ? 'real' : 'fake');
+      if (intent === 'clarify' && callSession.details.lastTopic === 'identity') {
+        const guessed = callSession.details.guessedName;
+        return guessed
+          ? copy(`你頭先估我係${guessed}。你想我講返我哋點樣識，定係先講迎新嗰件事？`, `你刚才猜我是${guessed}。你想我说说我们怎么认识，还是先说迎新的事？`, `You just guessed I was ${guessed}. Do you want to ask how we met or about the orientation event?`)
+          : copy('你係想我再講個名，定係講上年迎新點樣識？', '你是想让我再说名字，还是说说去年迎新时怎么认识？', 'Do you want me to repeat my name, or explain how we met during orientation?');
+      }
+      if (intent === 'clarify' && callSession.details.lastTopic === 'request') {
+        return copy('我係講迎新活動嘅安排。你係想再聽一次要做咩，定係問相關文件？', '我说的是迎新活动安排。你想再听一次要做什么，还是询问相关文件？', 'I was talking about the orientation arrangement. Do you want me to repeat the request or explain the paperwork?');
+      }
       if (intent === 'challenge_request') {
         if (variant === 'real') return copy('你唔需要畀我個人資料或者私人付款。我可以用學院電郵再發一次活動安排。', '你不需要向我提供个人资料或私人付款。我可以通过学院邮件重发活动安排。', 'You do not need to give me personal details or make a private payment. I can resend the event arrangement by faculty email.');
         if (variant === 'grey') return copy('場地公司想快啲點人數，我手上又冇學院系統權限。你唔方便就叫嘉敏直接搵我。', '场地公司想尽快点算人数，我又没有学院系统权限。你不方便的话，可以让嘉敏直接联系我。', 'The venue wants a headcount and I do not have access to the faculty system. If you are not comfortable, ask Carmen to contact me directly.');
@@ -3410,6 +3490,19 @@
 
   function isContextualCallIntent(intent) {
     return ['clarify', 'challenge_request', 'deny_context', 'unknown'].includes(intent);
+  }
+
+  function rememberPilotCallTopic(intent) {
+    if (!callSession || !['hall', 'orientation'].includes(callSession.scenario)) return;
+    const topics = {
+      ask_identity: 'identity', guess_name: 'identity',
+      ask_purpose: 'request', describe_request: 'request', ask_document: 'request',
+      ask_reference: callSession.scenario === 'hall' ? 'tracking' : 'identity',
+      share_partial: 'tracking', share_full: 'tracking',
+      ask_fee: 'payment', offer_payment: 'payment', offer_cash: 'payment',
+      record_result: 'collection'
+    };
+    if (topics[intent]) callSession.details.lastTopic = topics[intent];
   }
 
   function addCallTurn(role, text, intent = '') {
@@ -3464,7 +3557,14 @@
       orientation: {
         intro: { reply: '「喂，你真係唔記得我呀？上年迎新活動嗰個呀。你再諗下啦。」', audio: 'orientation-intro', quick: [['ask_identity', '你先说名字'], ['ask_purpose', '你找我有什么事？'], ['refuse_disclosure', '我不确认任何个人资料']] },
         identity: { reply: () => variant === 'real' ? '「我係阿杰呀，上年迎新喺N座擺攤嗰個。」' : (variant === 'grey' ? '「我係阿倫，之前幫迎新場地做聯絡嗰個。」' : '「吓，你連我個名都唔記得？上年我哋成日見㗎。」'), audio: () => `orientation-identity-${variant}`, quick: [['ask_purpose', '你找我有什么事？'], ['ask_reference', '说一件只有联系人知道的事'], ['hold_research', '先去联系人核对']] },
-        guessed: { reply: '「係呀，我咪阿杰囉，終於認得我喇。」', audio: 'orientation-guessed', quick: [['ask_purpose', '你找我有什么事？'], ['ask_reference', '说一件只有阿杰知道的事'], ['hold_research', '先去联系人核对']] },
+        guessed: { reply: (session) => {
+          const guessed = session.details.guessedName || '阿杰';
+          if (variant === 'fake') return contextualCallCopy(`係呀，我咪${guessed}囉。你終於記得喇。`, `对，我就是${guessed}。你终于想起来了。`, `Yes, it's ${guessed}. You remember me now.`);
+          const actual = variant === 'real' ? '阿杰' : '阿倫';
+          return guessed === actual
+            ? contextualCallCopy(`係呀，我係${actual}。`, `对，我是${actual}。`, `Yes, I'm ${actual}.`)
+            : contextualCallCopy(`唔係，我係${actual}。上年迎新嗰邊聯絡過你。`, `不是，我是${actual}。去年迎新时联系过你。`, `No, I'm ${actual}. We were in touch about orientation last year.`);
+        }, quick: [['ask_purpose', '你找我有什么事？'], ['ask_reference', '说一件只有联系人知道的事'], ['hold_research', '先去联系人核对']] },
         purpose: { reply: () => variant === 'real' ? '「我換咗號碼。供應商有份訂金資料想你幫手睇，但唔使你私人付款。」' : (variant === 'grey' ? '「場地方想確認參加人數，你可唔可以send學生名單同電話畀我？」' : '「供應商催訂金，爭HK$1,200。你可以轉數，或者我叫同事去宿舍大堂收現金，今晚還畀你。」'), audio: () => `orientation-purpose-${variant}`, quick: [['ask_document', '先发正式文件给我'], ['refuse_disclosure', '我不会在这通电话提供资料'], ['hold_research', '先去联系人核对']] },
         reference: { reply: () => variant === 'real' ? '「上年你負責N座攤位，嘉敏遲到，我哋一齊搬過物資。」' : (variant === 'grey' ? '「我只係供應商聯絡人，係嘉敏畀你號碼我；你可以問返佢。」' : '「咁耐以前邊記得咁清楚？你先講你負責邊一part，我就記得。」'), audio: () => `orientation-reference-${variant}`, quick: [['ask_purpose', '继续问来意'], ['refuse_disclosure', '不提供更多线索'], ['hold_research', '先去联系人核对']] },
         document: { reply: () => variant === 'real' ? '「得，我send學院報價單畀你；款項應該由學院戶口處理。」' : (variant === 'grey' ? '「我只有場地公司張表，冇學院文件。你可以先問嘉敏。」' : '「供應商就收工，唔使搞咁多文件啦，你轉咗先。」'), audio: () => `orientation-document-${variant}`, quick: [['hold_research', '先去联系人核对'], ['refuse_disclosure', '资料确认前不处理'], ['offer_payment', '按对方要求处理']] },
@@ -3542,6 +3642,15 @@
     return String(state.mails.find((mail) => mail.id === 'mail-parcel')?.tracking || '').replace(/\D/g, '');
   }
 
+  function guessedOrientationName(raw) {
+    const text = String(raw || '').trim();
+    const explicit = text.match(/^(?:你(?:是|係|係咪|是不是)|是不是|係咪|莫非係|难道是)\s*([\p{L}]{2,10}?)(?:[吗嗎呀啊])?[？?。.!！]*$/u);
+    const short = text.match(/^(阿[\p{L}]{1,3})[？?。.!！]*$/u);
+    const english = text.match(/^(?:are you|is it)\s+([a-z][a-z -]{1,18})[?!.]*$/i);
+    const name = explicit?.[1] || short?.[1] || english?.[1]?.trim() || '';
+    return /谁|誰|边个|邊個|什么|甚麼|哪位|騙|骗|收發|收发|政府|办公室|辦公室|銀行|银行|客服|郵政|邮政/u.test(name) ? '' : name;
+  }
+
   function routeCallIntent(intent, spoken = '') {
     const scenario = callSession.scenario;
     const current = callSession.node;
@@ -3607,7 +3716,11 @@
       return current === 'purpose' || current === 'reference' ? 'banking' : 'fallback';
     }
     if (scenario === 'orientation') {
-      if (intent === 'guess_name') { markCallDisclosure('guessed-name'); return 'guessed'; }
+      if (intent === 'guess_name') {
+        callSession.details.guessedName = guessedOrientationName(spoken) || '阿杰';
+        markCallDisclosure('guessed-name');
+        return 'guessed';
+      }
       if (intent === 'ask_identity') return 'identity';
       if (intent === 'ask_purpose') return 'purpose';
       if (intent === 'ask_reference') return 'reference';
@@ -3702,11 +3815,12 @@
   function recogniseCallIntent(raw) {
     const text = String(raw || '').trim().toLowerCase();
     if (!text) return '';
+    if (callSession?.scenario === 'orientation' && guessedOrientationName(raw)) return 'guess_name';
     const has = (...terms) => terms.some((term) => text.includes(term));
     const digits = text.match(/\d/g)?.join('') || '';
     const current = callSession?.node || '';
     const isQuestion = /[?？]|吗|嗎|是什么|係咩|是多少|有多少|几多|幾多|为什么|為什麼|点解|點解/.test(text) || /^(请问|請問|想问|想問|我想知道|可不可以|可唔可以|能不能|可以吗|可以嗎|怎么|怎麼|点样|點樣|what|which|how|can i|could i|should i)/i.test(text);
-    if (has('不知道', '不清楚', '不明白', '没听懂', '聽唔明', '唔清楚', '唔明', '唔知', '再说一次', '再講一次', '再讲一次', 'pardon', 'not sure', 'do not know', "don't know", 'what do you mean') || /^(什么|甚麼|咩|what)[？?。.!！]*$/.test(text)) return 'clarify';
+    if (has('不知道', '不清楚', '不明白', '没听懂', '聽唔明', '唔清楚', '唔明', '唔知', '再说一次', '再講一次', '再讲一次', '刚才说什么', '剛才講咩', '头先讲咩', '頭先講咩', '再说一遍', '再講多次', 'repeat that', 'pardon', 'not sure', 'do not know', "don't know", 'what do you mean') || /^(什么|甚麼|咩|what)[？?。.!！]*$/.test(text)) return 'clarify';
     if (has('为什么要', '為什麼要', '点解要', '點解要', '凭什么', '憑咩', '为什么给', '為什麼畀', 'why do you need', 'why should i', 'why give')) return 'challenge_request';
     if (has('我没有', '我沒有', '我冇', '没收到', '沒有收到', '未收到', '不是我的', '唔係我', 'not mine', 'did not receive', "didn't receive", 'never received')) return 'deny_context';
     if (has('不提供', '不透露', '唔提供', '不会给', '不會畀', '不转', '不轉', '唔轉', '不付款', '不支付', 'won\'t give', 'will not give', 'will not pay')) return 'refuse_disclosure';
@@ -3780,6 +3894,7 @@
     if (!intent) { showToast('输入你想说的话'); return; }
     const spoken = text || callQuickLabel(intent);
     captureGovernmentReply(spoken, intent);
+    rememberPilotCallTopic(intent);
     addCallTurn('player', spoken, intent);
     if (isContextualCallIntent(intent)) {
       callSession.step += 1;
@@ -3792,11 +3907,44 @@
     }
     const nextNode = routeCallIntent(intent, spoken);
     if (!callSession || typeof nextNode !== 'string') return;
+    const pilotLookup = (callSession.scenario === 'hall' && ['share_full', 'share_partial'].includes(intent))
+      || (callSession.scenario === 'orientation' && ['ask_reference', 'ask_document'].includes(intent));
+    if (pilotLookup) {
+      beginPilotCallLookup(nextNode);
+      return;
+    }
+    deliverCallNode(nextNode);
+  }
+
+  function beginPilotCallLookup(nextNode) {
+    if (!callSession || callSession.phase !== 'connected') return;
+    const sessionId = callSession.id;
+    callSession.phase = 'checking';
+    callSession.pendingNode = nextNode;
+    const waitLine = callSession.scenario === 'hall'
+      ? contextualCallCopy('等我睇一睇收件記錄，唔該等陣。', '我查一下收件记录，请稍等。', 'Let me check the reception record. One moment, please.')
+      : contextualCallCopy('等我搵一搵手邊啲活動資料。', '我找一下手边的活动资料。', 'Let me find the event details I have here.');
+    addCallTurn('caller', waitLine);
+    callSession.lastCallerAudio = '';
+    advanceTime(callSession.scenario === 'hall' ? 4 : 3);
+    saveState();
+    renderCallSession('');
+    callbackTimer = setTimeout(() => {
+      if (!callSession || callSession.id !== sessionId || callSession.phase !== 'checking') return;
+      callSession.phase = 'connected';
+      callSession.pendingNode = null;
+      deliverCallNode(nextNode);
+    }, 1700);
+  }
+
+  function deliverCallNode(nextNode) {
+    if (!callSession) return;
     if (nextNode === 'claim' || nextNode === 'identity' || nextNode === 'guessed') {
       if (!callSession.claims.includes('caller-claimed-identity')) callSession.claims.push('caller-claimed-identity');
       if (callSession.scenario === 'orientation') state.taskState.contact.steps.identityClaimed = true;
     }
     callSession.node = nextNode;
+    if (callSession.scenario === 'hall' && nextNode === 'result') callSession.details.lastTopic = 'collection';
     callSession.step += 1;
     const node = getCallNode(callSession.scenario, nextNode);
     addCallTurn('caller', resolveCallReply(callSession.scenario, nextNode, node.reply));
@@ -3852,7 +4000,8 @@
     }
     advanceTime(1);
     saveState();
-    renderCallSession(callSession.lastCallerAudio);
+    if (callSession.minimized) renderActiveCallBar();
+    else renderCallSession(callSession.lastCallerAudio);
   }
 
   function callQuickLabel(intent) {
@@ -3862,27 +4011,28 @@
   }
 
   function renderCallSession(audioId = '') {
-    if (!callSession || callSession.phase !== 'connected') return;
+    if (!callSession || !['connected', 'checking'].includes(callSession.phase)) return;
     callSession.minimized = false;
-    const node = getCallNode(callSession.scenario, callSession.node);
+    const checking = callSession.phase === 'checking';
     const latestCallerText = [...callSession.transcript].reverse().find((turn) => turn.role === 'caller')?.text || '';
     const transcript = callSession.transcript.map((turn) => `<div class="call-turn ${turn.role}"><span>${turn.role === 'caller' ? esc(ui('未知号码')) : esc(localized('你', 'You'))}</span><p>${esc(turn.text)}</p></div>`).join('');
     const videoCall = callSession.scenario === 'deepfake';
     els.overlayLayer.innerHTML = `
-      <section class="call-overlay call-conversation ${videoCall ? 'is-video-call' : ''}" data-cantonese-audio="${esc(audioId || '')}">
+      <section class="call-overlay call-conversation ${videoCall ? 'is-video-call' : ''}" data-cantonese-audio="${esc(audioId || '')}" data-call-phase="${callSession.phase}">
         <header class="call-conversation-head">
           <button class="call-minimize" type="button" data-action="call-minimize" aria-label="${esc(localized('最小化通话', 'Minimise call'))}">⌄</button>
-          <div><span>${esc(videoCall ? localized('视频通话中', 'Video call') : ui('通话中'))} · ${esc(callSession.number)}</span><strong>${esc(ui('未知号码'))}</strong></div>
+          <div><span>${esc(videoCall ? localized('视频通话中', 'Video call') : ui('通话中'))} · <time id="callElapsedTime">00:00</time></span><strong>${esc(ui('未知号码'))}</strong></div>
           <button class="call-replay" type="button" data-action="call-replay-voice" aria-label="${esc(localized('重播对方刚才的话', 'Replay the caller'))}">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 10v4h3.2l4.3 3.4V6.6L7.7 10H4.5Z"/><path d="M15 9a4.2 4.2 0 0 1 0 6M17.8 6.5a7.6 7.6 0 0 1 0 11"/></svg>
           </button>
         </header>
         ${videoCall ? `<div class="call-video-surface" aria-label="${esc(localized('连接不稳定的视频画面', 'Unstable video connection'))}"><div class="video-silhouette" aria-hidden="true"><i></i><span></span></div><div class="video-noise" aria-hidden="true"></div><span class="video-quality">${esc(localized('连接不稳定', 'Unstable connection'))}</span><small>${esc(callSession.number)}</small></div>` : ''}
+        ${checking ? `<div class="call-checking" role="status"><i aria-hidden="true"></i>${esc(localized('对方正在查找资料…', 'The caller is checking the details…'))}</div>` : ''}
         <div class="call-transcript" id="callTranscript" aria-live="polite">${transcript}</div>
         <form class="call-reply-form" id="callReplyForm">
           <label class="sr-only" for="callReplyInput">${esc(localized('你想说什么', 'What do you want to say?'))}</label>
-          <input id="callReplyInput" maxlength="240" autocomplete="off" placeholder="${esc(localized('你想说什么…', 'Say something…'))}">
-          <button type="submit" aria-label="${esc(localized('说出回复', 'Say reply'))}">↑</button>
+          <input id="callReplyInput" maxlength="240" autocomplete="off" ${checking ? 'disabled' : ''} placeholder="${esc(checking ? localized('请稍候…', 'Please wait…') : localized('你想说什么…', 'Say something…'))}">
+          <button type="submit" ${checking ? 'disabled' : ''} aria-label="${esc(localized('说出回复', 'Say reply'))}">↑</button>
         </form>
         <div class="call-controls"><button class="round-call-button" type="button" data-action="end-call" aria-label="${esc(ui('结束通话'))}">${DATA.icons.hangup}</button></div>
       </section>`;
@@ -3916,7 +4066,7 @@
   }
 
   function minimizeCall() {
-    if (!callSession || callSession.phase !== 'connected') return;
+    if (!callSession || !['connected', 'checking'].includes(callSession.phase)) return;
     callSession.minimized = true;
     els.overlayLayer.innerHTML = '';
     renderActiveCallBar();
@@ -3941,7 +4091,7 @@
     els.activeCallBar.innerHTML = `
       <button type="button" data-action="call-resume">
         <span class="active-call-dot" aria-hidden="true"></span>
-        <span><strong>${esc(ui('未知号码'))}</strong><small>${esc(localized('轻点返回通话', 'Tap to return to call'))}</small></span>
+        <span><strong>${esc(ui('未知号码'))}</strong><small>${esc(callSession.phase === 'checking' ? localized('通话中 · 对方正在查资料', 'On call · checking details') : localized('轻点返回通话', 'Tap to return to call'))}</small></span>
       </button>
       <button class="active-call-end" type="button" data-action="end-call" aria-label="${esc(ui('结束通话'))}">${DATA.icons.hangup}</button>`;
   }
@@ -3956,6 +4106,7 @@
       endedAt: state.time,
       disclosed: [...callSession.disclosed],
       claims: [...callSession.claims],
+      details: { ...callSession.details },
       transcript: callSession.transcript.map((turn) => ({ ...turn })),
       note
     };
@@ -3989,7 +4140,39 @@
       </div>`;
   }
 
+  function showOpeningNamePrompt() {
+    els.systemNavigation?.classList.add('is-hidden');
+    els.overlayLayer.innerHTML = `
+      <div class="dialog-overlay opening-name-overlay">
+        <section class="dialog-sheet opening-sheet opening-name-sheet" role="dialog" aria-modal="true" aria-labelledby="openingNameTitle">
+          <span class="opening-eyebrow">SCAM-BUSTER · 01 / 02</span>
+          <div class="opening-name-avatar" aria-hidden="true">${esc(localized('你', 'You'))}</div>
+          <h2 id="openingNameTitle">${esc(localized('今天，怎么称呼你？', 'What should we call you today?'))}</h2>
+          <p>${esc(localized('这个名字会出现在模拟手机里。可以用昵称，不需要填写真实姓名；它只保存在当前浏览器。', 'This name appears on your simulated phone. A nickname is fine; it stays in this browser.'))}</p>
+          <form id="openingNameForm" class="settings-name-form">
+            <label for="openingNameInput">${esc(localized('显示名字', 'Display name'))}</label>
+            <input id="openingNameInput" name="playerName" type="text" autocomplete="nickname" maxlength="24" required placeholder="${esc(localized('输入你想用的名字', 'Enter a name'))}">
+            <button type="submit">${esc(localized('继续', 'Continue'))}</button>
+          </form>
+        </section>
+      </div>`;
+  }
+
+  function savePlayerName(input) {
+    const name = String(input?.value || '').trim().replace(/\s+/g, ' ').slice(0, 24);
+    if (!name) {
+      input?.setCustomValidity(localized('请输入名字', 'Enter a name'));
+      input?.reportValidity();
+      return false;
+    }
+    state.profile.name = name;
+    saveState();
+    renderHome();
+    return true;
+  }
+
   function showOpeningBrief() {
+    els.systemNavigation?.classList.remove('is-hidden');
     els.overlayLayer.innerHTML = `
       <div class="dialog-overlay opening-overlay">
         <section class="dialog-sheet opening-sheet">
@@ -4009,6 +4192,7 @@
 
   function closeOverlay() {
     els.overlayLayer.innerHTML = '';
+    if (state.unlocked) els.systemNavigation?.classList.remove('is-hidden');
     els.overlayLayer.setAttribute('aria-live', 'assertive');
     setMailMenuBackgroundInert(false);
     mailMenuReturnFocus = null;
@@ -4980,6 +5164,7 @@
 
   function resetDay() {
     const preferences = {
+      name: state.profile?.name || '',
       language: state.language,
       region: state.region,
       soundEnabled: state.soundEnabled,
@@ -4996,6 +5181,8 @@
       callVoiceLanguage: preferences.callVoiceLanguage
     });
     state.profile.focusAreas = preferences.focusAreas;
+    state.profile.name = preferences.name;
+    pendingOpeningTarget = null;
     settingsPage = 'root';
     callSession = null;
     clearTimeout(callbackTimer);
@@ -5048,7 +5235,7 @@
         break;
       }
       case 'settings-page':
-        if (!['root', 'profile', 'locale', 'sound', 'time', 'about'].includes(target.dataset.value)) break;
+        if (!['root', 'name', 'profile', 'locale', 'sound', 'time', 'about'].includes(target.dataset.value)) break;
         settingsPage = target.dataset.value;
         renderSettings();
         break;
@@ -5096,7 +5283,7 @@
       case 'confirm-reset-day':
         showDialog(
           localized('重新开始今天？', 'Restart today?'),
-          localized('今天的对话、交易、资金和成长进度会被清除，并重新分配部分人物情况。界面语言、地区、声音、通话语言和发展方向会保留。', 'Today’s conversations, transactions, funds and growth progress will be cleared, and some character situations will be reassigned. Interface language, region, sound, call language and development focus will be kept.'),
+          localized('今天的对话、交易、资金和成长进度会被清除，并重新分配部分人物情况。名字、界面语言、地区、声音、通话语言和发展方向会保留。', 'Today’s conversations, transactions, funds and growth progress will be cleared, and some character situations will be reassigned. Name, interface language, region, sound, call language and development focus will be kept.'),
           [
             { label: localized('重新开始', 'Restart'), action: 'reset-day', kind: 'danger-action' },
             { label: localized('取消', 'Cancel'), action: 'close-overlay', kind: 'secondary-action' }
@@ -5471,6 +5658,10 @@
       case 'close-review': closeOverlay(); break;
       case 'reset-day': resetDay(); break;
       case 'start-day':
+        if (!state.profile.name) {
+          showOpeningNamePrompt();
+          break;
+        }
         state.openingBriefSeen = true;
         state.timeSpeed = 0;
         state.clockLastRealMs = Date.now();
@@ -5480,8 +5671,13 @@
         if (state.currentApp) renderApp(state.currentApp);
         renderHome();
         renderTimeControls();
+        if (pendingOpeningTarget) {
+          const next = pendingOpeningTarget;
+          pendingOpeningTarget = null;
+          openApp(next.app, next.target);
+        }
         break;
-      case 'close-overlay': closeOverlay(); if (state.currentApp) renderApp(state.currentApp); renderHome(); break;
+      case 'close-overlay': if (!els.overlayLayer.querySelector('.opening-name-overlay')) { closeOverlay(); if (state.currentApp) renderApp(state.currentApp); renderHome(); } break;
     }
   }
 
@@ -5547,8 +5743,15 @@
       if (target) { playSound('tap'); handleAction(target.dataset.action, target); }
     });
     els.appContent.addEventListener('submit', (event) => {
-      if (!['browserSearchForm', 'dialForm', 'contactsSearchForm', 'messageReplyForm', 'mailReplyForm'].includes(event.target.id)) return;
+      if (!['playerNameForm', 'browserSearchForm', 'dialForm', 'contactsSearchForm', 'messageReplyForm', 'mailReplyForm'].includes(event.target.id)) return;
       event.preventDefault();
+      if (event.target.id === 'playerNameForm') {
+        const input = $('playerNameInput');
+        if (!savePlayerName(input)) return;
+        settingsPage = 'root';
+        renderSettings();
+        return;
+      }
       if (event.target.id === 'messageReplyForm') {
         const key = event.target.dataset.thread;
         sendMessageReply(key, $('messageReplyInput')?.value || '');
@@ -5595,6 +5798,7 @@
       }
     });
     els.appContent.addEventListener('input', (event) => {
+      if (event.target.id === 'playerNameInput') event.target.setCustomValidity('');
       if (event.target.id === 'dialNumber') state.dialNumber = normaliseDialNumber(event.target.value);
       if (event.target.id === 'messageReplyInput' && activeThreadKey) {
         state.messageDrafts[activeThreadKey] = event.target.value.slice(0, 500);
@@ -5616,6 +5820,19 @@
       if (target) { playSound('tap'); handleAction(target.dataset.action, target); }
     });
     els.overlayLayer.addEventListener('submit', (event) => {
+      if (event.target.id === 'openingNameForm') {
+        event.preventDefault();
+        if (!savePlayerName($('openingNameInput'))) return;
+        if (!state.openingBriefSeen) showOpeningBrief();
+        else if (pendingOpeningTarget) {
+          closeOverlay();
+          const next = pendingOpeningTarget;
+          pendingOpeningTarget = null;
+          openApp(next.app, next.target);
+        }
+        else goHome();
+        return;
+      }
       if (event.target.id !== 'callReplyForm') return;
       event.preventDefault();
       const input = $('callReplyInput');
@@ -5671,6 +5888,9 @@
       systemNavigation: $('systemNavigation'), systemBack: $('systemBack'), systemHome: $('systemHome'),
       systemBackLabel: $('systemBackLabel'), systemHomeLabel: $('systemHomeLabel')
     });
+    els.overlayLayer.addEventListener('input', (event) => {
+      if (event.target.id === 'openingNameInput') event.target.setCustomValidity('');
+    });
     bindEvents();
     state.timeSpeed = 0;
     state.clockLastRealMs = Date.now();
@@ -5684,7 +5904,8 @@
     if (state.unlocked) {
       showScreen('homeScreen');
       if (preview && DATA.apps[preview]) openApp(preview);
-      if (!preview && !state.openingBriefSeen) showOpeningBrief();
+      if (!preview && !state.profile.name) showOpeningNamePrompt();
+      else if (!preview && !state.openingBriefSeen) showOpeningBrief();
     } else {
       showScreen('lockScreen');
     }

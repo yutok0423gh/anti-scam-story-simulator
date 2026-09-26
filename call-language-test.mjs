@@ -58,9 +58,15 @@ function assert(condition, message) {
 }
 
 async function setCallLanguage(language) {
-  await command('Page.navigate', { url: `${pageBase}/phone-prototype.html?preview=home&simTime=09:40&voice-test=${language}` });
-  await wait(650);
+  await command('Page.navigate', { url: `${pageBase}/?preview=home&simTime=09:40&voice-test=${language}` });
+  for (let attempt = 0; attempt < 30; attempt += 1) {
+    if (await evaluate('Boolean(document.querySelector("#appGrid [data-open-app=settings]"))')) break;
+    await wait(100);
+  }
   await click('#appGrid [data-open-app="settings"]');
+  if (await evaluate('Boolean(document.querySelector("#playerNameForm"))')) {
+    await evaluate(`(() => { document.querySelector('#playerNameInput').value = 'Test Student'; document.querySelector('#playerNameForm').requestSubmit(); })()`);
+  }
   await click('[data-action="settings-page"][data-value="sound"]');
   await click('[data-action="settings-choice"][data-value="voice"]');
   await click(`[data-action="set-call-voice"][data-value="${language}"]`);
@@ -98,6 +104,7 @@ async function submitCallText(text) {
   })()`);
   if (!submitted) throw new Error('Call reply form was not available');
   await wait(220);
+  if (await evaluate('document.querySelector(".call-conversation")?.dataset.callPhase === "checking"')) await wait(1850);
   return evaluate("document.querySelector('.call-turn.caller:last-child p')?.textContent || ''");
 }
 
@@ -166,7 +173,7 @@ async function verifyOfficialReferenceChecks() {
 await command('Runtime.enable');
 await command('Page.enable');
 await command('Network.setCacheDisabled', { cacheDisabled: true });
-await command('Page.navigate', { url: `${pageBase}/phone-prototype.html?preview=home&simTime=09:40&voice-test=setup` });
+await command('Page.navigate', { url: `${pageBase}/?preview=home&simTime=09:40&voice-test=setup` });
 await wait(650);
 
 await verifyCall('zh-CN', '真的不记得我', 'zh');

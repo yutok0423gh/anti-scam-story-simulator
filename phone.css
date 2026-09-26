@@ -1539,6 +1539,34 @@
   stroke-linecap: round;
 }
 
+.call-checking {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-height: 30px;
+  color: rgba(255, 255, 255, .64);
+  font-size: 11px;
+  letter-spacing: .01em;
+}
+
+.call-checking i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: call-checking-pulse 1.1s ease-in-out infinite alternate;
+}
+
+@keyframes call-checking-pulse {
+  from { opacity: .3; }
+  to { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .call-checking i { animation: none; }
+}
+
 .call-transcript {
   min-height: 0;
   flex: 1 1 auto;
@@ -1653,6 +1681,10 @@
   background: #fff;
   font-size: 19px;
   font-weight: 800;
+}
+
+.call-reply-form:has(:disabled) {
+  opacity: .55;
 }
 
 .call-conversation .call-controls {
@@ -6422,6 +6454,35 @@ input:focus-visible,
   padding: 30px 18px 24px;
 }
 
+.ios-ui .opening-name-sheet {
+  padding-top: 34px;
+}
+
+.ios-ui .opening-name-avatar {
+  width: 58px;
+  height: 58px;
+  margin: 3px 0 18px;
+  display: grid;
+  place-items: center;
+  border-radius: 17px;
+  color: #fff;
+  background: #29466c;
+  font-size: 19px;
+  font-weight: 700;
+}
+
+.ios-ui .opening-name-sheet > p {
+  margin-bottom: 22px;
+}
+
+.ios-ui .opening-name-sheet .settings-name-form label {
+  margin-left: 2px;
+}
+
+.ios-ui .opening-name-sheet .settings-name-form button {
+  margin-top: 14px;
+}
+
 .ios-ui .opening-eyebrow {
   display: block;
   margin-bottom: 6px;
@@ -6959,6 +7020,85 @@ input:focus-visible,
 
 .ios-ui .settings-page > .settings-section-label:first-child {
   margin-top: 2px;
+}
+
+.ios-ui .settings-name-page {
+  padding-top: 48px;
+  text-align: center;
+}
+
+.ios-ui .settings-name-avatar {
+  width: 76px;
+  height: 76px;
+  margin: 0 auto 24px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #243a5a;
+  color: white;
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.ios-ui .settings-name-page h2 {
+  margin: 0 0 10px;
+  font-size: 25px;
+  letter-spacing: -.03em;
+}
+
+.ios-ui .settings-name-page p {
+  max-width: 330px;
+  margin: 0 auto 30px;
+  color: var(--ios-secondary);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.ios-ui .settings-name-form {
+  text-align: left;
+}
+
+.ios-ui .settings-name-form label {
+  display: block;
+  margin: 0 16px 8px;
+  color: var(--ios-secondary);
+  font-size: 13px;
+}
+
+.ios-ui .settings-name-form input {
+  width: 100%;
+  min-height: 52px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 13px;
+  outline-offset: 3px;
+  background: var(--ios-card);
+  color: var(--ios-label);
+  font: inherit;
+  box-sizing: border-box;
+}
+
+.ios-ui .settings-name-form button {
+  width: 100%;
+  min-height: 50px;
+  margin-top: 18px;
+  border: 0;
+  border-radius: 13px;
+  background: var(--ios-blue);
+  color: white;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ios-ui .settings-name-form button:focus-visible,
+.ios-ui .settings-name-form input:focus-visible {
+  outline: 3px solid var(--ios-blue);
+  outline-offset: 3px;
+}
+
+.ios-ui .profile-name-group {
+  margin-bottom: 18px;
 }
 
 .ios-ui .settings-profile-entry {
