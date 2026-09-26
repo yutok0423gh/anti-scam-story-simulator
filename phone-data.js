@@ -67,6 +67,7 @@
       timelineLastEvent: null,
       balance: 3000,
       profile: {
+        name: '',
         startingBalance: 3000,
         growth: 0,
         growthTarget: 30,

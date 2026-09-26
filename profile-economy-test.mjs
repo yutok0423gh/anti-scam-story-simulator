@@ -75,6 +75,8 @@ await command('Page.navigate', { url: `${base}/phone-prototype.html?preview=home
 await wait(650);
 
 await click('#appGrid [data-open-app="settings"]');
+assert(await evaluate("Boolean(document.querySelector('#playerNameForm'))"), 'First Settings entry did not prompt for a name');
+await evaluate(`(() => { document.querySelector('#playerNameInput').value = 'Profile Tester'; document.querySelector('#playerNameForm').requestSubmit(); })()`);
 assert(await evaluate("Boolean(document.querySelector('.settings-profile-entry'))"), 'My Profile entry is missing from Settings');
 await click('.settings-profile-entry');
 assert(await evaluate("document.querySelector('.profile-ledger-card')?.textContent.includes('HK$3,000.00')"), 'Initial HK$3,000 balance is not shown');
@@ -107,6 +109,7 @@ const timeInjection = await command('Page.addScriptToEvaluateOnNewDocument', { s
 await command('Page.navigate', { url: `${base}/phone-prototype.html?profile-test=attend-${Date.now()}` });
 await wait(550);
 await command('Page.removeScriptToEvaluateOnNewDocument', { identifier: timeInjection.identifier });
+assert(await evaluate("JSON.parse(localStorage.getItem('polyu_simulator_phone_v1')).profile.name === 'Profile Tester'"), 'Player name was not restored after reloading the saved day');
 await click('#appGrid [data-open-app="polyu"]');
 const checkInDebug = await evaluate(`(() => ({
   hasAction: Boolean(document.querySelector('[data-action=research-attend-official]')),
